@@ -1,0 +1,4 @@
+Runs: 3 · items done: 2 · blocked: 0 · held: 0 · published: 1
+Tokens: 2.4M total, 1.2M per item ≈ $1.90 at API list price; first-pass 50%; 1 fix round.
+Review: 1 must-fix across 2 reviews. Questions for you: 1 asked, 0 defaulted, 0 open.
+Measurements complete.

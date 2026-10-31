@@ -1,0 +1,6 @@
+Built 1 of 1 thing.
+  done      Add a chore — type "Dishes", press Add: it appears in the list
+I couldn't save this to the shared copy — your work is safe here.
+Live: https://chore-chart.vercel.app
+Next: say "let me try it" and check this one thing yourself.
+This run used about 374 thousand tokens (roughly $0.27 at Claude's public API prices).

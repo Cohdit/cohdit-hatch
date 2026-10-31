@@ -1,0 +1,11 @@
+scorecard 2000-01-01 → 2026-11-01 · 1 run(s) · 1 done · 1 blocked · 1 held · 1 shared
+UNTRUSTED (events 33%) — the numbers below undercount
+tokens 374k  (input 20k · output 4k · cache read 300k · cache write 50k)  ≈ $0.27 at API list price of 2026-10-06
+1 tokens per done item   374k  (rework 374k)  ≈ $0.27 at API list price
+2 orchestrator share     0%  (of tokens; target < 25%)
+3 rework                 first-pass 0% · 100% of item tokens after first round · rounds 1
+4 review yield           checker 1 must-fix / 0 dispatches
+5 owner load             1.00 questions per item · asked 2 · defaulted 1 · done→shared median 0.1h · 1 waiting
+6 tokens per shared link 374k  ≈ $0.27 at API list price
+7 said to you            ≈0 words/run  (0 chars)
+-- digest: 374k tokens/item ≈ $0.27 at API list price · orchestrator 0% · first-pass 0% · 1.00 questions/item

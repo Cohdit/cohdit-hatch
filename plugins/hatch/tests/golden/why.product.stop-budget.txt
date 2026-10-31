@@ -1,0 +1,3 @@
+Stopped 45 minutes ago. Stopped: this run reached its cap (1.3M tokens ≈ $0.98 at API list price).
+Steps: review passed → ready → done → saved → reached the usage limit → stopped.
+Say "technical" for the full event list.

@@ -1,0 +1,3 @@
+Finished 7 minutes ago.
+Steps: started publishing → you decided → publishing → published → shared the link → finished.
+Run 20261101T095000Z-delons-laptop-0003, skill share, last event 2026-11-01T09:52:30Z. Say "show me the events" for the full list.

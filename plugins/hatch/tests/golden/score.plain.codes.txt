@@ -1,0 +1,4 @@
+Over this period: 1 building session, 1 thing finished, 1 set aside, 1 link shared.
+Claude used about 374 thousand tokens, about 374 thousand per finished thing (roughly $0.27 at Claude's public API prices).
+Right first time: 0 of 1. Questions for you: 1.
+These numbers are incomplete: some steps weren't recorded.

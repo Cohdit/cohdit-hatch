@@ -1,0 +1,9 @@
+{
+  "_about": "What each lens must find on defective.diff, and must NOT find on clean.diff. `must` is a missed-defect failure if absent; `should` is a hard case worth reporting but not a failure if missed. clean.diff must produce verdict pass from every lens. Run by hand or by scripts/evals when the agents are wired in.",
+  "defective": {
+    "lens-security": {"must": ["SEC-SECRETS", "SEC-AUTHZ", "SEC-INJECTION", "SEC-UPLOADS"], "should": ["SEC-INPUT"]},
+    "lens-privacy": {"must": ["PRI-NOLOG", "PRI-OWNER", "PRI-NOTICE", "PRI-THIRDPARTY"], "should": ["PRI-REALDATA", "PRI-DELETE", "PRI-MINIMISE", "PRI-ENCRYPT"]},
+    "lens-compliance": {"must": ["law_as_data", "human_in_loop"], "should": ["not-advice note", "tenant scoping"]}
+  },
+  "clean": {"lens-security": "pass", "lens-privacy": "pass", "lens-compliance": "pass"}
+}

@@ -1,0 +1,5 @@
+Local test session started.
+Local test running at http://localhost:3000.
+Passed: "Add a chore".
+Failed: "Tick a chore done" — Dishes stayed in the list after I ticked it.
+Run finished.

@@ -1,0 +1,6 @@
+Started publishing.
+You chose to make it live.
+Publishing…
+Publishing failed.
+Publishing failed, so I stopped. The details are saved.
+Stopped early.

@@ -1,0 +1,13 @@
+Started building.
+Started on "Add a chore".
+Building "Add a chore".
+The checks passed.
+Finished building "Add a chore".
+Checking "Add a chore".
+The review found nothing that must change.
+"Add a chore" passed the review.
+"Add a chore" is ready.
+Done: "Add a chore".
+Saved to the shared copy.
+I stopped because this run reached its limit: about 1.3 million tokens, roughly $0.98 at Claude's public API prices.
+Stopped early.

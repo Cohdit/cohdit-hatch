@@ -1,0 +1,3 @@
+Working now: waiting for your test results (started 5 minutes ago).
+Steps: started → opened the app → it worked.
+Say "technical" for the full event list.

@@ -1,0 +1,13 @@
+Chore Chart. Worked: Both kids have ticked a chore on their own phone by next Sunday.
+  ITEM-001 Add a chore      — type "Dishes", press Add: it appears in the list
+  ITEM-002 Tick a chore done — tick Dishes: it moves under Done
+  ITEM-003 Reset on Sunday  — on Sunday night the list is empty again
+  ITEM-004 Weekly scoreboard — the top of the page shows who ticked most this week
+  ITEM-005 On the iPad      — the list fills the screen (checked when you try it)
+Not in the first version: rewards or money, sign-in for kids.
+What one person puts in is shown to others, so a build rule is attached: lets people report what others post.
+Decisions I took: undefined: undefined.
+Open questions: What happens to unticked chores on Sunday?.
+Called Chore Chart, in a folder called chore-chart; change either by saying so.
+It'll live on a free plan meant for personal use; say "it's a business" if that changes.
+Say yes to agree that what you build is yours to answer for (terms, version 1; say "read me the terms").

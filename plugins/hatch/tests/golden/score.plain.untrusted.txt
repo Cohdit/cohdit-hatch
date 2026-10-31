@@ -1,0 +1,4 @@
+Over this period: 1 building session, 1 thing finished, 0 set aside, 0 links shared.
+Claude used about 1 thousand tokens, about 1 thousand per finished thing (no dollar estimate: a model has no known price).
+Right first time: 1 of 1. Questions for you: 0.
+These numbers are incomplete: some steps weren't recorded; 1 model has no price; 1 session never ended; 1 log line couldn't be read.

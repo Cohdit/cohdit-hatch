@@ -1,0 +1,8 @@
+Idea: ABC Friends (4 items)
+Working now: read-back: 4 items, 7 assumptions inferred, 0 open questions (started just now).
+  queued     Letter grid
+  queued     Tap to hear
+  queued     Animal picture
+  on device  On the iPad
+Not published yet — say "share it" to deploy.
+Tokens: 0 over 1 run ≈ $0.00 at API list price.

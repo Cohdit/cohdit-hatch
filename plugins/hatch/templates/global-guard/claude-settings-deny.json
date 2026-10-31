@@ -1,0 +1,33 @@
+{
+  "_comment": "cohdit-secret-guard v1 — merge this array into permissions.deny in ~/.claude/settings.json. Do not overwrite an existing deny array; append entries not already present.",
+  "deny": [
+    "Read(**/.env*)",
+    "Read(**/.dev.vars*)",
+    "Read(**/*.pem)",
+    "Read(**/*.key)",
+    "Read(**/*.p12)",
+    "Read(**/*.pfx)",
+    "Read(**/secrets/**)",
+    "Read(**/credentials/**)",
+    "Read(**/.aws/**)",
+    "Read(**/.ssh/**)",
+    "Read(**/config/database.yml)",
+    "Read(**/config/credentials.json)",
+    "Read(**/service-account*.json)",
+    "Read(**/.npmrc)",
+    "Read(**/.pypirc)",
+    "Read(**/.netrc)",
+    "Edit(**/.env*)",
+    "Edit(**/.dev.vars*)",
+    "Edit(**/secrets/**)",
+    "Edit(**/.ssh/**)",
+    "Write(**/.env*)",
+    "Write(**/.dev.vars*)",
+    "Bash(cat **/.env*)",
+    "Bash(cat **/.dev.vars*)",
+    "Bash(cat **/*.pem)",
+    "Bash(cat **/*.key)",
+    "Bash(printenv)",
+    "Bash(env)"
+  ]
+}

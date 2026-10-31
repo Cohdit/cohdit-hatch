@@ -1,0 +1,2 @@
+  1 Tick a chore done (ITEM-002) — tick Dishes: it moves under Done
+Say "let me try it" to run it locally.

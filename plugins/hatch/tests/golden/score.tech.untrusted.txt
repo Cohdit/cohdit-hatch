@@ -1,0 +1,11 @@
+scorecard 2000-01-01 → 2026-11-01 · 1 run(s) · 1 done · 0 blocked · 0 held · 0 shared
+UNTRUSTED (events 0%; unpriced models: claude-future-9; 1 run(s) never ended; 1 unreadable ledger line(s)) — the numbers below undercount
+tokens 1k  (input 1k · output 100 · cache read 0 · cache write 0)  no estimate (a model has no known price)
+1 tokens per done item   1k  (build 1k)  no estimate (a model has no known price)
+2 orchestrator share     0%  (of tokens; target < 25%)
+3 rework                 first-pass 100% · 0% of item tokens after first round · rounds 0
+4 review yield           checker 0 must-fix / 0 dispatches
+5 owner load             0.00 questions per item · asked 0 · defaulted 0 · done→shared median n/a · 0 waiting
+6 tokens per shared link n/a
+7 said to you            ≈0 words/run  (0 chars)
+-- digest: 1k tokens/item no estimate (a model has no known price) · orchestrator 0% · first-pass 100% · 0.00 questions/item

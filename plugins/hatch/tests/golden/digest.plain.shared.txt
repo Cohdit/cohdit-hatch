@@ -1,0 +1,5 @@
+Live: https://chore-chart.vercel.app — send it to whoever should try it first.
+Still to check at that link: On the iPad.
+Not fixed yet: Tick a chore done. Say "build it".
+Something wrong? Say "let me try it" and tell me what you saw.
+This run used about 177 thousand tokens (roughly $0.19 at Claude's public API prices).

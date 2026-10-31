@@ -1,0 +1,7 @@
+Built 2 of 3 items.
+  done      Add a chore — type "Dishes", press Add: it appears in the list
+  done      Tick a chore done — tick Dishes: it moves under Done
+  blocked   Reset on Sunday — failed tests twice
+Pushed to GitHub: delon/chore-chart.
+Next: say "let me try it" to test 2 items.
+This run: 3M tokens ≈ $2.24 at API list price.

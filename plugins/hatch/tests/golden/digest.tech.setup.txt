@@ -1,0 +1,10 @@
+Checking your computer…
+  node            ready (20 or later)
+  git             ready
+  gh              not found; Hatch fetches its own copy into ~/.cohdit/bin
+  gh auth         not signed in
+  vercel (npx)    ready
+  vercel auth     signed in
+  secret guard    global core.hooksPath and core.excludesfile point at ~/.cohdit/guard; repo hooks are chained
+  hooks PATH      node reachable from hooks
+2 left; next=gh

@@ -1,0 +1,3 @@
+Live on production: https://chore-chart.vercel.app
+Something wrong? Say "let me try it" and name what failed.
+This run: 177k tokens ≈ $0.19 at API list price.

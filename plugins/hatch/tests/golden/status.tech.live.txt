@@ -1,0 +1,9 @@
+Idea: Chore Chart (4 items)
+Working now: builder started on "Weekly scoreboard" (started 10 minutes ago), run 20261101T095000Z-delons-laptop-0001.
+  done       ITEM-001 Add a chore
+  done       ITEM-002 Tick a chore done
+  held       ITEM-003 Reset on Sunday — your decision needed
+  building   ITEM-004 Weekly scoreboard
+Not published yet — say "share it" to deploy.
+Tokens: 0 over 1 run ≈ $0.00 at API list price. Prices of 2026-10-06.
+Waiting on you: 2 items to try. Say "let me try it".

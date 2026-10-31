@@ -1,0 +1,7 @@
+2026-11-01T09:50:00Z  RUN_START skill=share plugin=0.0.1 host=delons-laptop os=mac base=- prices=2026-10-06
+2026-11-01T09:50:20Z  DECIDE type=publish choice=live who=you v=- item=-
+2026-11-01T09:50:30Z  DEPLOY vercel production state=building url=- dep=dpl_8f3k2
+2026-11-01T09:52:10Z  DEPLOY vercel production state=ready url=https://chore-chart.vercel.app dep=dpl_8f3k2
+2026-11-01T09:52:11Z  URL_SHARED vercel production https://chore-chart.vercel.app
+2026-11-01T09:52:20Z  USAGE orchestrator - attrib=orchestrator models={"claude-opus-5-5":{"cold1":0,"cold5":0,"cr":150000,"ctx_max":70000,"cw1":0,"cw5":20000,"in":5000,"msgs":6,"out":2000,"said":400}}
+2026-11-01T09:52:30Z  RUN_END outcome=ok

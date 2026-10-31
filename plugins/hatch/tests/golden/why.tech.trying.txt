@@ -1,0 +1,3 @@
+Working now: waiting for your test results (started 5 minutes ago).
+Steps: started → opened the app → it worked.
+Run 20261101T095500Z-delons-laptop-0002, skill try, last event 2026-11-01T09:57:00Z. Say "show me the events" for the full list.

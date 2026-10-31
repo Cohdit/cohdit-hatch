@@ -1,0 +1,16 @@
+{
+ "decisions": [],
+ "gates": {
+  "personal_details": true
+ },
+ "in": [],
+ "items": [],
+ "name": "Ex Finder",
+ "open_questions": [],
+ "out": [],
+ "pitch": "Show me where my ex is right now and who she is with.",
+ "rails": [],
+ "refused": "harm",
+ "terms_v": 1,
+ "v": 1
+}

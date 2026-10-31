@@ -1,0 +1,3 @@
+  1 Add a chore (ITEM-001) — type "Dishes", press Add: it appears in the list
+  2 Tick a chore done (ITEM-002) — tick Dishes: it moves under Done
+Say "let me try it" to run it locally.

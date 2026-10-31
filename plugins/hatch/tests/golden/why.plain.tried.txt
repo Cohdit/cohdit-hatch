@@ -1,0 +1,3 @@
+Finished 14 minutes ago.
+Steps: started → opened the app → it worked → it didn't work → finished.
+Say "show me the details" for the technical view.

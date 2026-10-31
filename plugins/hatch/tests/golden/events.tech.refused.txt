@@ -1,0 +1,6 @@
+2026-11-01T09:30:00Z  RUN_START skill=dream plugin=0.0.1 host=delons-laptop os=mac base=- prices=2026-10-06
+2026-11-01T09:30:40Z  DECIDE type=terms choice=accepted who=you v=1 item=-
+2026-11-01T09:31:00Z  DECIDE type=hosting choice=own_free who=you v=- item=-
+2026-11-01T09:34:00Z  REFUSE category=harm item=-
+2026-11-01T09:34:01Z  STOP cause=refused item=- name=- blob=-
+2026-11-01T09:34:02Z  RUN_END outcome=stopped

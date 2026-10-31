@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# managed-by: cohdit-secret-guard v2
+# Global pre-commit hook — installed by `hatch.js setup` via `git config --global core.hooksPath`.
+# Runs for every repo on this machine unless that repo sets its own local core.hooksPath, then hands
+# over to the repo's own .git/hooks/pre-commit if it has one, so nothing a repo relied on is lost.
+set -euo pipefail
+
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$HOOK_DIR/_env-guard.sh"
+
+staged_paths=$(git diff --cached --name-only --diff-filter=ACMR)
+
+ok=0
+if ! echo "$staged_paths" | check_paths "pre-commit"; then
+  ok=1
+fi
+if ! check_content "--cached"; then
+  ok=1
+fi
+
+if [ $ok -ne 0 ]; then exit $ok; fi
+
+repo_hook="$(git rev-parse --git-common-dir)/hooks/pre-commit"
+if [ -x "$repo_hook" ]; then
+  exec "$repo_hook" "$@"
+fi
+exit 0

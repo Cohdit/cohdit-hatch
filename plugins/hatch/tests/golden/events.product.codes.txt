@@ -1,0 +1,28 @@
+Build run started.
+  GitHub      not signed in
+Terms accepted (version 1).
+Default taken: data = neon_free. Say "change that" to revisit.
+Question 1: walk.
+Read-back: 4 items, 6 assumptions inferred, 1 open questions.
+Spec saved: 4 items to build, 1 gates answered yes, 1 open questions.
+Cohdit doesn't build apps that are designed to physically hurt, threaten, stalk or harass people. This isn't something I can change or make an exception for.
+Decision: design = sunday_night.
+Picked "Add a chore".
+Builder started on "Add a chore".
+Builder finished "Add a chore".
+Tests and build passed (48s).
+"Add a chore" passed the gate.
+Risk low: copy.
+Review: 1 thing to fix, 3 nits.
+Fix round on "Add a chore" after review.
+Done: "Add a chore" merged.
+Blocked "Weekly scoreboard": depends on something not built yet.
+Held "Reset on Sunday" for your decision: Reset on Sunday night, or Monday morning before school?
+Finding (medium) out of scope on "Add a chore": The chore list has no empty state when every chore is done.
+Push to GitHub rejected — your work is safe locally.
+Deployed to production.
+Live on production: https://chore-chart.vercel.app
+Local test running at http://localhost:3101.
+Failed: "Tick a chore done" — Dishes stayed in the list after I ticked it.
+Stopped: "Add a chore" failed its tests once, so it was blocked.
+Run stopped early.

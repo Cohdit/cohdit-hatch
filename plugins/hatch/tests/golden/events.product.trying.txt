@@ -1,0 +1,3 @@
+Local test session started.
+Local test running at http://localhost:3000.
+Passed: "Add a chore".

@@ -1,0 +1,4 @@
+{"c":"RUN_START","f":{"base":"3f2a9c1e","host":"delons-laptop","os":"mac","plugin":"0.0.1","prices":"2026-10-06","skill":"build"},"id":"2f6e04394ac8061b","r":"20261101T075000Z-delons-laptop-0001","ts":"2026-11-01T07:50:00Z","v":1}
+{"c":"PICK","f":{"branch":"item/004-scoreboard","fork":"3f2a9c1e"},"i":"ITEM-004","id":"440f017ed0e7d2bf","r":"20261101T075000Z-delons-laptop-0001","ts":"2026-11-01T07:51:00Z","v":1}
+{"c":"DISPATCH","f":{"agent":"maker","model":"claude-sonnet-5-5"},"i":"ITEM-004","id":"6f0cd9e8d8b8662b","r":"20261101T075000Z-delons-laptop-0001","ts":"2026-11-01T07:51:10Z","v":1}
+{"c":"USAGE","f":{"agent":"orchestrator","attrib":"orchestrator","models":{"claude-sonnet-5-5":{"cold1":0,"cold5":0,"cr":300000,"ctx_max":90000,"cw1":0,"cw5":50000,"in":20000,"msgs":12,"out":4000,"said":900}}},"id":"525a742cf2817a0b","r":"20261101T075000Z-delons-laptop-0001","ts":"2026-11-01T07:58:00Z","v":1}

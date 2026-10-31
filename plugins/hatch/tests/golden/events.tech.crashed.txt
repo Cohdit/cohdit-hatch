@@ -1,0 +1,4 @@
+2026-11-01T07:50:00Z  RUN_START skill=build plugin=0.0.1 host=delons-laptop os=mac base=3f2a9c1e prices=2026-10-06
+2026-11-01T07:51:00Z  PICK ITEM-004 branch=item/004-scoreboard fork=3f2a9c1e
+2026-11-01T07:51:10Z  DISPATCH maker ITEM-004 model=claude-sonnet-5-5
+2026-11-01T07:58:00Z  USAGE orchestrator - attrib=orchestrator models={"claude-sonnet-5-5":{"cold1":0,"cold5":0,"cr":300000,"ctx_max":90000,"cw1":0,"cw5":50000,"in":20000,"msgs":12,"out":4000,"said":900}}

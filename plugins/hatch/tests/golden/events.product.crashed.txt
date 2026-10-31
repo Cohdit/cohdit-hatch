@@ -1,0 +1,3 @@
+Build run started.
+Picked "Weekly scoreboard".
+Builder started on "Weekly scoreboard".

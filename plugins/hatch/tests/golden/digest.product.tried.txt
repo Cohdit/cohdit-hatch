@@ -1,0 +1,4 @@
+Tested 2 items: 1 passed, 1 failed.
+  failed    Tick a chore done — Dishes stayed in the list after I ticked it.
+Next: say "build it" to fix it.
+This run: 177k tokens ≈ $0.19 at API list price.

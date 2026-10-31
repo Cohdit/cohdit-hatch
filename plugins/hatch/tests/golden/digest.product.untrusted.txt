@@ -1,0 +1,4 @@
+Built 1 of 1 item.
+  done      Add a chore — type "Dishes", press Add: it appears in the list
+Next: say "let me try it" to test 1 item.
+This run: 1k tokens no estimate (a model has no known price).

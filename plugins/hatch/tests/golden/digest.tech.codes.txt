@@ -1,0 +1,6 @@
+Built 1 of 1 item (run 20261101T080000Z-delons-laptop-0001).
+  done      Add a chore (ITEM-001, a1b2c3d4) — type "Dishes", press Add: it appears in the list
+Push to GitHub rejected — your work is safe locally.
+Live: https://chore-chart.vercel.app
+Next: say "let me try it" to test 1 item.
+This run: 374k tokens ≈ $0.27 at API list price.

@@ -1,0 +1,8 @@
+Idea: Chore Chart
+  done       Add a chore
+  done       Tick a chore done
+  waiting    Reset on Sunday — your answer needed
+  to do      Weekly scoreboard
+Not shared yet — say "share it" when you want friends to see it.
+Claude has used about 177 thousand tokens over 1 session (roughly $0.19 at Claude's public API prices).
+Waiting on you: 2 things to try. Say "let me try it".

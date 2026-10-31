@@ -1,0 +1,6 @@
+Publish run started.
+Publish approved.
+Deploying to production…
+Deploy to production failed.
+Stopped: the deploy to vercel failed. The log is saved.
+Run stopped early.

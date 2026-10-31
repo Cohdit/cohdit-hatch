@@ -1,0 +1,27 @@
+Started building.
+  GitHub      not signed in
+You agreed that what you build is yours to answer for.
+I made a small choice for you. Say "what did you decide" to see it.
+I asked you to walk me through it.
+I read the idea back to you: 4 things to build.
+Saved your idea with 4 things to build.
+Cohdit doesn't build apps that are designed to physically hurt, threaten, stalk or harass people. This isn't something I can change or make an exception for.
+You answered a question.
+Started on "Add a chore".
+Building "Add a chore".
+Finished building "Add a chore".
+The checks passed.
+"Add a chore" is ready.
+The review found 1 thing that must change.
+Fixing and rebuilding "Add a chore".
+Done: "Add a chore".
+Set aside "Weekly scoreboard": it needs something else built first.
+Parked "Reset on Sunday" — needs you: Reset on Sunday night, or Monday morning before school?
+Noticed an idea for later while building "Add a chore".
+I couldn't save this to the shared copy — your work is safe here.
+Published.
+Live: https://chore-chart.vercel.app — send it to whoever should try it first.
+Open http://localhost:3101 to try it.
+Didn't work: "Tick a chore done" — Dishes stayed in the list after I ticked it.
+I set "Add a chore" aside: the checks failed once.
+Stopped early.

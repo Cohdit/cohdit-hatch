@@ -1,0 +1,7 @@
+{"c":"RUN_START","f":{"host":"delons-laptop","os":"mac","plugin":"0.0.1","prices":"2026-10-06","skill":"share"},"id":"17382592c582c8c1","r":"20261101T095000Z-delons-laptop-0002","ts":"2026-11-01T09:50:00Z","v":1}
+{"c":"DECIDE","f":{"choice":"live","type":"publish","who":"you"},"id":"3c3807416d77ed7e","r":"20261101T095000Z-delons-laptop-0002","ts":"2026-11-01T09:50:20Z","v":1}
+{"c":"DEPLOY","f":{"dep":"dpl_8f3k2","env":"production","state":"building","target":"vercel"},"id":"bfc9001f9a5add95","r":"20261101T095000Z-delons-laptop-0002","ts":"2026-11-01T09:50:30Z","v":1}
+{"c":"DEPLOY","f":{"dep":"dpl_8f3k2","env":"production","state":"ready","target":"vercel","url":"https://chore-chart.vercel.app"},"id":"fb43bd483fcbc8fb","r":"20261101T095000Z-delons-laptop-0002","ts":"2026-11-01T09:52:10Z","v":1}
+{"c":"URL_SHARED","f":{"env":"production","target":"vercel","url":"https://chore-chart.vercel.app"},"id":"32374a9a0eea1480","r":"20261101T095000Z-delons-laptop-0002","ts":"2026-11-01T09:52:11Z","v":1}
+{"c":"USAGE","f":{"agent":"orchestrator","attrib":"orchestrator","models":{"claude-opus-5-5":{"cold1":0,"cold5":0,"cr":150000,"ctx_max":70000,"cw1":0,"cw5":20000,"in":5000,"msgs":6,"out":2000,"said":400}}},"id":"147296d48a4f7e96","r":"20261101T095000Z-delons-laptop-0002","ts":"2026-11-01T09:52:20Z","v":1}
+{"c":"RUN_END","f":{"outcome":"ok"},"id":"e494f0713137983e","r":"20261101T095000Z-delons-laptop-0002","ts":"2026-11-01T09:52:30Z","v":1}

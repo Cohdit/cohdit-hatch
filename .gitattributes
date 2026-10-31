@@ -1,0 +1,4 @@
+# Byte-identical ledgers and golden files on every operating system: never let git rewrite line endings.
+* text=auto eol=lf
+*.png binary
+*.jpg binary

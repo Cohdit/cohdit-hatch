@@ -1,0 +1,4 @@
+Stopped 1 hour ago. I set "Add a chore" aside: the checks failed once.
+Steps: published → shared the link → opened the app → it didn't work → set aside → stopped.
+Waiting on you: 1 question. Say "status" to see it.
+Say "show me the details" for the technical view.

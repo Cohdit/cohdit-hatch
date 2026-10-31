@@ -1,0 +1,10 @@
+2026-11-01T09:00:00Z  RUN_START skill=setup plugin=0.0.1 host=delons-laptop os=mac base=- prices=2026-10-06
+2026-11-01T09:00:05Z  CHECK node            ready (20 or later)
+2026-11-01T09:00:05Z  CHECK git             ready
+2026-11-01T09:00:05Z  CHECK gh              not found; Hatch fetches its own copy into ~/.cohdit/bin
+2026-11-01T09:00:05Z  CHECK gh auth         not signed in
+2026-11-01T09:00:05Z  CHECK vercel (npx)    ready
+2026-11-01T09:00:05Z  CHECK vercel auth     signed in
+2026-11-01T09:00:05Z  CHECK secret guard    global core.hooksPath and core.excludesfile point at ~/.cohdit/guard; repo hooks are chained
+2026-11-01T09:00:05Z  CHECK hooks PATH      node reachable from hooks
+2026-11-01T09:00:07Z  RUN_END outcome=ok

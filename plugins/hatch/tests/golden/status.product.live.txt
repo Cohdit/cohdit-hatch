@@ -1,0 +1,9 @@
+Idea: Chore Chart (4 items)
+Working now: builder started on "Weekly scoreboard" (started 10 minutes ago).
+  done       Add a chore
+  done       Tick a chore done
+  held       Reset on Sunday — your decision needed
+  building   Weekly scoreboard
+Not published yet — say "share it" to deploy.
+Tokens: 0 over 1 run ≈ $0.00 at API list price.
+Waiting on you: 2 items to try. Say "let me try it".

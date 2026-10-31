@@ -1,0 +1,3 @@
+Stopped 20 minutes ago. I set "Reset on Sunday" aside: the checks failed twice.
+Steps: checks failed → builder finished → not ready → fixed and rebuilt → set aside → stopped.
+Say "show me the details" for the technical view.

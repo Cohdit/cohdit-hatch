@@ -1,0 +1,39 @@
+Started building.
+Started on "Add a chore".
+Building "Add a chore".
+The checks passed.
+Finished building "Add a chore".
+Checking "Add a chore".
+The review found nothing that must change.
+"Add a chore" passed the review.
+"Add a chore" is ready.
+Done: "Add a chore".
+Saved to the shared copy.
+Started on "Tick a chore done".
+Building "Tick a chore done".
+The checks passed.
+Finished building "Tick a chore done".
+Checking "Tick a chore done".
+The review found 1 thing that must change.
+The review found problems in "Tick a chore done".
+Fixing and rebuilding "Tick a chore done".
+Building "Tick a chore done".
+The checks passed.
+Finished building "Tick a chore done".
+"Tick a chore done" is ready.
+Done: "Tick a chore done".
+Saved to the shared copy.
+Started on "Reset on Sunday".
+Building "Reset on Sunday".
+The checks failed.
+Finished building "Reset on Sunday".
+"Reset on Sunday" didn't pass yet.
+Fixing and rebuilding "Reset on Sunday".
+Building "Reset on Sunday".
+The checks failed.
+Finished building "Reset on Sunday".
+"Reset on Sunday" didn't pass yet.
+Fixing and rebuilding "Reset on Sunday".
+Set aside "Reset on Sunday".
+I set "Reset on Sunday" aside: the checks failed twice.
+Stopped early.

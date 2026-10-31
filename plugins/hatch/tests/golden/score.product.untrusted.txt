@@ -1,0 +1,4 @@
+Runs: 1 · items done: 1 · blocked: 0 · held: 0 · published: 0
+Tokens: 1k total, 1k per item no estimate (a model has no known price); first-pass 100%; 0 fix rounds.
+Review: 0 must-fix across 0 reviews. Questions for you: 0 asked, 0 defaulted, 0 open.
+Measurements incomplete: some steps weren't recorded; 1 model has no price; 1 session never ended; 1 log line couldn't be read.

@@ -1,0 +1,6 @@
+Started publishing.
+You chose to make it live.
+Publishing…
+Published.
+Live: https://chore-chart.vercel.app — send it to whoever should try it first.
+Finished.

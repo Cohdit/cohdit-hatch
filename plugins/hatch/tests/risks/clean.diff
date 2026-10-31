@@ -1,0 +1,90 @@
+diff --git a/lib/legal-rules.ts b/lib/legal-rules.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/legal-rules.ts
+@@ -0,0 +1,14 @@
++// Every legal value lives here with where it comes from and when it was last checked.
++// FIXTURE VALUES for a test case, not real law.
++export const legalRules = {
++  entryNotice: {
++    days: 7,
++    sourceName: "Residential Tenancies Authority",
++    sourceUrl: "https://www.rta.qld.gov.au",
++    jurisdiction: "AU-QLD",
++    checkedOn: "2026-10-20",
++  },
++} as const;
++
++export const STALE_AFTER_DAYS = 180;
+diff --git a/app/api/tenants/route.ts b/app/api/tenants/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/tenants/route.ts
+@@ -0,0 +1,19 @@
++import { z } from "zod";
++import { auth } from "@/lib/auth";
++import { db } from "@/lib/db";
++
++const Query = z.object({ q: z.string().max(80).default("") }).strict();
++
++export async function GET(req: Request) {
++  const session = await auth();
++  if (!session) return new Response(null, { status: 401 });
++
++  const parsed = Query.safeParse(Object.fromEntries(new URL(req.url).searchParams));
++  if (!parsed.success) return new Response(null, { status: 400 });
++
++  const rows = await db.tenant.findMany({
++    where: { ownerId: session.userId, name: { contains: parsed.data.q } },
++    select: { id: true, name: true },
++  });
++  return Response.json(rows);
++}
+diff --git a/app/notices/actions.ts b/app/notices/actions.ts
+new file mode 100644
+--- /dev/null
++++ b/app/notices/actions.ts
+@@ -0,0 +1,26 @@
++"use server";
++import { z } from "zod";
++import { auth } from "@/lib/auth";
++import { db } from "@/lib/db";
++import { legalRules } from "@/lib/legal-rules";
++
++const Id = z.string().cuid();
++
++// Creates a draft only. The owner reviews it and sends it from the notices screen.
++export async function draftEntryNotice(tenantId: string) {
++  const session = await auth();
++  if (!session) throw new Error("unauthorised");
++  const id = Id.parse(tenantId);
++
++  const tenant = await db.tenant.findFirst({ where: { id, ownerId: session.userId } });
++  if (!tenant) throw new Error("not found");
++
++  return db.noticeDraft.create({
++    data: {
++      ownerId: session.userId,
++      tenantId: tenant.id,
++      days: legalRules.entryNotice.days,
++      ruleCheckedOn: legalRules.entryNotice.checkedOn,
++      status: "draft",
++    },
++  });
++}
+diff --git a/components/legal-note.tsx b/components/legal-note.tsx
+new file mode 100644
+--- /dev/null
++++ b/components/legal-note.tsx
+@@ -0,0 +1,10 @@
++import { legalRules } from "@/lib/legal-rules";
++
++export function LegalNote() {
++  const r = legalRules.entryNotice;
++  return (
++    <p role="note">
++      RentRoll keeps records. It is not legal advice. Notice rule last checked {r.checkedOn} from{" "}
++      <a href={r.sourceUrl}>{r.sourceName}</a>.
++    </p>
++  );
++}

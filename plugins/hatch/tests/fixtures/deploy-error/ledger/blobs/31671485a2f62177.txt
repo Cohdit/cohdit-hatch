@@ -1,0 +1,2 @@
+Error: Command "npm run build" exited with 1
+./app/page.tsx:12:5 Type error: Property 'chores' does not exist

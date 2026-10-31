@@ -1,0 +1,3 @@
+Working now: read-back: 4 items, 7 assumptions inferred, 0 open questions (started just now).
+Steps: started → asked a question → reflected the shape → asked a question → read it back.
+Run 20261101T100000Z-delons-laptop-0001, skill dream, last event 2026-11-01T10:02:00Z. Say "show me the events" for the full list.

@@ -1,0 +1,6 @@
+{"c":"RUN_START","f":{"host":"delons-laptop","os":"mac","plugin":"0.0.1","prices":"2026-10-06","skill":"try"},"id":"c22371f4efb21b31","r":"20261101T094000Z-delons-laptop-0002","ts":"2026-11-01T09:40:00Z","v":1}
+{"c":"TRY_START","f":{"items":["ITEM-001","ITEM-002"],"url":"http://localhost:3000"},"id":"20e208ab871ba4f7","r":"20261101T094000Z-delons-laptop-0002","ts":"2026-11-01T09:40:20Z","v":1}
+{"c":"TRY_RESULT","f":{"result":"pass"},"i":"ITEM-001","id":"37e29836cce4bf66","r":"20261101T094000Z-delons-laptop-0002","ts":"2026-11-01T09:44:00Z","v":1}
+{"c":"TRY_RESULT","f":{"blob":"0489eca546c371ed","result":"fail"},"i":"ITEM-002","id":"c5bac9f71c0df953","r":"20261101T094000Z-delons-laptop-0002","ts":"2026-11-01T09:45:00Z","v":1}
+{"c":"USAGE","f":{"agent":"orchestrator","attrib":"orchestrator","models":{"claude-opus-5-5":{"cold1":0,"cold5":0,"cr":150000,"ctx_max":70000,"cw1":0,"cw5":20000,"in":5000,"msgs":6,"out":2000,"said":400}}},"id":"91df35d06831a94f","r":"20261101T094000Z-delons-laptop-0002","ts":"2026-11-01T09:45:10Z","v":1}
+{"c":"RUN_END","f":{"outcome":"ok"},"id":"e34ebb3926bb34cd","r":"20261101T094000Z-delons-laptop-0002","ts":"2026-11-01T09:45:20Z","v":1}

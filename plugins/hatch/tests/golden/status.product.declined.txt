@@ -1,0 +1,8 @@
+Idea: Chore Chart (4 items)
+  tested     Add a chore
+  done       Tick a chore done
+  held       Reset on Sunday — your decision needed
+  queued     Weekly scoreboard
+Not published yet — say "share it" to deploy.
+Tokens: 1.3M over 3 runs ≈ $0.98 at API list price.
+Waiting on you: 1 item to try. Say "let me try it".

@@ -1,0 +1,3 @@
+Stopped unexpectedly 2 hours ago while the builder was working on "Weekly scoreboard" and never reported back.
+Steps: started building → started "Weekly scoreboard" → building it.
+Say "technical" for the full event list.

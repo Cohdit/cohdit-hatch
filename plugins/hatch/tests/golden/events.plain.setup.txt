@@ -1,0 +1,10 @@
+Started checking your computer.
+  Node        ready
+  Git         ready
+  GitHub      can't fetch the GitHub tool — is this computer online?
+  GitHub      not signed in
+  Vercel      tool ready
+  Vercel      signed in
+  Safety net  installed
+  Measuring   working
+Finished.

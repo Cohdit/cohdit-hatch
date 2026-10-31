@@ -1,0 +1,10 @@
+Idea: Chore Chart
+  done       Add a chore
+  to do      Tick a chore done
+  waiting    Reset on Sunday — your answer needed
+  set aside  Weekly scoreboard
+Live: https://chore-chart.vercel.app (shared 1 hour ago)
+Claude has used about 374 thousand tokens over 1 session (roughly $0.27 at Claude's public API prices).
+Waiting on you: 1 question.
+  Reset on Sunday — Reset on Sunday night, or Monday morning before school?
+Waiting on you: 1 thing to try. Say "let me try it".

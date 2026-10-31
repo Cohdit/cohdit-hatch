@@ -1,0 +1,8 @@
+Idea: ABC Friends (4 items)
+Working now: read-back: 4 items, 7 assumptions inferred, 0 open questions (started just now), run 20261101T100000Z-delons-laptop-0001.
+  queued     ITEM-001 Letter grid
+  queued     ITEM-002 Tap to hear
+  queued     ITEM-003 Animal picture
+  on device  ITEM-004 On the iPad
+Not published yet — say "share it" to deploy.
+Tokens: 0 over 1 run ≈ $0.00 at API list price. Prices of 2026-10-06.

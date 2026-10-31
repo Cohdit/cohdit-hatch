@@ -1,0 +1,5 @@
+2026-11-01T10:00:00Z  RUN_START skill=dream plugin=0.0.1 host=delons-laptop os=mac base=- prices=2026-10-06
+2026-11-01T10:00:40Z  ASK goal=walk n=1
+2026-11-01T10:01:00Z  READBACK kind=partial items=3 inferred=0 open=0
+2026-11-01T10:01:30Z  ASK goal=worked n=2
+2026-11-01T10:02:00Z  READBACK kind=full items=4 inferred=7 open=0

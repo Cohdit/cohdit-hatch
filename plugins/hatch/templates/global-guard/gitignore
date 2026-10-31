@@ -1,0 +1,38 @@
+# managed-by: cohdit-secret-guard v1
+# Global gitignore — applies to every repo on this machine (git config --global core.excludesfile)
+# Purpose: catch secret-bearing files even when a project's own .gitignore forgets them
+# (e.g. Next.js's default .gitignore covers .env*.local but NOT bare .env).
+#
+# Safe placeholder files are explicitly re-allowed below with `!` so real workflows
+# (committing .env.example) still work.
+
+# Env files of every shape: .env, .env.local, .env.production, .env.development.local, etc.
+.env
+.env.*
+*.env
+
+# Common credential/key file shapes
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+id_ecdsa
+*.crt.key
+.npmrc
+.pypirc
+.netrc
+credentials.json
+service-account*.json
+*.tfvars
+.dev.vars
+.dev.vars.*
+
+# Re-allow known-safe placeholder/template files
+!.env.example
+!.env.sample
+!.env.template
+!.env.*.example
+!.env.*.sample
+!.env.*.template

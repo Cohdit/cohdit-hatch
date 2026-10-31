@@ -1,0 +1,14 @@
+ABC Friends — for Maya, 4. Worked: she asks to play it again.
+  1 Letter grid      — open it; you see all 26 letters, big
+  2 Tap to hear      — tap a letter; you hear "A, a, alligator"
+  3 Animal picture   — tap a letter; you see the animal and its name
+  4 On the iPad      — open it on the iPad; the letters fill the screen (checked when you try it)
+Not in the first version: scores, levels, remembering what she has done.
+I'm assuming: nothing is kept about anyone, no money, no emails or texts, no advice of the health, legal or money kind, no files or photos going in, nobody sees anyone else's input.
+Anything in what I'm assuming that's wrong?
+Children use it, so a build rule is attached: asks for a parent when someone under 13 signs up.
+Decisions I took: design: name_then_sound_then_animal.
+Open questions: none.
+Called ABC Friends, in a folder called abc-friends; change either by saying so.
+It'll live on a free plan meant for personal use; say "it's a business" if that changes.
+Say yes to agree that what you build is yours to answer for (terms, version 1; say "read me the terms").

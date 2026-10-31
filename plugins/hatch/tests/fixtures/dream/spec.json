@@ -1,0 +1,91 @@
+{
+ "agreed": false,
+ "anchor": "she asks to play it again",
+ "decisions": [
+  {
+   "choice": "name_then_sound_then_animal",
+   "type": "design",
+   "who": "hatch"
+  }
+ ],
+ "for": "Maya, 4",
+ "gates": {
+  "advice": {
+   "source": "inferred",
+   "value": false
+  },
+  "children": {
+   "source": "said",
+   "value": true
+  },
+  "messaging": {
+   "source": "inferred",
+   "value": false
+  },
+  "payments": {
+   "source": "inferred",
+   "value": false
+  },
+  "personal_details": {
+   "source": "inferred",
+   "value": false
+  },
+  "uploads": {
+   "source": "inferred",
+   "value": false
+  },
+  "user_content": {
+   "source": "inferred",
+   "value": false
+  }
+ },
+ "items": [
+  {
+   "criteria": [
+    "open it; you see all 26 letters, big"
+   ],
+   "id": "ITEM-001",
+   "source": "said",
+   "status": "queued",
+   "title": "Letter grid"
+  },
+  {
+   "criteria": [
+    "tap a letter; you hear \"A, a, alligator\""
+   ],
+   "id": "ITEM-002",
+   "source": "said",
+   "status": "queued",
+   "title": "Tap to hear"
+  },
+  {
+   "criteria": [
+    "tap a letter; you see the animal and its name"
+   ],
+   "id": "ITEM-003",
+   "source": "said",
+   "status": "queued",
+   "title": "Animal picture"
+  },
+  {
+   "criteria": [
+    "open it on the iPad; the letters fill the screen"
+   ],
+   "device": true,
+   "id": "ITEM-004",
+   "source": "inferred",
+   "status": "queued",
+   "title": "On the iPad"
+  }
+ ],
+ "name": "ABC Friends",
+ "open_questions": [],
+ "out": [
+  "scores",
+  "levels",
+  "remembering what she has done"
+ ],
+ "shape": "use",
+ "slug": "abc-friends",
+ "v": 1
+}

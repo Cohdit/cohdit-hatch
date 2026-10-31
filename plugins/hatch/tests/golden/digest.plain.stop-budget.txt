@@ -1,0 +1,6 @@
+Built 1 of 1 thing.
+  done      Add a chore — type "Dishes", press Add: it appears in the list
+I stopped because this run reached its limit: about 1.3 million tokens, roughly $0.98 at Claude's public API prices.
+Saved in your GitHub account as chore-chart.
+Next: say "let me try it" and check this one thing yourself.
+This run used about 1.3 million tokens (roughly $0.98 at Claude's public API prices).

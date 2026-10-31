@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# managed-by: cohdit-secret-guard v2
+# Global pre-push hook — backstop in case a commit with a secret ever gets past
+# pre-commit (e.g. committed with --no-verify, or committed by a tool that bypasses hooks).
+# Hands over to the repo's own .git/hooks/pre-push afterwards, with the same stdin.
+set -euo pipefail
+
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$HOOK_DIR/_env-guard.sh"
+
+zero="0000000000000000000000000000000000000000"
+failed=0
+input="$(cat)"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "${local_sha:-}" ] && continue
+  # Deleting a remote ref — nothing to scan.
+  if [ "$local_sha" = "$zero" ]; then
+    continue
+  fi
+
+  if [ "$remote_sha" = "$zero" ]; then
+    # New branch/tag on the remote: scan the full tree being introduced rather than
+    # every historical commit (avoids re-flagging things already safely elsewhere).
+    range_paths_cmd=(git ls-tree -r --name-only "$local_sha")
+    diff_range="$(git hash-object -t tree /dev/null)..$local_sha"
+  else
+    range_paths_cmd=(git diff --name-only --diff-filter=ACMR "$remote_sha" "$local_sha")
+    diff_range="$remote_sha..$local_sha"
+  fi
+
+  paths=$("${range_paths_cmd[@]}")
+  if [ -n "$paths" ] && ! echo "$paths" | check_paths "pre-push ($local_ref)"; then
+    failed=1
+  fi
+  if ! check_content "$diff_range"; then
+    failed=1
+  fi
+done <<< "$input"
+
+if [ $failed -ne 0 ]; then exit $failed; fi
+
+repo_hook="$(git rev-parse --git-common-dir)/hooks/pre-push"
+if [ -x "$repo_hook" ]; then
+  printf '%s\n' "$input" | "$repo_hook" "$@"
+  exit $?
+fi
+exit 0

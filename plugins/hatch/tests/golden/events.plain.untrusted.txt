@@ -1,0 +1,5 @@
+Started building.
+Started on "Add a chore".
+Building "Add a chore".
+Finished building "Add a chore".
+Done: "Add a chore".

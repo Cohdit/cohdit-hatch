@@ -1,0 +1,3 @@
+Built 0 of 1 item.
+  open      Weekly scoreboard
+This run: 374k tokens ≈ $0.27 at API list price.

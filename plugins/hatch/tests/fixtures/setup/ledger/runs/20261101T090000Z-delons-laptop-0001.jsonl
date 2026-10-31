@@ -1,0 +1,10 @@
+{"c":"RUN_START","f":{"host":"delons-laptop","os":"mac","plugin":"0.0.1","prices":"2026-10-06","skill":"setup"},"id":"ceeb711fe76041ef","r":"20261101T090000Z-delons-laptop-0001","ts":"2026-11-01T09:00:00Z","v":1}
+{"c":"CHECK","f":{"name":"node","state":"ok"},"id":"ae61ddf014fc185d","r":"20261101T090000Z-delons-laptop-0001","ts":"2026-11-01T09:00:05Z","v":1}
+{"c":"CHECK","f":{"name":"git","state":"ok"},"id":"bd1c8d9d4b5e16cc","r":"20261101T090000Z-delons-laptop-0001","ts":"2026-11-01T09:00:05Z","v":1}
+{"c":"CHECK","f":{"name":"gh","state":"missing"},"id":"9badb61aa4294262","r":"20261101T090000Z-delons-laptop-0001","ts":"2026-11-01T09:00:05Z","v":1}
+{"c":"CHECK","f":{"name":"gh_auth","state":"unauth"},"id":"776ccbf8f0be497c","r":"20261101T090000Z-delons-laptop-0001","ts":"2026-11-01T09:00:05Z","v":1}
+{"c":"CHECK","f":{"name":"vercel","state":"ok"},"id":"e0922c03b64bcf27","r":"20261101T090000Z-delons-laptop-0001","ts":"2026-11-01T09:00:05Z","v":1}
+{"c":"CHECK","f":{"name":"vercel_auth","state":"ok"},"id":"9267c8abc228ec66","r":"20261101T090000Z-delons-laptop-0001","ts":"2026-11-01T09:00:05Z","v":1}
+{"c":"CHECK","f":{"name":"guard","state":"ok"},"id":"0f652e33d76a7575","r":"20261101T090000Z-delons-laptop-0001","ts":"2026-11-01T09:00:05Z","v":1}
+{"c":"CHECK","f":{"name":"hook_path","state":"ok"},"id":"f0ed732aaa521ce9","r":"20261101T090000Z-delons-laptop-0001","ts":"2026-11-01T09:00:05Z","v":1}
+{"c":"RUN_END","f":{"outcome":"ok"},"id":"e60617ae098b0d0e","r":"20261101T090000Z-delons-laptop-0001","ts":"2026-11-01T09:00:07Z","v":1}

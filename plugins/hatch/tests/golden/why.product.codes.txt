@@ -1,0 +1,4 @@
+Stopped 1 hour ago. Stopped: "Add a chore" failed its tests once, so it was blocked.
+Steps: published → shared the link → opened the app → it didn't work → set aside → stopped.
+Held for you: 1 question. Say "status" to see it.
+Say "technical" for the full event list.

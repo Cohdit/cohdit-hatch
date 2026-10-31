@@ -1,0 +1,8 @@
+Idea: Chore Chart (5 items)
+  tested     Add a chore
+  queued     Tick a chore done
+  held       Reset on Sunday — your decision needed
+  queued     Weekly scoreboard
+  on device  On the iPad
+Live: https://chore-chart.vercel.app (shared 7 minutes ago)
+Tokens: 2.4M over 3 runs ≈ $1.90 at API list price.

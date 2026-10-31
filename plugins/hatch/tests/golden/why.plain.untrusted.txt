@@ -1,0 +1,3 @@
+Stopped unexpectedly 3 days ago right after finishing "Add a chore".
+Steps: started building → started "Add a chore" → building it → builder finished → done.
+Say "show me the details" for the technical view.

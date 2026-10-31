@@ -1,0 +1,3 @@
+Stopped 16 minutes ago. Publishing failed, so I stopped. The details are saved.
+Steps: started publishing → you decided → publishing → publishing failed → stopped.
+Say "show me the details" for the technical view.

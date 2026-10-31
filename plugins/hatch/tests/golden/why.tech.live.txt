@@ -1,0 +1,3 @@
+Working now: builder started on "Weekly scoreboard" (started 10 minutes ago).
+Steps: started building → started "Weekly scoreboard" → building it.
+Run 20261101T095000Z-delons-laptop-0001, skill build, last event 2026-11-01T09:57:00Z. Say "show me the events" for the full list.

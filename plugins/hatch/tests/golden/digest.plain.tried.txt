@@ -1,0 +1,4 @@
+Tried 2 things: 1 worked, 1 didn't.
+  didn't    Tick a chore done — Dishes stayed in the list after I ticked it.
+Next: say "build it" and I'll fix it.
+This run used about 177 thousand tokens (roughly $0.19 at Claude's public API prices).

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "hatch",
+  "displayName": "Hatch",
+  "version": "0.0.10",
+  "description": "Hatch the idea you have been sitting on: say it in plain words, answer a few questions, have it built, try it, share it at a free link. For people who don't write software. Seven things you can say: set me up, I have an idea, build it, let me try it, share it, fix the bugs, status. Stores no passwords; what you build is yours.",
+  "author": {
+    "name": "Cohdit",
+    "email": "delon@cohdit.com"
+  },
+  "keywords": ["idea", "interview", "build", "deploy", "vercel", "github", "no-code", "ledger", "deterministic"]
+}

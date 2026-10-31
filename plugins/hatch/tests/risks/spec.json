@@ -1,0 +1,9 @@
+{
+  "name": "RentRoll",
+  "pitch": "A landlord keeps tenant details, sends entry notices and collects identity documents.",
+  "gates": {"personal_details": true, "uploads": true, "messaging": true, "payments": false},
+  "domains": ["rental_property"],
+  "regions": ["AU-QLD"],
+  "data_classes": ["names", "emails", "phones", "identity_documents", "licence_numbers"],
+  "signals": ["always", "accounts", "database", "personal_details", "uploads", "messaging", "regulated"]
+}

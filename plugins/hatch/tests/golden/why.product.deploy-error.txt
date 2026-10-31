@@ -1,0 +1,3 @@
+Stopped 16 minutes ago. Stopped: the deploy to vercel failed. The log is saved.
+Steps: started publishing → you decided → publishing → publishing failed → stopped.
+Say "technical" for the full event list.

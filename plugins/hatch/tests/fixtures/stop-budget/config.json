@@ -1,0 +1,9 @@
+{
+  "v": 1,
+  "verify": "npm test && npm run build",
+  "connectors": {
+    "github": {
+      "repo": "delon/chore-chart"
+    }
+  }
+}

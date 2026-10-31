@@ -1,0 +1,7 @@
+Idea: Chore Chart (4 items)
+  tested     ITEM-001 Add a chore
+  queued     ITEM-002 Tick a chore done
+  held       ITEM-003 Reset on Sunday — your decision needed
+  queued     ITEM-004 Weekly scoreboard
+Not published yet — say "share it" to deploy.
+Tokens: 2.4M over 2 runs ≈ $1.90 at API list price. Prices of 2026-10-06.

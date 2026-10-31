@@ -1,0 +1,5 @@
+Started a test on your computer.
+Open http://localhost:3000 to try it.
+Worked: "Add a chore".
+Didn't work: "Tick a chore done" — Dishes stayed in the list after I ticked it.
+Finished.

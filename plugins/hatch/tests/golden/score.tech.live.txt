@@ -1,0 +1,11 @@
+scorecard 2000-01-01 → 2026-11-01 · 1 run(s) · 0 done · 0 blocked · 0 held · 0 shared
+UNTRUSTED (no items closed in this window) — the numbers below undercount
+tokens 0  (input 0 · output 0 · cache read 0 · cache write 0)  ≈ $0.00 at API list price of 2026-10-06
+1 tokens per done item   n/a  (no usage)  no estimate (a model has no known price)
+2 orchestrator share     n/a  (of tokens; target < 25%)
+3 rework                 first-pass n/a · n/a of item tokens after first round · rounds 0
+4 review yield           checker 0 must-fix / 0 dispatches
+5 owner load             n/a questions per item · asked 0 · defaulted 0 · done→shared median n/a · 0 waiting
+6 tokens per shared link n/a
+7 said to you            ≈0 words/run  (0 chars)
+-- digest: n/a tokens/item no estimate (a model has no known price) · orchestrator n/a · first-pass n/a · n/a questions/item

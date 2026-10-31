@@ -1,0 +1,6 @@
+{"c":"RUN_START","f":{"host":"delons-laptop","os":"mac","plugin":"0.0.1","prices":"2026-10-06","skill":"dream"},"id":"bd2dc3fdee241751","r":"20261101T093000Z-delons-laptop-0001","ts":"2026-11-01T09:30:00Z","v":1}
+{"c":"DECIDE","f":{"choice":"accepted","type":"terms","v":1,"who":"you"},"id":"b51007d5824f8302","r":"20261101T093000Z-delons-laptop-0001","ts":"2026-11-01T09:30:40Z","v":1}
+{"c":"DECIDE","f":{"choice":"own_free","type":"hosting","who":"you"},"id":"1d04d5056395341d","r":"20261101T093000Z-delons-laptop-0001","ts":"2026-11-01T09:31:00Z","v":1}
+{"c":"REFUSE","f":{"category":"harm"},"id":"1b80019569ceb499","r":"20261101T093000Z-delons-laptop-0001","ts":"2026-11-01T09:34:00Z","v":1}
+{"c":"STOP","f":{"cause":"refused"},"id":"fa7faa3ef74ea9ba","r":"20261101T093000Z-delons-laptop-0001","ts":"2026-11-01T09:34:01Z","v":1}
+{"c":"RUN_END","f":{"outcome":"stopped"},"id":"291b61932d16287c","r":"20261101T093000Z-delons-laptop-0001","ts":"2026-11-01T09:34:02Z","v":1}

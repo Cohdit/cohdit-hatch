@@ -1,0 +1,3 @@
+Started a test on your computer.
+Open http://localhost:3000 to try it.
+Worked: "Add a chore".

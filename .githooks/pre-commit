@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# This repo is public: nothing private may be committed. Turned on once per clone with
+#   git config core.hooksPath .githooks
+# It runs the global hook first (if one is set), so the secret guard keeps working.
+set -euo pipefail
+g="$(git config --global core.hooksPath 2>/dev/null || true)"; g="${g/#\~/$HOME}"
+if [ -n "$g" ] && [ -x "$g/pre-commit" ] && [ "$(cd "$g" && pwd)" != "$(pwd)/.githooks" ]; then "$g/pre-commit" "$@"; fi
+node scripts/ip-guard.js --staged

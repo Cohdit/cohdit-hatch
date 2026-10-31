@@ -1,0 +1,10 @@
+Idea: Chore Chart (4 items)
+  done       Add a chore
+  queued     Tick a chore done
+  held       Reset on Sunday — your decision needed
+  blocked    Weekly scoreboard
+Live: https://chore-chart.vercel.app (shared 1 hour ago)
+Tokens: 374k over 1 run ≈ $0.27 at API list price.
+Held for you: 1 question.
+  Reset on Sunday — Reset on Sunday night, or Monday morning before school?
+Waiting on you: 1 item to try. Say "let me try it".

@@ -1,0 +1,41 @@
+Build run started.
+Picked "Add a chore".
+Builder started on "Add a chore".
+Tests and build passed (48s).
+Builder finished "Add a chore".
+Risk standard: logic,tests.
+Reviewer started on "Add a chore".
+Review: nothing to fix, 2 nits.
+Review passed "Add a chore".
+"Add a chore" passed the gate.
+Done: "Add a chore" merged.
+Pushed to GitHub.
+Picked "Tick a chore done".
+Builder started on "Tick a chore done".
+Tests and build passed (48s).
+Builder finished "Tick a chore done".
+Risk standard: logic,tests.
+Reviewer started on "Tick a chore done".
+Review: 1 thing to fix, 2 nits.
+Review failed "Tick a chore done".
+Fix round on "Tick a chore done" after review.
+Builder started on "Tick a chore done".
+Tests and build passed (51s).
+Builder finished "Tick a chore done".
+"Tick a chore done" passed the gate.
+Done: "Tick a chore done" merged.
+Pushed to GitHub.
+Picked "Reset on Sunday".
+Builder started on "Reset on Sunday".
+Tests or build failed (62s).
+Builder finished "Reset on Sunday".
+"Reset on Sunday" failed the gate.
+Fix round on "Reset on Sunday" after the gate failed.
+Builder started on "Reset on Sunday".
+Tests or build failed (59s).
+Builder finished "Reset on Sunday".
+"Reset on Sunday" failed the gate.
+Fix round on "Reset on Sunday" after the gate failed.
+Blocked "Reset on Sunday".
+Stopped: "Reset on Sunday" failed its tests twice, so it was blocked.
+Run stopped early.

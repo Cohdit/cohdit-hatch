@@ -1,0 +1,3 @@
+Stopped unexpectedly 3 days ago right after "Add a chore" was done.
+Steps: started building → started "Add a chore" → building it → builder finished → done.
+Run 20261029T090000Z-delons-laptop-0001, skill build, last event 2026-10-29T09:07:00Z. Say "show me the events" for the full list.

@@ -1,0 +1,6 @@
+Checking your computer…
+  Node        ready
+  Git         ready
+  GitHub      can't fetch the GitHub tool — is this computer online?
+  Vercel      signed in
+2 items to fix; one at a time.

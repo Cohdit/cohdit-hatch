@@ -1,0 +1,2 @@
+  1 Add a chore — type "Dishes", press Add: it appears in the list
+Say "let me try it" to run it locally.

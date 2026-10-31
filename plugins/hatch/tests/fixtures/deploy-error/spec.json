@@ -1,0 +1,84 @@
+{
+ "anchor": "Both kids have ticked a chore on their own phone by next Sunday.",
+ "decisions": [
+  {
+   "a": "a parent",
+   "n": 1,
+   "q": "Who can reset the week?"
+  }
+ ],
+ "gates": {
+  "advice": false,
+  "children": false,
+  "messaging": false,
+  "payments": false,
+  "personal_details": false,
+  "uploads": false,
+  "user_content": true
+ },
+ "in": [
+  "add a chore",
+  "tick it done",
+  "weekly scoreboard",
+  "reset on Sunday",
+  "share link"
+ ],
+ "items": [
+  {
+   "criteria": [
+    "type \"Dishes\", press Add: it appears in the list"
+   ],
+   "depends": [],
+   "id": "ITEM-001",
+   "status": "done",
+   "title": "Add a chore"
+  },
+  {
+   "criteria": [
+    "tick Dishes: it moves under Done"
+   ],
+   "depends": [
+    "ITEM-001"
+   ],
+   "id": "ITEM-002",
+   "status": "done",
+   "title": "Tick a chore done"
+  },
+  {
+   "criteria": [
+    "on Sunday night the list is empty again"
+   ],
+   "depends": [
+    "ITEM-002"
+   ],
+   "id": "ITEM-003",
+   "status": "held",
+   "title": "Reset on Sunday"
+  },
+  {
+   "criteria": [
+    "the top of the page shows who ticked most this week"
+   ],
+   "depends": [
+    "ITEM-002"
+   ],
+   "id": "ITEM-004",
+   "status": "queued",
+   "title": "Weekly scoreboard"
+  }
+ ],
+ "name": "Chore Chart",
+ "open_questions": [
+  "What happens to unticked chores on Sunday?"
+ ],
+ "out": [
+  "rewards or money",
+  "sign-in for kids"
+ ],
+ "pitch": "A shared list where the kids tick off chores and see who's ahead this week.",
+ "rails": [
+  "user_content"
+ ],
+ "terms_v": 1,
+ "v": 1
+}

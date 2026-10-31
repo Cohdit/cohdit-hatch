@@ -1,0 +1,4 @@
+Stopped 1 hour ago. Stopped: "Add a chore" failed its tests once, so it was blocked.
+Steps: published → shared the link → opened the app → it didn't work → set aside → stopped.
+Held for you: 1 question. Say "status" to see it. (ITEM-003)
+Run 20261101T080000Z-delons-laptop-0001, skill build, last event 2026-11-01T08:28:00Z. Say "show me the events" for the full list.
