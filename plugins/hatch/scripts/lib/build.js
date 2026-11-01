@@ -277,7 +277,7 @@ function saveActive(dir, cur) {
 /** Does this run belong to a session that is still at work? */
 function isLive(cur) {
   const last = ml.parseTs(cur.beat || cur.started).getTime();
-  return (Date.now() - last) / 60000 < LIVE_MIN;
+  return (ml.parseTs(ml.utcNow()).getTime() - last) / 60000 < LIVE_MIN;   // Hatch's clock, which tests pin
 }
 
 /** The usage hook finds the working copy that is building by the session that made the call, so two

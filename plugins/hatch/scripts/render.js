@@ -179,7 +179,7 @@ class Ctx {
   constructor(a) {
     this.level = a.level;
     this.w = WORDS[this.level === 'tech' ? 'product' : this.level];
-    this.now = a.now ? ml.parseTs(a.now) : new Date();
+    this.now = ml.parseTs(a.now || ml.utcNow());
     this.cohdit = a.cohdit;
     this.table = cz.load();
     this.rails = cz.loadRails();
