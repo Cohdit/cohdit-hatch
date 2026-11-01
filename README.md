@@ -12,6 +12,7 @@ puts it at a free link you can send to anyone. It can always tell you what it is
 
 You need:
 
+- a Hatch subscription from [cohdit.com](https://www.cohdit.com), for your access key
 - an email address
 - a Claude plan that includes Claude Code: Pro, Max, Team or Enterprise. The free plan does not.
 - a computer you can install things on, online
@@ -38,7 +39,7 @@ Open Claude Code and paste this line:
 Claude Code asks two things. First it shows where it is getting Hatch from; say yes. Then it asks how
 to install; choose **Install for you**. When it says Hatch is active, type here: **set me up**
 
-Hatch checks what your computer can do and walks you through anything missing, one thing at a time.
+Hatch asks for your access key first; paste it from your welcome page. Then it checks what your computer can do and walks you through anything missing, one thing at a time.
 
 <details>
 <summary>If that line is not recognised</summary>
@@ -78,11 +79,17 @@ time, so what Hatch tells you is something you can rely on and repeat.
 
 ## What it costs
 
-Hatch is free. The recommended place to put your app is free. The one thing Hatch uses up is your own
-Claude plan. After every run Hatch tells you how many tokens it used, and what those tokens would come to
-at Claude's public API prices, so you can see where the figure comes from. That dollar figure is an
-estimate, not a bill: what you actually pay depends on your Claude plan, not on Hatch. Each run stops at a
-limit. The terms say the rest in plain words: you own what you build. Say "read me the terms" any time, or read `plugins/hatch/data/TERMS.md`.
+Hatch is $40 a month: the playbooks, every update, and help from a person. Subscribe at
+[cohdit.com](https://www.cohdit.com).
+
+Hatch runs on your own Claude plan, paid to Anthropic. After every run Hatch shows the tokens it used and
+what they would cost at Claude's public API prices. That figure is an estimate, not a bill. Each run stops
+at a limit.
+
+The recommended place to put your app is free. A web address, email or AI features are paid to those
+providers.
+
+You own what you build. Say "read me the terms" any time.
 
 Two kinds of idea Hatch will not build, and will say so once, plainly and finally: anything designed to
 physically hurt, threaten, stalk or harass people, and anything that sexualises or exploits children.
