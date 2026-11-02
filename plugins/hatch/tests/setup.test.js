@@ -45,12 +45,19 @@ test('doctor: nothing installed → every tool missing, in walk order, node firs
 });
 
 test('doctor: an old node is "old", a signed-out tool is "unauth", not "missing"', () => {
-  const run = doc.fakeRun(probes(H.mkrepo(), {
+  const file = probes(H.mkrepo(), {
     'node --version': { code: 0, out: 'v18.20.0\n' }, 'gh --version': OK, 'gh auth status': { code: 1 },
-  }));
-  assert.equal(doc.probe('node', run), 'old');
-  assert.equal(doc.probe('gh_auth', run), 'unauth');
-  assert.equal(doc.probe('vercel_auth', run), 'missing');
+  });
+  const run = doc.fakeRun(file);
+  const was = process.env.COHDIT_PROBES;
+  process.env.COHDIT_PROBES = file;                  // probe names gh plainly, not this machine's gh path
+  try {
+    assert.equal(doc.probe('node', run), 'old');
+    assert.equal(doc.probe('gh_auth', run), 'unauth');
+    assert.equal(doc.probe('vercel_auth', run), 'missing');
+  } finally {
+    if (was === undefined) delete process.env.COHDIT_PROBES; else process.env.COHDIT_PROBES = was;
+  }
 });
 
 test('setup on an empty machine: four plain rows, nothing about Hatch\'s own installs, node is next, exit 1', () => {
