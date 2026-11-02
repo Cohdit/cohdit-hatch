@@ -48,6 +48,9 @@ Your Claude Code is older. Paste these two lines, one at a time, waiting for the
 
 ```
 /plugin marketplace add Cohdit/cohdit-hatch
+```
+
+```
 /plugin install hatch@cohdit-hatch
 ```
 </details>
