@@ -55,7 +55,9 @@ if [ "$MV" = "$PV" ]; then ok "version $PV"; else bad "marketplace $MV != plugin
 step "fixtures are regenerable (mkfixtures.js output is byte-identical to what is committed)"
 cp -R plugins/hatch/tests/fixtures "$TMPF/before"
 node plugins/hatch/tests/mkfixtures.js >/dev/null
-if diff -r "$TMPF/before" plugins/hatch/tests/fixtures >/dev/null; then ok; else bad "fixtures drifted from mkfixtures.js"; fi
+# Files only: git cannot store the empty folders mkfixtures makes, so a fresh checkout would always differ.
+fxsum() { (cd "$1" && find . -type f -print0 | sort -z | xargs -0 cksum); }
+if [ "$(fxsum "$TMPF/before")" = "$(fxsum plugins/hatch/tests/fixtures)" ]; then ok; else bad "fixtures drifted from mkfixtures.js"; fi
 
 step "prices cover every model named in an agent or fixture"
 if needs_content; then

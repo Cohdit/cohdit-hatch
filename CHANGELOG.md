@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.11 — agreed ideas can change; maker reports are forgiven (2026-11-08)
+
+- `idea change` adds to, edits or records decisions on an agreed idea without a second yes; `idea reopen`
+  sends it back to the interview. Anything else on an agreed idea is refused with `reagree`.
+- A maker's report is normalised instead of refused: a test path may contain `[id]` and `(group)`
+  (Next.js routes), several test files keep the first, and a long decision choice becomes a short slug.
+  The brief now states these limits. Before this, a finished thing could be set aside for its report alone.
+- The fixtures check compares files, not empty folders, so it passes on a fresh checkout.
+- Content must be deployed after this release: the new playbook text calls `idea change` and `idea reopen`.
+
 ## 0.0.10 — the thin client (2026-10-31)
 
 Hatch becomes a thin plugin: its playbooks, agent briefs and data come from Cohdit at run time with the
