@@ -12,6 +12,8 @@
  *   hatch.js level [plain|product|tech] show or set how Hatch talks (~/.cohdit/settings.json)
  *   hatch.js idea new <name> [--dir d]  start an idea: folder, draft, registry; begins the dream run
  *   hatch.js idea set [--dir d] --json <patch|->
+ *   hatch.js idea change [--dir d] --json <patch|->   (agreed idea: add, edit, decisions, out, open_questions)
+ *   hatch.js idea reopen [--dir d]                    (agreed idea: back to the interview, agree again)
  *                                       record what the interview learned; prints the one-line shape so far
  *   hatch.js idea show [--dir d] [--full]
  *                                       the shape so far, or the full read-back (--full)
@@ -344,6 +346,32 @@ function cmdIdea(argv) {
       showSpec(dir, true);
       return 0;
     }
+    if (sub === 'change' || sub === 'reopen') {
+      const spec = sp.load(dir);
+      const local = sp.readLocal(dir);
+      const run = newRunId(path.join(cd, 'ledger', 'runs'), ml.utcNow());
+      const events = [['RUN_START', runStart('dream')]];
+      if (sub === 'change') {
+        const res = sp.applyChange(spec, readPatch(rest), sp.loadInterview());
+        events.push(['DECIDE', { type: 'scope', choice: 'changed', who: 'you' }]);
+        events.push(['SPEC', { items: spec.items.length, gates_yes: (spec.rails || []).length, held: spec.open_questions.length }]);
+        for (const id of res.added) hint('added', id);
+        for (const id of res.edited) hint('edited', id);
+        hint('next', 'build');
+      } else {
+        if (!spec.agreed) throw new sp.Invalid('the idea is not agreed yet; keep going with idea set');
+        if (spec.refused) throw new sp.Invalid('refused: ' + spec.refused);
+        spec.agreed = false;
+        events.push(['DECIDE', { type: 'scope', choice: 'reopened', who: 'you' }]);
+        hint('next', 'agree');
+      }
+      events.push(['RUN_END', { outcome: 'ok' }]);
+      sp.save(dir, spec);
+      appendEvents(cd, run, events);
+      sp.writeLocal(dir, Object.assign(local, { dream_run: run, asked: 0, shown_items: [] }));
+      showSpec(dir, true);
+      return 0;
+    }
     if (sub === 'show') {
       showSpec(dir, !hasOpt(rest, '--full'));
       return 0;
@@ -409,7 +437,7 @@ function cmdIdea(argv) {
       hint('next', 'build');
       return 0;
     }
-    return fail('idea needs one of new, set, show, agree, refuse, terms');
+    return fail('idea needs one of new, set, change, reopen, show, agree, refuse, terms');
   } catch (e) {
     if (e instanceof sp.Invalid) {
       process.stderr.write('hatch: ' + e.message + '\n');

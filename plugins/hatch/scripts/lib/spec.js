@@ -127,9 +127,86 @@ function strList(v, what) {
   return v.map((x, i) => str(x, what + '[' + i + ']'));
 }
 
+function makeItem(it, i, id, maxCrit) {
+  if (!it || typeof it !== 'object') throw new Invalid('items[' + i + '] must be an object');
+  const crit = strList(it.criteria || [], 'items[' + i + '].criteria');
+  if (crit.length > maxCrit) throw new Invalid('items[' + i + '] has more than ' + maxCrit + ' checks');
+  const source = it.source || 'said';
+  if (!SOURCES.includes(source)) throw new Invalid('items[' + i + '].source must be said or inferred');
+  const out = { id, title: str(it.title, 'items[' + i + '].title'), criteria: crit, source, status: 'queued', lens: 'product' };
+  if (it.device) out.device = true;
+  return out;
+}
+
+function applyDecisions(spec, v) {
+  if (!Array.isArray(v)) throw new Invalid('decisions must be a list');
+  const types = cz.load().codes.DECIDE.fields.type.enum;
+  for (const d of v) {
+    if (!d || !types.includes(d.type)) throw new Invalid('decision type must be one of ' + types.join(', '));
+    if (!WHO.includes(d.who || 'hatch')) throw new Invalid('decision who must be you or hatch');
+    spec.decisions = spec.decisions.filter((x) => x.type !== d.type || (d.type === 'stack' && x.choice !== d.choice));
+    spec.decisions.push({ type: d.type, choice: str(d.choice, 'decision choice'), who: d.who || 'hatch' });
+  }
+}
+
+const CHANGE_KEYS = ['add', 'edit', 'decisions', 'out', 'open_questions'];
+const CHANGE_LOCKED_DECISIONS = ['hosting', 'terms'];   // these also write config.json and the registry: only agree does that
+
+/** A small change to an agreed idea: new things added, queued things reworded, a decision, what is out.
+ *  Anything that reshapes the whole idea (gates, shape, memory, people, a rewritten list) is refused with
+ *  `reagree`: reopen the idea and agree again. Returns { added[], edited[] }. Throws Invalid. */
+function applyChange(spec, patch, interview) {
+  if (!spec.agreed) throw new Invalid('the idea is not agreed yet; keep going with idea set');
+  if (spec.refused) throw new Invalid('refused: ' + spec.refused);
+  if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Invalid('patch must be an object');
+  const keys = Object.keys(patch);
+  if (!keys.length) throw new Invalid('nothing to change');
+  const big = keys.filter((k) => !CHANGE_KEYS.includes(k));
+  if (big.length) throw new Invalid('reagree: ' + big.join(', ') + ' changes the whole idea; reopen it and agree again');
+  if (patch.decisions && Array.isArray(patch.decisions) && patch.decisions.some((d) => d && CHANGE_LOCKED_DECISIONS.includes(d.type))) {
+    throw new Invalid('reagree: hosting and terms are settled when you agree; reopen the idea to change them');
+  }
+  const rb = (interview && interview.readback) || {};
+  const maxItems = rb.max_items || 8, maxCrit = rb.max_criteria_per_item || 3;
+  const trial = JSON.parse(JSON.stringify(spec));
+  const res = { added: [], edited: [] };
+  if (patch.edit !== undefined) {
+    if (!Array.isArray(patch.edit)) throw new Invalid('edit must be a list');
+    patch.edit.forEach((e, i) => {
+      const it = e && trial.items.find((x) => x.id === e.id);
+      if (!it) throw new Invalid('edit[' + i + '] names a thing that is not there');
+      if (it.status !== 'queued') throw new Invalid('edit[' + i + '] is already built; add a new thing instead');
+      if (e.title === undefined && e.criteria === undefined) throw new Invalid('edit[' + i + '] changes nothing');
+      if (e.title !== undefined) it.title = str(e.title, 'edit[' + i + '].title');
+      if (e.criteria !== undefined) {
+        const crit = strList(e.criteria, 'edit[' + i + '].criteria');
+        if (!crit.length || crit.length > maxCrit) throw new Invalid('edit[' + i + '] needs 1 to ' + maxCrit + ' checks');
+        it.criteria = crit;
+      }
+      res.edited.push(it.id);
+    });
+  }
+  if (patch.add !== undefined) {
+    if (!Array.isArray(patch.add)) throw new Invalid('add must be a list');
+    const own = trial.items.filter((x) => x.kind !== 'bug').length;
+    if (own + patch.add.length > maxItems) throw new Invalid('two_ideas: ' + (own + patch.add.length) + ' things is more than ' + maxItems + '; that is two ideas');
+    patch.add.forEach((it, i) => {
+      const made = makeItem(it, i, 'ITEM-' + String(trial.items.length + 1).padStart(3, '0'), maxCrit);
+      if (!made.criteria.length) throw new Invalid('add[' + i + '] needs one check: where you go, what you do, what you see');
+      trial.items.push(made);
+      res.added.push(made.id);
+    });
+  }
+  if (patch.decisions !== undefined) applyDecisions(trial, patch.decisions);
+  if (patch.out !== undefined) trial.out = strList(patch.out, 'out');
+  if (patch.open_questions !== undefined) trial.open_questions = strList(patch.open_questions, 'open_questions');
+  Object.assign(spec, trial);
+  return res;
+}
+
 /** Apply what the interview learned. Returns the goals it says were asked. Throws Invalid. */
 function applyPatch(spec, patch, interview) {
-  if (spec.agreed) throw new Invalid('the idea is agreed; say "add to my idea" to start a change');
+  if (spec.agreed) throw new Invalid('the idea is agreed; a small change goes through idea change, a big one through idea reopen');
   if (!patch || typeof patch !== 'object') throw new Invalid('patch must be an object');
   const rb = (interview && interview.readback) || {};
   const maxItems = rb.max_items || 8, maxCrit = rb.max_criteria_per_item || 3;
@@ -149,16 +226,7 @@ function applyPatch(spec, patch, interview) {
       case 'items': {
         if (!Array.isArray(v)) throw new Invalid('items must be a list');
         if (v.length > maxItems) throw new Invalid('two_ideas: ' + v.length + ' things is more than ' + maxItems + '; that is two ideas');
-        spec.items = v.map((it, i) => {
-          if (!it || typeof it !== 'object') throw new Invalid('items[' + i + '] must be an object');
-          const crit = strList(it.criteria || [], 'items[' + i + '].criteria');
-          if (crit.length > maxCrit) throw new Invalid('items[' + i + '] has more than ' + maxCrit + ' checks');
-          const source = it.source || 'said';
-          if (!SOURCES.includes(source)) throw new Invalid('items[' + i + '].source must be said or inferred');
-          const out = { id: 'ITEM-' + String(i + 1).padStart(3, '0'), title: str(it.title, 'items[' + i + '].title'), criteria: crit, source, status: 'queued', lens: 'product' };
-          if (it.device) out.device = true;
-          return out;
-        });
+        spec.items = v.map((it, i) => makeItem(it, i, 'ITEM-' + String(i + 1).padStart(3, '0'), maxCrit));
         break;
       }
       case 'gates': {
@@ -174,14 +242,7 @@ function applyPatch(spec, patch, interview) {
         break;
       }
       case 'decisions': {
-        if (!Array.isArray(v)) throw new Invalid('decisions must be a list');
-        const types = cz.load().codes.DECIDE.fields.type.enum;
-        for (const d of v) {
-          if (!d || !types.includes(d.type)) throw new Invalid('decision type must be one of ' + types.join(', '));
-          if (!WHO.includes(d.who || 'hatch')) throw new Invalid('decision who must be you or hatch');
-          spec.decisions = spec.decisions.filter((x) => x.type !== d.type || (d.type === 'stack' && x.choice !== d.choice));
-          spec.decisions.push({ type: d.type, choice: str(d.choice, 'decision choice'), who: d.who || 'hatch' });
-        }
+        applyDecisions(spec, v);
         break;
       }
       case 'people': {
@@ -256,7 +317,7 @@ function railsFor(spec) {
 }
 
 module.exports = {
-  Invalid, SOURCES, SHAPES,
+  Invalid, SOURCES, SHAPES, applyChange,
   loadInterview, loadStack, loadHosting, terms, slugify, homeDir, cohditDir, specPath, load, save, readLocal, writeLocal,
   registry, saveRegistry, newProject, findProject, applyPatch, addBug, agreeProblems, checkStack, railsFor,
 };

@@ -15,7 +15,8 @@ const VIEWS = ['status', 'why', 'digest', 'events', 'score', 'spec', 'checklist'
 const LEVELS = ['plain', 'product', 'tech'];
 const UPDATE = process.env.UPDATE_GOLDEN === '1';
 const fx = (name) => path.join(H.T, 'fixtures', name);
-const R = (view, name, lvl, ...extra) => H.run('render.js', [view, '--level', lvl, '--cohdit', fx(name), '--now', H.NOW, ...extra]);
+const HOME = H.tmpdir();   // an empty home: a golden never reads the person's own settings (terms agreed, level)
+const R = (view, name, lvl, ...extra) => H.run('render.js', [view, '--level', lvl, '--cohdit', fx(name), '--now', H.NOW, ...extra], { env: { COHDIT_HOME: HOME } });
 const sha = (s) => crypto.createHash('sha1').update(s).digest('hex');
 
 // How much a person reads per view, at most. Events are a list and exempt. A golden that grows past
