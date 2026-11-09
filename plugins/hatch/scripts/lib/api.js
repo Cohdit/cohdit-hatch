@@ -54,6 +54,7 @@ const MESSAGES = {
   // Not yet worded in the contract.
   wrong_plan: 'Your Hatch plan does not include this. Write to delon@cohdit.com.',
   not_found: 'Hatch is missing a part it needs. Update Hatch, or write to delon@cohdit.com.',
+  update_required: 'This part of Hatch needs a newer version. Update Hatch, then try again.',
 };
 
 class HatchError extends Error {
@@ -115,6 +116,8 @@ function get(url, key, ms) {
   const headers = { Authorization: 'Bearer ' + key };
   const machine = machineId();
   if (machine) headers['X-Hatch-Machine'] = machine;
+  const version = pluginVersion();
+  if (version) headers['X-Hatch-Plugin'] = version;
   return new Promise((resolve, reject) => {
     const req = lib.get(url, { headers }, (res) => {
       const chunks = [];
@@ -125,6 +128,18 @@ function get(url, key, ms) {
     const timer = setTimeout(() => req.destroy(new Error('timeout')), ms || limits.slow);   // whole request, not idle time
     req.on('error', (e) => { clearTimeout(timer); reject(e); });
   });
+}
+
+/** This plugin's version, sent so the server can keep a newer playbook from an older plugin. */
+function pluginVersion() {
+  try { return JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', '.claude-plugin', 'plugin.json'), 'utf8')).version || ''; } catch (e) { return ''; }
+}
+
+/** A 200 that cannot be right (empty, or data that is not JSON) is treated like Cohdit not answering: the cached copy stays. */
+function sound(kind, name, text) {
+  if (!text || !text.trim()) return false;
+  if (kind === 'data' && !MARKDOWN_DATA.includes(name)) { try { JSON.parse(text); } catch (e) { return false; } }
+  return true;
 }
 
 function markDown() {
@@ -151,7 +166,13 @@ function writeCache(file, text) {
 /** Network (or dev dir) only, no cache read: the answer of the server for this key. */
 async function request(kind, name, key, ms) {
   const res = await get(base() + '/' + kind + '/' + name, key, ms);
-  if (res.status === 200) return res.body;
+  if (res.status === 200) {
+    if (sound(kind, name, res.body)) return res.body;
+    const bad = new Error('unsound content');
+    bad.retryable = true;
+    throw bad;
+  }
+  if (res.status === 426) throw new HatchError('update_required');
   if (res.status === 401) throw new HatchError('bad_key');
   if (res.status === 403) {
     const code = errorCode(res);
@@ -179,6 +200,7 @@ async function fetchContent(kind, name) {
     text = await request(kind, name, key, stale ? limits.quick : limits.slow);
   } catch (e) {
     if (e instanceof HatchError) {
+      if (e.code === 'update_required' && stale) return fs.readFileSync(file, 'utf8');   // the older copy still suits this plugin
       if (FORBIDDEN.includes(e.code)) fs.rmSync(cacheDir(), { recursive: true, force: true });
       throw e;
     }

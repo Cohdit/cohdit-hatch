@@ -1,0 +1,19 @@
+{
+  "configVersion": 24,
+  "mode": "branch",
+  "operator": "technical",
+  "verify": "bash scripts/check.sh",
+  "width": 1,
+  "sweepMax": 2,
+  "lensDimensions": ["SCOPE", "TESTS", "SECRETS", "ROOT-CAUSE", "REUSE"],
+  "budget": null,
+  "gateSkipPaths": ["tasks/**"],
+  "integrationOwned": [],
+  "pushBranch": null,
+  "autoPush": true,
+
+  "activeFeature": null,
+  "featureWipLimit": 1,
+  "backlogSizeWarnKB": 150,
+  "archiveDoneAfter": 50
+}
