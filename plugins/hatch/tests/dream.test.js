@@ -122,6 +122,56 @@ test('agree: terms, hosting as Hatch\'s choice, scope, SPEC; the second idea on 
   assert.match(off.err, /^problem=not on my list: rails$/m);
 });
 
+test('change: an agreed idea takes small changes (add, edit queued, decisions, out) and refuses big ones; reopen goes back to the interview', () => {
+  const h = home();
+  const dir = newIdea(h, 'Changeable');
+  idea(h, ['set', '--dir', dir, '--json', JSON.stringify({ items: ITEMS, gates: GATES })]);
+  assert.equal(idea(h, ['change', '--dir', dir, '--json', '{"out":["x"]}']).code, 64, 'not agreed yet');
+  assert.equal(idea(h, ['agree', '--dir', dir]).code, 0);
+  const specFile = path.join(dir, '.cohdit', 'spec.json');
+  const read = () => JSON.parse(fs.readFileSync(specFile, 'utf8'));
+  const r = idea(h, ['change', '--dir', dir, '--json', JSON.stringify({
+    add: [{ title: 'Quiz', criteria: ['open Quiz; you see a letter to find'] }],
+    edit: [{ id: 'ITEM-001', title: 'Bigger letter grid' }],
+    decisions: [{ type: 'design', choice: 'large-print', who: 'you' }],
+    out: ['sign in'],
+  })]);
+  assert.equal(r.code, 0, r.err);
+  assert.match(r.err, /^added=ITEM-004$/m);
+  assert.match(r.err, /^edited=ITEM-001$/m);
+  assert.match(r.err, /^next=build$/m);
+  let spec = read();
+  assert.equal(spec.agreed, true);
+  assert.equal(spec.items.length, 4);
+  assert.equal(spec.items[0].title, 'Bigger letter grid');
+  assert.equal(spec.items[3].status, 'queued');
+  assert.deepEqual(spec.out, ['sign in']);
+  assert.ok(spec.decisions.some((d) => d.type === 'design' && d.choice === 'large-print'));
+  const events = fs.readdirSync(path.join(dir, '.cohdit', 'ledger', 'runs')).map((f) => fs.readFileSync(path.join(dir, '.cohdit', 'ledger', 'runs', f), 'utf8')).join('');
+  assert.match(events, /"choice":"changed"/);
+  // big changes and locked decisions are refused, and nothing is written
+  for (const bad of [{ gates: { payments: true } }, { shape: 'runs' }, { items: [] }, { decisions: [{ type: 'hosting', choice: 'own_paid' }] }, { edit: [{ id: 'ITEM-999', title: 'x' }] }, { add: [{ title: 'No check' }] }]) {
+    const x = idea(h, ['change', '--dir', dir, '--json', JSON.stringify(bad)]);
+    assert.equal(x.code, 64, JSON.stringify(bad));
+  }
+  assert.match(idea(h, ['change', '--dir', dir, '--json', '{"gates":{"payments":true}}']).err, /^hint=invalid$/m);
+  assert.deepEqual(read(), spec, 'a refused change writes nothing');
+  // a built thing cannot be edited in place
+  spec.items[1].status = 'done';
+  fs.writeFileSync(specFile, JSON.stringify(spec));
+  assert.equal(idea(h, ['change', '--dir', dir, '--json', '{"edit":[{"id":"ITEM-002","title":"y"}]}']).code, 64);
+  // the cap is eight
+  const many = Array.from({ length: 5 }, (_, i) => ({ title: 'T' + i, criteria: ['c'] }));
+  assert.match(idea(h, ['change', '--dir', dir, '--json', JSON.stringify({ add: many })]).err, /^hint=two_ideas$/m);
+  // reopen: back to the interview, set works again, agree closes it
+  assert.equal(idea(h, ['reopen', '--dir', dir]).code, 0);
+  assert.equal(read().agreed, false);
+  assert.equal(idea(h, ['set', '--dir', dir, '--json', '{"gates":{"payments":true}}']).code, 0);
+  assert.equal(idea(h, ['agree', '--dir', dir]).code, 0);
+  assert.equal(read().agreed, true);
+  assert.equal(idea(h, ['reopen', '--dir', newIdea(h, 'Fresh')]).code, 64, 'only an agreed idea reopens');
+});
+
 test('refuse: one fixed sentence, the run ends, build will not start', () => {
   const h = home();
   const dir = newIdea(h, 'Tracker');

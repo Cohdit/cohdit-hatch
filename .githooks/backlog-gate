@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+# backlog-loop commit gate — blocks a commit when the project's verify command fails,
+# AND blocks a commit that stages a secret-shaped file (.env, keys, tokens, credentials).
+#
+# Installed per-repo via:  git config core.hooksPath .githooks
+# The verify command is read from tasks/backlog-loop.config.json ("verify" field),
+# which /cohdit-drain-backlog and /cohdit-install-gate populate.
+#
+# State-only fast path: a commit that touches ONLY loop bookkeeping (tasks/**, per the
+# "gateSkipPaths" field) can't break the build, so the gate skips verify and returns
+# immediately. One code file in the same commit and the full verify runs as normal.
+# The secret guard below always runs, even on the fast path — it's cheap and a stray
+# .env is exactly as bad in a "state-only" commit as anywhere else.
+#
+# Escape hatches:
+#   BACKLOG_LOOP_FORCE_VERIFY=1 git commit ...       # run verify even for a state-only commit
+#   BACKLOG_LOOP_SKIP_VERIFY=1  git commit ...       # skip the BUILD/TEST gate only (throwaway WIP)
+#   BACKLOG_LOOP_SKIP_SECRET_GUARD=1 git commit ...  # skip the SECRET gate only — never for real use;
+#                                                     # this exists for the guard's own false positives.
+set -euo pipefail
+
+# --- Secret/env guard --------------------------------------------------------------------
+# Filenames that are always OK even though they look env-like (safe placeholder templates).
+_gate_safe_env_pattern='(^|/)\.env(\.[A-Za-z0-9_-]+)*\.(example|sample|template)$'
+# Path patterns that must never be committed.
+_gate_blocked_pattern='(^|/)\.env($|\.[^/]*$)|(^|/)\.dev\.vars($|\.[^/]*$)|\.pem$|\.p12$|\.pfx$|(^|/)id_rsa$|(^|/)id_ed25519$|(^|/)id_ecdsa$|(^|/)\.npmrc$|(^|/)\.pypirc$|(^|/)\.netrc$|(^|/)credentials\.json$|(^|/)service-account.*\.json$|\.tfvars$'
+# High-signal live-credential shapes, as a backstop for secrets pasted into an unexpected file.
+_gate_secret_content_pattern='AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|sk-ant-[A-Za-z0-9_-]{20,}|sk-proj-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----'
+
+if [ "${BACKLOG_LOOP_SKIP_SECRET_GUARD:-}" = "1" ]; then
+  echo "backlog-loop: BACKLOG_LOOP_SKIP_SECRET_GUARD=1 — skipping secret guard (not recommended)." >&2
+else
+  _gate_offenders=""
+  while IFS= read -r _gate_path; do
+    [ -z "$_gate_path" ] && continue
+    if echo "$_gate_path" | grep -qiE "$_gate_safe_env_pattern"; then
+      continue
+    fi
+    if echo "$_gate_path" | grep -qiE "$_gate_blocked_pattern"; then
+      _gate_offenders="$_gate_offenders$_gate_path"$'\n'
+    fi
+  done <<< "$(git diff --cached --name-only --diff-filter=ACMR)"
+
+  if [ -n "$_gate_offenders" ]; then
+    echo "" >&2
+    echo "backlog-loop: COMMIT BLOCKED — staged file(s) match a credential/secret filename" >&2
+    echo "pattern (.env, keys, tokens, etc.):" >&2
+    printf '%s\n' "$_gate_offenders" | sed '/^$/d; s/^/  - /' >&2
+    echo "" >&2
+    echo "If this is a genuinely safe template, rename it to end in .example/.sample/.template." >&2
+    echo "Otherwise unstage it. Last resort: BACKLOG_LOOP_SKIP_SECRET_GUARD=1 (not recommended)." >&2
+    echo "" >&2
+    exit 1
+  fi
+
+  _gate_content_hit="$(git diff --cached -- . 2>/dev/null | grep -E '^\+' | grep -viE '^\+\+\+' | grep -oE "$_gate_secret_content_pattern" | head -1 || true)"
+  if [ -n "$_gate_content_hit" ]; then
+    echo "" >&2
+    echo "backlog-loop: COMMIT BLOCKED — staged content looks like a live credential (AWS key," >&2
+    echo "Anthropic/OpenAI/GitHub/Slack token, or private key block). Remove it before committing." >&2
+    echo "Last resort: BACKLOG_LOOP_SKIP_SECRET_GUARD=1 (not recommended)." >&2
+    echo "" >&2
+    exit 1
+  fi
+fi
+# -------------------------------------------------------------------------------------------
+
+if [ "${BACKLOG_LOOP_SKIP_VERIFY:-}" = "1" ]; then
+  echo "backlog-loop: BACKLOG_LOOP_SKIP_VERIFY=1 — skipping verify gate (WIP only)." >&2
+  exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+config="$repo_root/tasks/backlog-loop.config.json"
+
+verify=""
+if [ -f "$config" ]; then
+  # Flat config we control; extract the "verify": "..." string without a JSON dep.
+  verify="$(sed -n 's/.*"verify"[[:space:]]*:[[:space:]]*"\(.*\)".*/\1/p' "$config" | head -1)"
+fi
+
+if [ -z "$verify" ]; then
+  echo "backlog-loop: no verify command configured in tasks/backlog-loop.config.json — commit allowed." >&2
+  echo "             run /cohdit-drain-backlog or /cohdit-install-gate to set the gate's verify command." >&2
+  exit 0
+fi
+
+# --- State-only fast path -----------------------------------------------------------
+# Patterns come from "gateSkipPaths" in the config (JSON array of globs); default tasks/**.
+# Matching is bash `case` globbing, where * spans '/', so "tasks/**" covers nested paths.
+skip_patterns=""
+if [ -f "$config" ]; then
+  skip_patterns="$(tr -d '\n' < "$config" \
+    | sed -n 's/.*"gateSkipPaths"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p' \
+    | grep -o '"[^"]*"' | tr -d '"' || true)"
+fi
+[ -z "$skip_patterns" ] && skip_patterns="tasks/**"
+
+staged="$(git diff --cached --name-only)"
+
+state_only=1
+if [ -n "$staged" ]; then
+  while IFS= read -r file; do
+    [ -z "$file" ] && continue
+    matched=0
+    while IFS= read -r pattern; do
+      [ -z "$pattern" ] && continue
+      # shellcheck disable=SC2254  # glob in $pattern is intentional
+      case "$file" in
+        ${pattern//\*\*/\*}) matched=1; break ;;
+      esac
+    done <<< "$skip_patterns"
+    if [ "$matched" -eq 0 ]; then state_only=0; break; fi
+  done <<< "$staged"
+fi
+
+if [ "$state_only" -eq 1 ] && [ "${BACKLOG_LOOP_FORCE_VERIFY:-}" != "1" ]; then
+  echo "backlog-loop: state-only commit (no code touched) — verify skipped." >&2
+  exit 0
+fi
+# -------------------------------------------------------------------------------------
+
+# --- Verify lock: one repo-global verify at a time --------------------------------------
+# Worktrees (width > 1) share ports/databases/build output, so every verify queues on a
+# directory lock in the SHARED git dir. A lock older than 30 min is a crashed holder.
+lock="$(cd "$(git rev-parse --git-common-dir)" && pwd)/backlog-verify.lock"
+while ! mkdir "$lock" 2>/dev/null; do
+  ts="$(stat -f %m "$lock" 2>/dev/null || stat -c %Y "$lock" 2>/dev/null || echo 0)"
+  if [ "$(( $(date +%s) - ts ))" -gt 1800 ]; then
+    rmdir "$lock" 2>/dev/null && continue
+  fi
+  echo "backlog-loop: verify lock held by another worktree — waiting..." >&2
+  sleep 10
+done
+trap 'rmdir "$lock" 2>/dev/null || true' EXIT INT TERM
+# -----------------------------------------------------------------------------------------
+
+echo "backlog-loop: commit gate → $verify" >&2
+if ! ( cd "$repo_root" && eval "$verify" ); then
+  echo "" >&2
+  echo "backlog-loop: COMMIT BLOCKED — verify failed: $verify" >&2
+  echo "             fix it, or for a throwaway WIP commit: BACKLOG_LOOP_SKIP_VERIFY=1 git commit ..." >&2
+  exit 1
+fi
+
+echo "backlog-loop: commit gate passed." >&2
+exit 0

@@ -18,7 +18,7 @@ function repo(files, content) {
   put(root, 'README.md', '# Hatch\n');
   put(root, 'plugins/hatch/skills/dream/SKILL.md', STUB);
   for (const [rel, text] of Object.entries(files)) put(root, rel, text);
-  if (content) for (const [rel, text] of Object.entries(content)) put(path.join(top, 'cohdit-access', 'hatch-content'), rel, text);
+  if (content) for (const [rel, text] of Object.entries(content)) put(path.join(top, 'cohdit-hatch-private', 'hatch-content'), rel, text);
   const env = { ...process.env, GIT_CONFIG_GLOBAL: path.join(top, 'nogit'), HATCH_DEV_DIR: '' };
   spawnSync('git', ['init', '-q'], { cwd: root, env });
   spawnSync('git', ['add', '-A'], { cwd: root, env });

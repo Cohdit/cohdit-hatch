@@ -3,6 +3,8 @@
 # Ubuntu and Windows (Git Bash). Needs Node >= 20 and git; nothing else.
 #   bash scripts/check.sh
 set -uo pipefail
+# Run from a git hook, git exports GIT_INDEX_FILE and friends; the tests build their own temporary repos and must not inherit them.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
 status=0
@@ -12,20 +14,20 @@ bad()  { printf '  FAIL  %s\n' "$1"; status=1; }
 TMPF="$(mktemp -d)"; trap 'rm -rf "$TMPF"' EXIT
 
 # The playbooks, agent briefs, data and maintainer docs are private: they live in the site repo
-# (cohdit-access/hatch-content and cohdit-access/docs/hatch) and reach the plugin through
+# (cohdit-hatch-private/hatch-content and cohdit-hatch-private/docs) and reach the plugin through
 # scripts/lib/api.js. With them (HATCH_DEV_DIR, or the sibling site repo) every check runs. Without them
 # (the public CI) only the code checks run, so no log ever prints private text.
-if [ -z "${HATCH_DEV_DIR:-}" ] && [ -d "$ROOT/../cohdit-access/hatch-content" ]; then
-  HATCH_DEV_DIR="$(cd "$ROOT/../cohdit-access/hatch-content" && pwd)"
+if [ -z "${HATCH_DEV_DIR:-}" ] && [ -d "$ROOT/../cohdit-hatch-private/hatch-content" ]; then
+  HATCH_DEV_DIR="$(cd "$ROOT/../cohdit-hatch-private/hatch-content" && pwd)"
 fi
 CONTENT=0
 if [ -n "${HATCH_DEV_DIR:-}" ] && [ -f "$HATCH_DEV_DIR/data/codes.json" ]; then CONTENT=1; fi
 command -v cygpath >/dev/null && [ -n "${HATCH_DEV_DIR:-}" ] && HATCH_DEV_DIR="$(cygpath -m "$HATCH_DEV_DIR")"   # node on Windows needs D:/ not /d/
 if [ "$CONTENT" -eq 1 ]; then export HATCH_DEV_DIR; else unset HATCH_DEV_DIR; fi
 C="${HATCH_DEV_DIR:-}"
-CONTRACTS="$C/../docs/hatch/CONTRACTS.md"
+CONTRACTS="$C/../docs/CONTRACTS.md"
 STUB_END='Otherwise follow the printed instructions exactly as if they were this file.'
-if [ "$CONTENT" -eq 1 ]; then echo "content: $C"; else echo "content: none (code-only checks; the full run needs cohdit-access beside this repo)"; fi
+if [ "$CONTENT" -eq 1 ]; then echo "content: $C"; else echo "content: none (code-only checks; the full run needs cohdit-hatch-private beside this repo)"; fi
 # Steps that read private content say so and are skipped without it.
 needs_content() { [ "$CONTENT" -eq 1 ] && return 0; echo "  skipped: needs the private content"; return 1; }
 
@@ -55,7 +57,9 @@ if [ "$MV" = "$PV" ]; then ok "version $PV"; else bad "marketplace $MV != plugin
 step "fixtures are regenerable (mkfixtures.js output is byte-identical to what is committed)"
 cp -R plugins/hatch/tests/fixtures "$TMPF/before"
 node plugins/hatch/tests/mkfixtures.js >/dev/null
-if diff -r "$TMPF/before" plugins/hatch/tests/fixtures >/dev/null; then ok; else bad "fixtures drifted from mkfixtures.js"; fi
+# Files only: git cannot store the empty folders mkfixtures makes, so a fresh checkout would always differ.
+fxsum() { (cd "$1" && find . -type f -print0 | sort -z | xargs -0 cksum); }
+if [ "$(fxsum "$TMPF/before")" = "$(fxsum plugins/hatch/tests/fixtures)" ]; then ok; else bad "fixtures drifted from mkfixtures.js"; fi
 
 step "prices cover every model named in an agent or fixture"
 if needs_content; then

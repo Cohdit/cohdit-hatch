@@ -18,7 +18,7 @@ const MIN = 60 * 1000;
 let server, port, reply, hits;
 test.before(async () => {
   server = http.createServer((req, res) => {
-    hits.push({ url: req.url, auth: req.headers.authorization, machine: req.headers['x-hatch-machine'] });
+    hits.push({ url: req.url, auth: req.headers.authorization, machine: req.headers['x-hatch-machine'], plugin: req.headers['x-hatch-plugin'] });
     const r = reply(req);
     res.writeHead(r.status, { 'Content-Type': r.json ? 'application/json' : 'text/markdown', 'X-Hatch-Content-Version': 'v1' });
     res.end(r.json ? JSON.stringify(r.json) : r.body);
@@ -71,7 +71,7 @@ test('a fetch sends the key as a bearer token to {base}/{kind}/{name} and caches
 test('HATCH_KEY wins over the key file', async () => {
   storeKey();
   process.env.HATCH_KEY = '  other  ';
-  await api.fetchContent('data', 'codes');
+  await api.fetchContent('skill', 'dream');
   assert.equal(hits[0].auth, 'Bearer other');
 });
 
@@ -238,11 +238,12 @@ test('preloadData fetches every data file once; dataJson then reads it synchrono
 
 test('preloadData(true) adds the read-only agents; agentText reads them synchronously', async () => {
   storeKey();
-  reply = (req) => ({ status: 200, body: '# ' + req.url.split('/').slice(-2).join('/') });
+  reply = (req) => ({ status: 200, body: req.url.includes('/agent/') || req.url.endsWith('/TERMS') ? '# ' + req.url.split('/').slice(-2).join('/') : '{}' });
   await api.preloadData(true);
   assert.equal(hits.length, api.NAMES.data.length + api.READ_ONLY.length);
   assert.equal(api.agentText('lens-cost'), '# agent/lens-cost');
   assert.equal(api.dataText('TERMS'), '# data/TERMS');
+  assert.equal(api.dataText('codes'), '{}');
   assert.throws(() => api.agentText('../maker'), (e) => e.code === 'not_found');
 });
 
@@ -325,4 +326,33 @@ test('cli: key set and key status never print the key', async () => {
   r = await run(['key', 'status']);
   assert.deepEqual([r.status, r.out], [0, 'ok\n']);
   for (const x of [r.out, r.err]) assert.ok(!x.includes(KEY));
+});
+
+test('every request names this plugin\'s version', async () => {
+  storeKey();
+  await api.fetchContent('skill', 'dream');
+  assert.equal(hits[0].plugin, require('../.claude-plugin/plugin.json').version);
+});
+
+test('426 is update_required with a plain message; an older cached copy still stands in', async () => {
+  storeKey();
+  reply = () => ({ status: 426, json: { error: 'update_required' } });
+  assert.equal(await code(api.fetchContent('skill', 'build')), 'update_required');
+  assert.match(api.message('update_required'), /newer version/);
+  seedCache('skill', 'build', '# older copy', 11 * MIN);
+  assert.equal(await api.fetchContent('skill', 'build'), '# older copy');
+});
+
+test('a 200 that cannot be right never replaces the cache: empty text, or data that is not JSON', async () => {
+  storeKey();
+  seedCache('data', 'codes', '{"ok":true}', 11 * MIN);
+  reply = () => ({ status: 200, body: '<html>oops' });
+  assert.equal(await api.fetchContent('data', 'codes'), '{"ok":true}');
+  seedCache('skill', 'dream', '# kept', 11 * MIN);
+  reply = () => ({ status: 200, body: '  \n' });
+  assert.equal(await api.fetchContent('skill', 'dream'), '# kept');
+  fs.rmSync(path.join(api.home(), 'down'), { force: true });   // the bad answers above marked Cohdit down for a minute
+  seedCache('data', 'TERMS', '# terms', 11 * MIN);
+  reply = () => ({ status: 200, body: '# new terms' });
+  assert.equal(await api.fetchContent('data', 'TERMS'), '# new terms');
 });

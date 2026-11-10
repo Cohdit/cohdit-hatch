@@ -672,7 +672,8 @@ function brief(dir, spec, item, cfg, notes, status, advice) {
     '```json', '{"verdict":"done|blocked|refused|consult","change":"copy|style|docs|test-only|logic|config|mixed",',
     ' "criteria":[{"n":1,"met":true,"ref":"app/page.tsx:41","test":"app/page.test.tsx:9"}],', ' "blocked":null,', ' "refused":null,', ' "consult":null,',
     ' "decisions":[{"type":"design","choice":"fox_for_x"}],', ' "try_note":null,',
-    ' "findings":[{"scope":"in|out","sev":"low|medium|high|critical","text":"…"}]}', '```');
+    ' "findings":[{"scope":"in|out","sev":"low|medium|high|critical","text":"…"}]}', '```',
+    'Limits the script enforces: `decisions[].choice` is a short slug of letters, digits and `. _ / : @ -`, at most 96 characters, no spaces or punctuation (the detail goes in `findings` or `try_note`). `criteria[].test` is exactly one test file path, optionally `:line`; other files go in `ref`.');
   return out.join('\n') + '\n';
 }
 
@@ -726,6 +727,22 @@ function parseReturn(text) {
   try { return JSON.parse(t); } catch (e) { throw new Invalid('the report is not one JSON block: ' + e.message); }
 }
 
+// A test path is one file, optionally :line. Brackets and parentheses are Next.js routes ([id], (group)).
+const TEST_PATH = /^[\w./@+\[\]()-]+(:\d+)?$/;
+const CHOICE = /^[A-Za-z0-9._/:@-]{1,96}$/;
+
+/** A maker that listed several files gets the first; the rest belong in `ref`. */
+function firstTestPath(v) {
+  return String(v).trim().split(/\s*[;,]\s*/)[0] || '';
+}
+
+/** A decision choice is a short slug; a sentence is squeezed into one rather than refused. */
+function choiceSlug(v) {
+  const t = String(v).trim();
+  if (CHOICE.test(t)) return t;
+  return t.replace(/[^A-Za-z0-9._/:@-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 96).replace(/_+$/, '');
+}
+
 function makerReturn(text) {
   const r = parseReturn(text);
   const codes = cz.load().codes;
@@ -736,7 +753,10 @@ function makerReturn(text) {
   if (r.criteria !== undefined && !Array.isArray(r.criteria)) throw new Invalid('criteria must be a list');
   for (const c of r.criteria || []) {
     if (!c || !Number.isInteger(c.n) || typeof c.met !== 'boolean') throw new Invalid('each criterion needs n (int) and met (bool)');
-    if (c.test !== undefined && c.test !== null && !/^[\w./-]+(:\d+)?$/.test(String(c.test))) throw new Invalid('criterion test must be a path, optionally :line');
+    if (c.test !== undefined && c.test !== null) {
+      c.test = firstTestPath(c.test);
+      if (!TEST_PATH.test(c.test)) throw new Invalid('criterion test must be a path, optionally :line (one file; more files go in ref)');
+    }
   }
   if (r.verdict === 'consult') {
     const q = r.consult || {};
@@ -756,7 +776,9 @@ function makerReturn(text) {
   for (const f of r.findings || []) if (!f || !scopes.includes(f.scope) || !sevs.includes(f.sev) || typeof f.text !== 'string') throw new Invalid('each finding needs scope, sev and text');
   const types = codes.DECIDE.fields.type.enum.filter((t) => !['terms', 'hosting', 'scope', 'publish', 'stack'].includes(t));
   for (const d of r.decisions || []) {
-    if (!d || !types.includes(d.type) || typeof d.choice !== 'string' || !/^[A-Za-z0-9._/:@-]{1,96}$/.test(d.choice)) throw new Invalid('each decision needs type (' + types.join(', ') + ') and a short choice');
+    if (!d || !types.includes(d.type) || typeof d.choice !== 'string') throw new Invalid('each decision needs type (' + types.join(', ') + ') and a short choice');
+    d.choice = choiceSlug(d.choice);
+    if (!CHOICE.test(d.choice)) throw new Invalid('each decision needs type (' + types.join(', ') + ') and a choice of letters, digits and . _ / : @ - (at most 96)');
   }
   if (r.try_note !== undefined && r.try_note !== null && typeof r.try_note !== 'string') throw new Invalid('try_note must be text');
   return r;

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Before anything leaves this computer: the global hook (if set), then every check, with the private
-# content from the sibling cohdit-access repo when it is there.
+# content from the sibling cohdit-hatch-private repo when it is there.
 set -euo pipefail
 input="$(cat)"
 g="$(git config --global core.hooksPath 2>/dev/null || true)"; g="${g/#\~/$HOME}"

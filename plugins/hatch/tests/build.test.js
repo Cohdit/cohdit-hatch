@@ -256,6 +256,26 @@ test('reports: a malformed report is re-asked once, then the thing is set aside;
   assert.doesNotMatch(close.out, /let me try it/);
 });
 
+test('maker report: brackets in test paths pass, extra paths and long sentence choices are normalised, and the message names the limit', () => {
+  const bd = require('../scripts/lib/build');
+  const rep = (o) => '```json\n' + JSON.stringify(Object.assign({ verdict: 'done', change: 'logic' }, o)) + '\n```';
+  const ok = bd.makerReturn(rep({ criteria: [
+    { n: 1, met: true, test: 'app/api/tests/[id]/runs/route.test.ts:230' },
+    { n: 2, met: true, test: 'app/(shop)/cart/page.test.tsx' },
+    { n: 3, met: true, test: 'a.test.ts:3; b.test.ts:9; c.test.ts' },
+  ] }));
+  assert.equal(ok.criteria[0].test, 'app/api/tests/[id]/runs/route.test.ts:230');
+  assert.equal(ok.criteria[1].test, 'app/(shop)/cart/page.test.tsx');
+  assert.equal(ok.criteria[2].test, 'a.test.ts:3');
+  const sentence = 'Use the {id} route, with a "retry" button (not a link), because the list can be long and it keeps the page simple for people on slow phones and small screens';
+  assert.ok(sentence.length > 109);
+  const d = bd.makerReturn(rep({ decisions: [{ type: 'design', choice: sentence }, { type: 'design', choice: 'fox_for_x' }] }));
+  assert.match(d.decisions[0].choice, /^[A-Za-z0-9._/:@-]{1,96}$/);
+  assert.equal(d.decisions[1].choice, 'fox_for_x');
+  assert.throws(() => bd.makerReturn(rep({ decisions: [{ type: 'design', choice: '!!!' }] })), /choice of letters, digits/);
+  assert.throws(() => bd.makerReturn(rep({ criteria: [{ n: 1, met: true, test: '$(x)' }] })).criteria, /criterion test must be a path/);
+});
+
 test('open refuses to start: a refused idea (exit 5), an unagreed one, a dirty tree; and resumes after a crash', () => {
   const h = home();
   const r = run(h, ['idea', 'new', 'Tracker']);

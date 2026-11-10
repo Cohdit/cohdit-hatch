@@ -6,3 +6,5 @@ set -euo pipefail
 g="$(git config --global core.hooksPath 2>/dev/null || true)"; g="${g/#\~/$HOME}"
 if [ -n "$g" ] && [ -x "$g/pre-commit" ] && [ "$(cd "$g" && pwd)" != "$(pwd)/.githooks" ]; then "$g/pre-commit" "$@"; fi
 node scripts/ip-guard.js --staged
+# Then the backlog-loop gate: secret-shaped files, and verify (scripts/check.sh) unless only tasks/** is staged.
+.githooks/backlog-gate "$@"
