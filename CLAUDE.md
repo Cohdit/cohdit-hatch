@@ -15,12 +15,14 @@ Plan and work all of Hatch from here. Until ITEM-001 in that backlog is Done, no
 - `cohdit-access`: the site, keys, subscriptions and the API that fetches the content. Holds none of it.
 - `cohdit-knowledge-software-leader`: the owner's knowledge as atoms; confirmed ones become lessons on a push.
 - `cohdit-knowlege-interviewer`: tools that validate and export the atoms (the spelling is the real one).
+  **Left alone by default:** the two knowledge repos are edited only from their own sessions, never from Hatch work. Read them, never write them; do not add their changes to a Hatch plan.
 
 - Playbooks, agent instructions, data, lessons and maintainer docs are private. They live in
   `../cohdit-hatch-private/hatch-content/` and `../cohdit-hatch-private/docs/` (start with `CONTRACTS.md` and
   `MAINTAINERS.md`). Never copy their text into this repo: not into code, comments, tests,
   fixtures, the README or the changelog.
-- "remember …" is a Hatch lesson: it goes in `../cohdit-hatch-private` (see its CLAUDE.md), not here.
+- "remember …" is a Hatch lesson, owned by the knowledge repo. From here: draft the atom and hand it to the owner to add
+  from a knowledge session. Never write it into the knowledge repo, and never hand-edit `lessons.json`.
   Content changes ship by deploying cohdit-hatch-private, not by releasing the plugin.
 - A new skill, agent or data file: add it to cohdit-hatch-private first (file and `manifest.json`), deploy, then
   the name and stub here. Removing one: here first. The contract is `../cohdit-access/docs/THIN-CLIENT.md`.
