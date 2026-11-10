@@ -6,7 +6,7 @@ Five repos sit side by side in this folder; work from here and `bash scripts/rep
 (branch, uncommitted, unpushed, unmerged). Why they are split, which repo owns which change and how
 knowledge reaches users: `../cohdit-hatch-private/docs/ARCHITECTURE.md` (read it before a cross-repo change).
 
-Plan and work all of Hatch from here. Until ITEM-001 in that backlog is Done, nothing is deployed: a content or knowledge push reaches no user yet. The one backlog is `../cohdit-hatch-private/tasks/BACKLOG.md` (private); each item's
+Plan and work all of Hatch from here. Content is live from cohdit-hatch-private's service, but its `publish` pipeline waits on ITEM-001: until then a content change ships only by `vercel deploy --prod` there, and a knowledge push reaches no user. The one backlog is `../cohdit-hatch-private/tasks/BACKLOG.md` (private); each item's
 `Repo:` says which repo to edit, so a change is never made in the wrong folder.
 
 - `cohdit-hatch` (this): code, hooks, stubs. Released as a plugin version.
