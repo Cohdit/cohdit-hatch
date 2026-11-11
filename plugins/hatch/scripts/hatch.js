@@ -362,6 +362,7 @@ function cmdIdea(argv) {
         if (!spec.agreed) throw new sp.Invalid('the idea is not agreed yet; keep going with idea set');
         if (spec.refused) throw new sp.Invalid('refused: ' + spec.refused);
         spec.agreed = false;
+        sp.raiseIdFloor(spec, bd.allRecords(dir).map((r) => r.i).filter(Boolean));   // a reshaped list never reuses an id the ledger knows
         events.push(['DECIDE', { type: 'scope', choice: 'reopened', who: 'you' }]);
         hint('next', 'agree');
       }
@@ -506,6 +507,8 @@ const land = bd.land;
 /** An item is finished without a merge: set aside or refused. */
 function setAside(dir, cur, item, lvl, recs) {
   const o = cur.open[item];
+  const kept = bd.keepWork(dir, o);                              // committed work is kept, never deleted
+  if (kept) hint('kept', kept);
   bd.releaseClaim(dir, o.branch);
   const written = bd.emit(dir, cur.run, recs);
   delete cur.open[item];
@@ -779,8 +782,9 @@ function cmdBuild(argv) {
       const c = new render.Ctx({ level: lvl, cohdit: sp.cohditDir(dir), spool: bd.spoolFile(dir) });
       const u = c.usage(c.runs.get(cur.run) || []);
       if (u.usd !== null && u.usd >= cfg.caps.usd_per_run) { stopRun(dir, cur, 'budget', lvl); return 0; }
-      const base = bd.baseSha(dir);                              // fetches first, so toMain brings in what other sessions finished
-      bd.toMain(dir);
+      const sb = bd.startBase(dir);                              // the shared main and this computer's own unpushed commits
+      const base = sb.base;
+      if (sb.push) bd.emit(dir, cur.run, [['PUSH', { branch: 'main', result: sb.push }]]);
       let status = bd.itemStatus(dir, spec), claims = bd.remoteClaims(dir);
       let picked = null, branch = null, start = null;
       for (let tries = 0; tries < 4 && !picked; tries++) {
@@ -865,6 +869,7 @@ function cmdBuild(argv) {
         return badReport(dir, cur, item, lvl, e);
       }
       if (sub === 'built') {
+        if (r.dropped.length) process.stderr.write('hatch: left out of the report: ' + r.dropped.join('; ') + '\n');
         const lead = [['RETURN', { agent: 'maker', verdict: r.verdict }, item]];
         for (const f of r.findings || []) lead.push(['FINDING', { scope: f.scope, sev: f.sev, blob: bd.blob(dir, f.text) }, item]);
         for (const d of r.decisions || []) lead.push(['DECIDE', { type: d.type, choice: d.choice, who: 'hatch' }, item]);

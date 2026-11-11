@@ -212,6 +212,22 @@ function baseSha(dir) {
   return remoteMain(dir) || fullSha(dir, 'main');
 }
 
+/** Where a new item starts: this copy's main line, after taking in the shared main. Commits the person
+ *  made here and never pushed (a reshaped list, say) are pushed first, so the build never starts from an
+ *  older copy than the one on this computer. A main line that cannot be combined with the shared one
+ *  falls back to the shared main. Returns { base, push } where push is the PUSH result or null. */
+function startBase(dir) {
+  fetch(dir);
+  toMain(dir);
+  const mb = mainBranch(dir);
+  const local = fullSha(dir, mb), rm = remoteMain(dir);
+  if (!local) return { base: rm, push: null };
+  if (!rm) return { base: local, push: null };
+  if (local === rm || !fastForward(dir, local)) return { base: rm, push: null };
+  const push = landMain(dir);
+  return { base: fullSha(dir, mb), push };
+}
+
 /** Advance the shared main to `sha`, a fast-forward only: a lease would let a non-fast-forward through and
  *  throw away what others merged. Returns 'ok' | 'rejected' (someone else got there first, or `sha` is not
  *  ahead of main) | 'no_remote'. */
@@ -413,6 +429,20 @@ function claim(dir, branch, stale) {
   const r = gitNet(['push', '-q', 'origin', 'refs/heads/' + branch + ':refs/heads/' + branch, '--force-with-lease=' + lease], dir);
   if (r.code === 0) return 'ok';
   return /\[rejected\]|stale info|fetch first/i.test(r.err) ? 'taken' : 'failed';   // "[remote rejected]" is the server refusing: failed
+}
+
+/** Work committed on an item that is set aside is kept, never deleted: its branch is saved as
+ *  `kept/<name>` here and on the shared copy (outside `item/`, so it is never read as a claim).
+ *  Returns that name, or null when nothing was committed past the start mark. */
+function keepWork(dir, o) {
+  const from = o.start || o.base;
+  if (!from || !fullSha(dir, o.branch)) return null;
+  const n = git(['rev-list', '--count', from + '..' + o.branch], dir, false);
+  if (!n || n === '0') return null;
+  const name = 'kept/' + o.branch.replace(/^item\//, '');
+  git(['branch', '-q', '-f', name, o.branch], dir, false);
+  if (hasRemote(dir)) gitNet(['push', '-q', '-f', 'origin', 'refs/heads/' + name + ':refs/heads/' + name], dir);
+  return name;
 }
 
 function releaseClaim(dir, branch) {
@@ -750,12 +780,16 @@ function makerReturn(text) {
   if (!r || typeof r !== 'object' || !verdicts.includes(r.verdict)) throw new Invalid('verdict must be one of ' + verdicts.join(', '));
   const changes = ['copy', 'style', 'docs', 'test-only', 'logic', 'config', 'mixed'];
   if (r.verdict === 'done' && !changes.includes(r.change)) throw new Invalid('change must be one of ' + changes.join(', '));
+  // Side notes (a test path, findings, decisions) never cost the thing: one that does not fit is dropped
+  // and named in `dropped`. Only what decides the outcome (verdict, change, the checks) is refused.
+  r.dropped = [];
   if (r.criteria !== undefined && !Array.isArray(r.criteria)) throw new Invalid('criteria must be a list');
   for (const c of r.criteria || []) {
     if (!c || !Number.isInteger(c.n) || typeof c.met !== 'boolean') throw new Invalid('each criterion needs n (int) and met (bool)');
     if (c.test !== undefined && c.test !== null) {
-      c.test = firstTestPath(c.test);
-      if (!TEST_PATH.test(c.test)) throw new Invalid('criterion test must be a path, optionally :line (one file; more files go in ref)');
+      const t = firstTestPath(c.test);
+      if (TEST_PATH.test(t)) c.test = t;
+      else { r.dropped.push('criterion ' + c.n + ' test (one file path, optionally :line)'); delete c.test; }
     }
   }
   if (r.verdict === 'consult') {
@@ -773,14 +807,25 @@ function makerReturn(text) {
     if (!cats.includes(r.refused)) throw new Invalid('refused must name the category: ' + cats.join(', '));
   }
   const scopes = codes.FINDING.fields.scope.enum, sevs = codes.FINDING.fields.sev.enum;
-  for (const f of r.findings || []) if (!f || !scopes.includes(f.scope) || !sevs.includes(f.sev) || typeof f.text !== 'string') throw new Invalid('each finding needs scope, sev and text');
+  r.findings = (Array.isArray(r.findings) ? r.findings : []).filter((f, i) => {
+    if (f && typeof f.text === 'string' && f.text.trim()) {
+      if (!scopes.includes(f.scope)) f.scope = 'in';
+      if (!sevs.includes(f.sev)) f.sev = 'medium';
+      return true;
+    }
+    r.dropped.push('finding ' + (i + 1) + ' (it needs text)');
+    return false;
+  });
   const types = codes.DECIDE.fields.type.enum.filter((t) => !['terms', 'hosting', 'scope', 'publish', 'stack'].includes(t));
-  for (const d of r.decisions || []) {
-    if (!d || !types.includes(d.type) || typeof d.choice !== 'string') throw new Invalid('each decision needs type (' + types.join(', ') + ') and a short choice');
-    d.choice = choiceSlug(d.choice);
-    if (!CHOICE.test(d.choice)) throw new Invalid('each decision needs type (' + types.join(', ') + ') and a choice of letters, digits and . _ / : @ - (at most 96)');
-  }
-  if (r.try_note !== undefined && r.try_note !== null && typeof r.try_note !== 'string') throw new Invalid('try_note must be text');
+  r.decisions = (Array.isArray(r.decisions) ? r.decisions : []).filter((d, i) => {
+    if (d && types.includes(d.type) && typeof d.choice === 'string') {
+      d.choice = choiceSlug(d.choice);
+      if (CHOICE.test(d.choice)) return true;
+    }
+    r.dropped.push('decision ' + (i + 1) + ' (type one of ' + types.join(', ') + '; choice in letters, digits and . _ / : @ -)');
+    return false;
+  });
+  if (r.try_note !== undefined && r.try_note !== null && typeof r.try_note !== 'string') { r.dropped.push('try_note (it must be text)'); delete r.try_note; }
   return r;
 }
 
@@ -851,7 +896,7 @@ function coverage(dir) {
 module.exports = {
   Invalid, DEFAULT_CAPS, DEFAULT_VERIFY, LONG_MS, NET_MS, LIVE_MIN, STALE_CLAIM_H, TOPIC, AGENTS, TERMINAL,
   cohditDir, notesDir, readCfg, saveCfg, level, blob, emit, spoolFile, flush,
-  git, gitNet, hasRemote, headSha, fullSha, currentBranch, isPrimary, mainBranch, resetTree, dirtyPaths, fetch, remoteMain, toMain, rebaseOnto, fastForward, baseSha, pushMain, commitLedger, landMain, land, agentModel,
+  git, gitNet, hasRemote, headSha, fullSha, currentBranch, isPrimary, mainBranch, resetTree, dirtyPaths, fetch, remoteMain, toMain, rebaseOnto, fastForward, baseSha, startBase, keepWork, pushMain, commitLedger, landMain, land, agentModel,
   active, saveActive, isLive, setPointer, clearPointer, newRunId, runStart, stopBefore, abandon,
   allRecords, itemStatus, lastFailNote, branchFor, remoteClaims, candidates, startItem, claim, releaseClaim, writeNote, readNote,
   scaffold, ensureRepo, fetchIdea, workDir, sideCopy, findSideCopy, removeSideCopy, sweepSideCopies, brief, scanBrief, briefPath, diffPath, consultPath, scanPath, rolePath, writeRole, writeConsult, hatchCmd, refusalClause,
