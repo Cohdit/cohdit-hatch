@@ -138,6 +138,42 @@ function makeItem(it, i, id, maxCrit) {
   return out;
 }
 
+function itemNo(id) { const m = /^ITEM-(\d+)$/.exec(id || ''); return m ? Number(m[1]) : 0; }
+function idFor(n) { return 'ITEM-' + String(n).padStart(3, '0'); }
+
+/** The next id: above every id on the list and every id a build has seen (`id_floor`, set on reopen).
+ *  The ledger keys an item's history by its id, so an id is never given to a different thing. */
+function nextId(spec) {
+  return idFor(Math.max(spec.id_floor || 0, ...spec.items.map((i) => itemNo(i.id))) + 1);
+}
+
+/** Ids for a list the interview sent. Before the idea was ever agreed, 1, 2, 3 … as before. After a
+ *  reopen, a thing sent back unchanged (same title and checks) keeps its id and its history; everything
+ *  else gets a new id above `id_floor`, so it never inherits an old thing's done or set-aside mark. */
+function listIds(spec, v) {
+  const key = (it) => JSON.stringify([String(it.title || '').trim().toLowerCase(), (it.criteria || []).map((c) => String(c).trim())]);
+  const was = new Map(spec.id_floor ? spec.items.map((it) => [key(it), it.id]) : []);
+  const used = new Set();
+  const ids = v.map((it) => {
+    const id = it && typeof it === 'object' ? was.get(key(it)) : undefined;
+    if (!id || used.has(id)) return null;
+    used.add(id);
+    return id;
+  });
+  let n = spec.id_floor || 0;
+  return ids.map((id) => {
+    if (id) return id;
+    do id = idFor(++n); while (used.has(id));
+    used.add(id);
+    return id;
+  });
+}
+
+/** On reopen: remember the highest id the list or the ledger (`seen`) ever used. */
+function raiseIdFloor(spec, seen) {
+  spec.id_floor = Math.max(spec.id_floor || 0, ...spec.items.map((i) => itemNo(i.id)), ...(seen || []).map(itemNo));
+}
+
 function applyDecisions(spec, v) {
   if (!Array.isArray(v)) throw new Invalid('decisions must be a list');
   const types = cz.load().codes.DECIDE.fields.type.enum;
@@ -191,7 +227,7 @@ function applyChange(spec, patch, interview) {
     const own = trial.items.filter((x) => x.kind !== 'bug').length;
     if (own + patch.add.length > maxItems) throw new Invalid('two_ideas: ' + (own + patch.add.length) + ' things is more than ' + maxItems + '; that is two ideas');
     patch.add.forEach((it, i) => {
-      const made = makeItem(it, i, 'ITEM-' + String(trial.items.length + 1).padStart(3, '0'), maxCrit);
+      const made = makeItem(it, i, nextId(trial), maxCrit);
       if (!made.criteria.length) throw new Invalid('add[' + i + '] needs one check: where you go, what you do, what you see');
       trial.items.push(made);
       res.added.push(made.id);
@@ -226,7 +262,8 @@ function applyPatch(spec, patch, interview) {
       case 'items': {
         if (!Array.isArray(v)) throw new Invalid('items must be a list');
         if (v.length > maxItems) throw new Invalid('two_ideas: ' + v.length + ' things is more than ' + maxItems + '; that is two ideas');
-        spec.items = v.map((it, i) => makeItem(it, i, 'ITEM-' + String(i + 1).padStart(3, '0'), maxCrit));
+        const ids = listIds(spec, v);
+        spec.items = v.map((it, i) => makeItem(it, i, ids[i], maxCrit));
         break;
       }
       case 'gates': {
@@ -281,7 +318,7 @@ function addBug(dir, bug) {
   if (!criteria.length) throw new Invalid('a bug needs one check: what must be true once it is fixed');
   const twin = spec.items.find((i) => i.kind === 'bug' && i.title.toLowerCase() === title.toLowerCase());
   if (twin) return Object.assign({ twin: true }, twin);
-  const it = { id: 'ITEM-' + String(spec.items.length + 1).padStart(3, '0'), title, criteria, source: bug.source, kind: 'bug', status: 'queued', lens: bug.source === 'report' ? 'product' : 'technical' };
+  const it = { id: nextId(spec), title, criteria, source: bug.source, kind: 'bug', status: 'queued', lens: bug.source === 'report' ? 'product' : 'technical' };
   if (bug.by) it.by = str(bug.by, 'bug by');
   spec.items.push(it);
   save(dir, spec);
@@ -320,4 +357,5 @@ module.exports = {
   Invalid, SOURCES, SHAPES, applyChange,
   loadInterview, loadStack, loadHosting, terms, slugify, homeDir, cohditDir, specPath, load, save, readLocal, writeLocal,
   registry, saveRegistry, newProject, findProject, applyPatch, addBug, agreeProblems, checkStack, railsFor,
+  nextId, raiseIdFloor,
 };

@@ -272,8 +272,54 @@ test('maker report: brackets in test paths pass, extra paths and long sentence c
   const d = bd.makerReturn(rep({ decisions: [{ type: 'design', choice: sentence }, { type: 'design', choice: 'fox_for_x' }] }));
   assert.match(d.decisions[0].choice, /^[A-Za-z0-9._/:@-]{1,96}$/);
   assert.equal(d.decisions[1].choice, 'fox_for_x');
-  assert.throws(() => bd.makerReturn(rep({ decisions: [{ type: 'design', choice: '!!!' }] })), /choice of letters, digits/);
-  assert.throws(() => bd.makerReturn(rep({ criteria: [{ n: 1, met: true, test: '$(x)' }] })).criteria, /criterion test must be a path/);
+  // a side note that does not fit is left out and named, never a reason to refuse the report
+  const loose = bd.makerReturn(rep({
+    criteria: [{ n: 1, met: true, test: '$(x)' }],
+    decisions: [{ type: 'design', choice: '!!!' }, { type: 'architecture', choice: 'server' }, { type: 'data', choice: 'kv' }],
+    findings: [{ scope: 'maybe', sev: 'huge', text: 'slow on old phones' }, { scope: 'in' }],
+    try_note: 3,
+  }));
+  assert.equal(loose.criteria[0].test, undefined);
+  assert.deepEqual(loose.decisions, [{ type: 'data', choice: 'kv' }]);
+  assert.deepEqual(loose.findings, [{ scope: 'in', sev: 'medium', text: 'slow on old phones' }]);
+  assert.equal(loose.try_note, undefined);
+  assert.equal(loose.dropped.length, 5, loose.dropped.join('; '));
+  assert.throws(() => bd.makerReturn(rep({ change: 'big' })), /change must be one of/, 'what decides the outcome is still checked');
+  assert.throws(() => bd.makerReturn(rep({ criteria: [{ n: 'one', met: true }] })), /each criterion needs n/);
+});
+
+test('a report refused twice sets the thing aside but keeps its committed work on kept/<branch>', () => {
+  const h = home();
+  const dir = agreedIdea(h);
+  const bare = withOrigin(dir);
+  B(h, dir, ['open']);
+  B(h, dir, ['next']);
+  makerCommits(h, dir, 'app/grid.tsx', 'export const grid = 1;\n', 'Letter grid');
+  assert.equal(B(h, dir, ['built', 'ITEM-001', '--return', '{"verdict":"maybe"}']).code, 64);
+  const second = B(h, dir, ['built', 'ITEM-001', '--return', '{"verdict":"maybe"}']);
+  assert.match(second.out, /^Set aside "Letter grid"\.$/m);
+  assert.equal(hintOf(second, 'kept'), 'kept/001-letter-grid');
+  assert.ok(bareLs(bare, 'kept/001-letter-grid').includes('app/grid.tsx'), 'the work is on the shared copy');
+  assert.ok(H.git(['ls-tree', '-r', '--name-only', 'kept/001-letter-grid'], dir).split('\n').includes('app/grid.tsx'), 'and here');
+  const n = B(h, dir, ['next']);
+  assert.equal(hintOf(n, 'item'), 'ITEM-002', 'a kept branch is not a claim');
+});
+
+test('a new item starts from this computer\'s main when the person committed on it without pushing', () => {
+  const h = home();
+  const dir = agreedIdea(h);
+  const bare = withOrigin(dir);
+  B(h, dir, ['open']);
+  B(h, dir, ['close']);
+  fs.writeFileSync(path.join(dir, 'NOTES.md'), 'reshaped by hand\n');
+  H.git(['add', 'NOTES.md'], dir);
+  H.git(['commit', '-q', '-m', 'local only'], dir);
+  assert.ok(!bareLs(bare).includes('NOTES.md'), 'not pushed yet');
+  B(h, dir, ['open']);
+  const n = B(h, dir, ['next']);
+  assert.equal(n.code, 0, n.err);
+  assert.ok(fs.existsSync(path.join(dir, 'NOTES.md')), 'the item is built on the local commit');
+  assert.ok(bareLs(bare).includes('NOTES.md'), 'and the local commit was pushed first');
 });
 
 test('open refuses to start: a refused idea (exit 5), an unagreed one, a dirty tree; and resumes after a crash', () => {
@@ -493,8 +539,8 @@ test('the gate refuses a commit under the coverage floor and says which test to 
   assert.match(events, /VERIFY ITEM-001 rc=1 dur=\d+s cov=62% cmd=[0-9a-f]{16}/);
   assert.match(events, /VERIFY ITEM-001 rc=0 dur=\d+s cov=84% cmd=-/);
   const noTest = B(h, dir, ['built', 'ITEM-001', '--return', DONE('logic', { criteria: [{ n: 1, met: true, ref: 'a.tsx:1', test: 'not a path!' }] })]);
-  assert.equal(noTest.code, 64);
-  assert.match(noTest.err, /criterion test must be a path/);
+  assert.equal(noTest.code, 0, 'a test path that does not fit is left out, never a reason to set the thing aside');
+  assert.match(noTest.err, /^hatch: left out of the report: criterion 1 test/m);
 });
 
 test('a done report with an unmet check is set aside; a report from the wrong agent is refused', () => {

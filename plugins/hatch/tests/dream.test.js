@@ -172,6 +172,30 @@ test('change: an agreed idea takes small changes (add, edit queued, decisions, o
   assert.equal(idea(h, ['reopen', '--dir', newIdea(h, 'Fresh')]).code, 64, 'only an agreed idea reopens');
 });
 
+test('reopen and a reshaped list: new things get new ids, an unchanged thing keeps its own', () => {
+  const h = home();
+  const dir = newIdea(h, 'Reshaped');
+  idea(h, ['set', '--dir', dir, '--json', JSON.stringify({ items: ITEMS, gates: GATES })]);
+  assert.equal(idea(h, ['agree', '--dir', dir]).code, 0);
+  const specFile = path.join(dir, '.cohdit', 'spec.json');
+  const read = () => JSON.parse(fs.readFileSync(specFile, 'utf8'));
+  const before = read().items;
+  assert.equal(idea(h, ['reopen', '--dir', dir]).code, 0);
+  const list = [{ title: 'Something new', criteria: ['open it; you see it'] }, { title: before[1].title, criteria: before[1].criteria }];
+  assert.equal(idea(h, ['set', '--dir', dir, '--json', JSON.stringify({ items: list })]).code, 0);
+  let ids = read().items.map((i) => i.id);
+  assert.deepEqual(ids, ['ITEM-' + String(before.length + 1).padStart(3, '0'), before[1].id], 'the old ITEM-001 history never lands on a new thing');
+  // sent again in the same interview: the ids hold
+  assert.equal(idea(h, ['set', '--dir', dir, '--json', JSON.stringify({ items: list.concat([{ title: 'Third', criteria: ['c'] }]) })]).code, 0);
+  ids = read().items.map((i) => i.id);
+  assert.equal(new Set(ids).size, 3);
+  assert.equal(ids[1], before[1].id);
+  assert.equal(idea(h, ['agree', '--dir', dir]).code, 0);
+  const r = idea(h, ['change', '--dir', dir, '--json', JSON.stringify({ add: [{ title: 'Fourth', criteria: ['c'] }] })]);
+  assert.equal(r.code, 0, r.err);
+  assert.ok(!ids.includes(/^added=(.*)$/m.exec(r.err)[1]), 'an added thing takes a fresh id too');
+});
+
 test('refuse: one fixed sentence, the run ends, build will not start', () => {
   const h = home();
   const dir = newIdea(h, 'Tracker');

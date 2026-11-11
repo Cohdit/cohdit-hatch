@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.0.12 — builds start from this computer; reshaped lists keep clean ids; work is never deleted (2026-11-11)
+
+- `build next` starts each thing from this computer's main line. Commits the person made and never pushed
+  (a reshaped list, say) are pushed first. Before this, the build started from the GitHub copy and could
+  pick up an old list.
+- After `idea reopen`, a reshaped list never reuses an id the ledger has seen. A thing sent back unchanged
+  (same title and checks) keeps its id and history; everything else gets a new id. Before this, the new
+  ITEM-001 to ITEM-003 inherited the old ones' set-aside marks. `idea change` and reported bugs take the
+  next free id too.
+- A maker's report is no longer refused over a side note: a test path, finding, decision or try note
+  that does not fit is left out and named on stderr. A bad decision type was the last such refusal.
+- A thing set aside after its work was committed keeps that work on `kept/<branch>`, here and on GitHub
+  (hint `kept=`). Before this, the branch was deleted.
+
 ## 0.0.11 — agreed ideas can change; maker reports are forgiven (2026-11-08)
 
 - `idea change` adds to, edits or records decisions on an agreed idea without a second yes; `idea reopen`
