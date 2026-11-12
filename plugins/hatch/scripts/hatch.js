@@ -62,6 +62,7 @@
  *   hatch.js remember list [--for <reader>]
  *                                       the bank, one line each: what every brief draws on
  *   hatch.js remember show <L-NNN>      the whole lesson
+ *   hatch.js leader [--for <reader>]    the software leader's knowledge as text (ask: all; dream: --for dream)
  *   hatch.js allow                      PreToolUse hook: approves Hatch's own calls and edits in its own folders
  *   hatch.js content skill|agent|data <name>
  *                                       the text, from Cohdit with the access key (lib/api.js); an error line
@@ -95,6 +96,7 @@ const bd = require('./lib/build');
 const tr = require('./lib/try');
 const sh = require('./lib/share');
 const ls = require('./lib/lessons');
+const ld = require('./lib/leader');
 const api = require('./lib/api');
 const render = require('./render');
 
@@ -1618,6 +1620,24 @@ function contentError(e) {
   return 1;
 }
 
+/** `leader [--for <reader>]`: the software leader's knowledge as text, for the ask skill (everything)
+ *  and dream (`--for dream`). An error line for the person and exit 1 when it cannot be fetched. */
+function cmdLeader(args) {
+  const reader = opt(args, '--for') || 'all';
+  const show = (l) => {
+    const text = ld.forReader(l, reader);
+    if (!text) return fail('the software leader has nothing for ' + reader);
+    process.stdout.write(text + '\n');
+    return 0;
+  };
+  if (process.env.COHDIT_LEADER) return show(ld.load());
+  return api.fetchContent('data', 'leader').then((text) => {
+    let l = null;
+    try { l = JSON.parse(text); } catch (e) { /* refused below */ }
+    return l && Array.isArray(l.knowledge) ? show(l) : contentError(new Error('leader is not valid'));
+  }, contentError);
+}
+
 /** `content <kind> <name>`: the playbook, brief or data, with the plugin's own path filled in
  *  (Claude Code substitutes ${CLAUDE_PLUGIN_ROOT} only in files it loads itself). */
 function cmdContent(args) {
@@ -1660,6 +1680,7 @@ function main(argv) {
 function dispatch(argv) {
   switch (argv[0]) {
     case 'content': return cmdContent(argv.slice(1));
+    case 'leader': return cmdLeader(argv.slice(1));
     case 'key': return cmdKey(argv.slice(1));
     case 'setup': return cmdSetup();
     case 'doctor': return cmdDoctor();

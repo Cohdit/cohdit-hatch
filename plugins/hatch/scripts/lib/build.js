@@ -45,6 +45,7 @@ const sp = require('./spec');
 const doc = require('./doctor');
 const tools = require('./tools');
 const ls = require('./lessons');
+const ld = require('./leader');
 const api = require('./api');
 
 const DEFAULT_CAPS = { items_per_run: 8, usd_per_run: 15, rounds_per_item: 2, minutes_per_item: 40 };
@@ -674,6 +675,8 @@ function brief(dir, spec, item, cfg, notes, status, advice) {
     out.push('', '## Rules attached to this idea');
     for (const r of spec.rails) if (rails[r]) out.push('- ' + r + ': ' + rails[r].build);
   }
+  const how = ld.core(ld.load());
+  if (how.length) out.push('', '## How Cohdit decides', 'The software leader\'s values and calls. When a choice is yours, make it this way; the review judges by them too.', ...how);
   const bank = ls.load();
   const about = [it.title].concat(it.criteria || [], spec.rails || [], [spec.pitch || '', spec.name || '', tried || '']).join(' ');
   const forMaker = ls.select(bank, 'maker', about);
@@ -743,6 +746,8 @@ function writeRole(dir, name) {
   const parts = [api.agentText(name).split('${CLAUDE_PLUGIN_ROOT}').join(ml.PLUGIN).trim()];
   const rules = AGENT_RULES[name];
   if (rules) parts.push('## The rules (' + rules + '.json)', '```json\n' + api.dataText(rules).trim() + '\n```');
+  const known = ld.forReader(ld.load(), name);
+  if (known) parts.push('## The software leader', known);
   fs.writeFileSync(rolePath(dir, name), parts.join('\n\n') + '\n');
   return rolePath(dir, name);
 }

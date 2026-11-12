@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.14 — the software leader decides (2026-11-13)
+
+- Builds are decided against the software leader: the owner's whole knowledge, fetched from Cohdit as
+  data `leader` (values, trade-off calls, limits, every rule by area).
+- Every maker brief carries `## How Cohdit decides` (the values and calls), before the lessons.
+- The advisor carries all of it and answers as the leader. The checker and each lens carry the rules of
+  their own areas, on a build and on a scan.
+- `hatch.js leader [--for <reader>]` prints it; the new `ask` skill uses it to answer the person's own
+  questions about building software. The interview reads its part when shaping the first version.
+- Nothing breaks without it: when the leader cannot be fetched, the sections are left out.
+- Order: deploy the content first (it adds `ask` and `leader`), then release this plugin.
+
 ## 0.0.13 — the try list is short (2026-11-12)
 
 - The try standard, at every level: each thing on the list is a short title (48 characters at most;
