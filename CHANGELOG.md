@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.0.13 — the try list is short (2026-11-12)
+
+- The try standard, at every level: each thing on the list is a short title (48 characters at most;
+  the tech level adds its id) and one line of how to try it, at most 100 characters. The line is the
+  first sentence of the maker's note that is not about wording, else the first check. Before this,
+  every check and the maker's whole note were printed, and a list of nine things ran to a page.
+- A maker that drafted wording sets `words: true` in its report; the list names those things once, in
+  one line at the end. An older note that says so in its own words counts too.
+- A bug from a report is titled with the first sentence of what the person saw, cut to 60 characters,
+  not the first 80 characters of a pasted error. Their words stay whole in the bug's check.
+- Content must be deployed after this release: the maker's instructions now ask for a one-sentence
+  `try_note` and `words: true`.
+
 ## 0.0.12 — builds start from this computer; reshaped lists keep clean ids; work is never deleted (2026-11-11)
 
 - `build next` starts each thing from this computer's main line. Commits the person made and never pushed

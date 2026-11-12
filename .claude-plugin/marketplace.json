@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-marketplace-manifest.json",
   "name": "cohdit-hatch",
   "description": "Cohdit Hatch: say an idea in plain words, be interviewed, have it built, try it, share it at a free link. For people who don't write software. You need a Claude plan that includes Claude Code, and free GitHub and Vercel accounts, which setup walks you through. Hatch stores no passwords; what you build is yours.",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "owner": {
     "name": "Cohdit",
     "email": "delon@cohdit.com"
@@ -15,7 +15,7 @@
       "name": "hatch",
       "source": "./plugins/hatch",
       "description": "Seven things you can say: set me up, I have an idea, build it, let me try it, share it, fix the bugs, status. Takes a non-technical person from an idea to an app their friends can open, on accounts they own. It can always tell you what it did and why.",
-      "version": "0.0.12",
+      "version": "0.0.13",
       "category": "automation",
       "author": {
         "name": "Cohdit",

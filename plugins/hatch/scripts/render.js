@@ -87,6 +87,7 @@ const WORDS = {
     nothingToTry: 'Nothing to try yet. Say "build it".',
     trySay: 'Say "let me try it" to start it on this computer.',
     tryAnswer: 'Say "pass", or say which one didn\'t work and what you saw.',
+    wroteWords: (nums) => 'I wrote some of the words in ' + list(nums) + ' myself. Change anything that doesn\'t sound right.',
     onDevice: (lan) => 'on the same wifi, open ' + lan + ' on it (if this computer asks whether to allow connections, say yes); ',
     tried: (n, ok, bad) => n === 0 ? 'Nothing tried yet.' : 'Tried ' + plural(n, 'thing') + ': ' + (bad === 0 ? 'all worked.' : ok + ' worked, ' + bad + " didn't."),
     failRow: "didn't",
@@ -151,6 +152,7 @@ const WORDS = {
     nothingToTry: 'Nothing to test yet. Say "build it".',
     trySay: 'Say "let me try it" to run it locally.',
     tryAnswer: 'Say "pass", or name the item that failed and what you saw.',
+    wroteWords: (nums) => 'Copy I drafted: ' + list(nums) + '. Edit anything that reads wrong.',
     onDevice: (lan) => 'on the same wifi, open ' + lan + ' on it (if this computer asks whether to allow connections, say yes); ',
     tried: (n, ok, bad) => n === 0 ? 'Nothing tested yet.' : 'Tested ' + plural(n, 'item') + ': ' + (bad === 0 ? 'all passed.' : ok + ' passed, ' + bad + ' failed.'),
     failRow: 'failed',
@@ -224,6 +226,13 @@ class Ctx {
   /** The maker's one-line note for the try checklist, from <cohdit>/notes/ITEM.txt; null if none. */
   note(i) {
     try { return require('fs').readFileSync(path.join(this.cohdit, 'notes', i + '.txt'), 'utf8').trim() || null; } catch (e) { return null; }
+  }
+
+  /** Did the maker write wording the person should read? Its report says so (notes/ITEM.words); an
+   *  older note that says so in its own words counts too. */
+  wroteWords(i) {
+    if (require('fs').existsSync(path.join(this.cohdit, 'notes', i + '.words'))) return true;
+    return /\bI (wrote|drafted)\b[^.]*\b(words?|wording|text|copy)\b/i.test(this.note(i) || '');
   }
 
   // --- lookups -------------------------------------------------------------------------------
@@ -381,6 +390,11 @@ function pct(x) {
 function hours(h) {
   if (h === null || h === undefined) return 'n/a';
   return h < 48 ? h.toFixed(1) + 'h' : (h / 24).toFixed(1) + 'd';
+}
+
+/** 2 → "2"; 2, 5 → "2 and 5"; 2, 3, 5 → "2, 3 and 5". */
+function list(xs) {
+  return xs.length < 2 ? String(xs[0]) : xs.slice(0, -1).join(', ') + ' and ' + xs[xs.length - 1];
 }
 
 function plural(n, one, many) {
@@ -1007,9 +1021,39 @@ function viewSpec(c, a) {
 
 // --- the checklist: what to try, in the person's own words ----------------------------------------
 
+// The try standard: below the tech level, a thing on the list is its title and one line of how to try
+// it, never longer than TRY_LINE_MAX. The line is the first sentence of the maker's note that is not
+// about wording it wrote; that wording is named once, at the end, by item number.
+const TRY_LINE_MAX = 100;
+const TRY_TITLE_MAX = 48;
+const ABOUT_WORDING = /\bI (wrote|drafted)\b|\bmyself\b|\bwording\b|\bplease read\b/i;
+
+function sentences(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s+(?=[A-Z"'(])/).filter(Boolean);
+}
+
+/** s cut at a word so it is at most max characters, ending in "…" when cut. */
+function cutAt(s, max) {
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max - 1);
+  return cut.slice(0, Math.max(cut.lastIndexOf(' '), Math.floor(max / 3))).replace(/[\s,;:—(-]+$/, '') + '…';
+}
+
+/** One short line from a note or a check: its first sentence not about wording, cut at a word. */
+function shortLine(text) {
+  const s = sentences(text).find((x) => !ABOUT_WORDING.test(x));
+  if (!s) return '';
+  return cutAt(s[0].toUpperCase() + s.slice(1), TRY_LINE_MAX);
+}
+
+/** A title short enough to read at a glance (a bug's title can be a whole error message). */
+function shortTitle(text) {
+  return cutAt(String(text || '').replace(/\s+/g, ' ').trim(), TRY_TITLE_MAX);
+}
+
 /** checklist view: the live try's address and the things left on its list, numbered as the try
- *  numbered them (the TRY_START event freezes the order), each with its checks verbatim and the maker's
- *  note; a device check carries the same-wifi address. Without a live try: what a try would cover. */
+ *  numbered them (the TRY_START event freezes the order), each a short title and one short line of how
+ *  to try it; a device check carries the same-wifi address. Without a live try: what a try would cover. */
 function viewChecklist(c, a) {
   const w = c.w;
   const tech = c.level === 'tech';
@@ -1034,14 +1078,19 @@ function viewChecklist(c, a) {
   const out = [];
   if (start) out.push(c.line(start, tech ? 'product' : c.level, rs));
   const order = start ? start.f.items : ids;
+  const wrote = [];
   for (const i of ids) {
     const it = c.item(i) || {};
     const n = order.indexOf(i) + 1;
     const device = it.device && start && start.f.lan ? w.onDevice(start.f.lan) : '';
-    out.push('  ' + n + ' ' + c.title(i) + (tech ? ' (' + i + ')' : '') + ' — ' + device + ((it.criteria || []).join('; ') || '?'));
     const note = c.note(i);
-    if (note) out.push('      ' + note);
+    // every level: the title, then one short line of how to try it (the standard: TRY_TITLE_MAX, TRY_LINE_MAX)
+    out.push('  ' + n + ' ' + shortTitle(c.title(i)) + (tech ? ' (' + i + ')' : ''));
+    const how = shortLine(note) || shortLine((it.criteria || [])[0]) || '?';
+    out.push('    ' + (device ? device[0].toUpperCase() + device.slice(1) + how[0].toLowerCase() + how.slice(1) : how));
+    if (c.wroteWords(i)) wrote.push(n);
   }
+  if (wrote.length) out.push(w.wroteWords(wrote));
   if (!ids.length) out.push(tech ? 'every item has a result' : w.tryAnswer);
   else out.push(start ? w.tryAnswer : w.trySay);
   return out;
@@ -1121,4 +1170,4 @@ if (require.main === module) {
     return 1;
   }).then((code) => { process.exitCode = code; });
 }
-module.exports = { Ctx, WORDS, score, VIEWS, parseArgs, resolveLevel, main };
+module.exports = { Ctx, WORDS, score, VIEWS, parseArgs, resolveLevel, main, shortLine, shortTitle };
