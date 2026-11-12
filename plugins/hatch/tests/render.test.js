@@ -21,7 +21,7 @@ const sha = (s) => crypto.createHash('sha1').update(s).digest('hex');
 
 // How much a person reads per view, at most. Events are a list and exempt. A golden that grows past
 // its budget is a verbosity regression, not a wording change.
-const BUDGET = { plain: { status: 12, why: 4, digest: 12, score: 4, spec: 16, checklist: 18 }, product: { status: 12, why: 4, digest: 12, score: 4, spec: 16, checklist: 18 } };
+const BUDGET = { plain: { status: 12, why: 4, digest: 12, score: 4, spec: 16, checklist: 20 }, product: { status: 12, why: 4, digest: 12, score: 4, spec: 16, checklist: 20 } };
 
 test('goldens', () => {
   fs.mkdirSync(G, { recursive: true });
@@ -180,4 +180,29 @@ test('bad arguments → 64, no --cohdit outside a repo → 2', () => {
   assert.equal(H.run('render.js', ['nope']).code, 64);
   assert.equal(H.run('render.js', ['why', '--level', 'loud']).code, 64);
   assert.equal(H.run('render.js', ['why'], { cwd: H.tmpdir() }).code, 2);
+});
+
+test('the try standard: at every level, a short title and one short line; drafted wording named once at the end', () => {
+  const { shortLine } = require('../scripts/render');
+  assert.equal(shortLine("open any run and click 'How this was decided'. A judged check shows its score."), "Open any run and click 'How this was decided'.");
+  assert.equal(shortLine('I wrote the wording for the panel myself. Please read it. Open the front page.'), 'Open the front page.');
+  const long = shortLine('Open a failed run on a laptop: each line of the conversation now has the checks that judged it on its right, with a green edge.');
+  assert.ok(long.length <= 100 && long.endsWith('…'), long);
+  assert.equal(shortLine(''), '');
+  const { shortTitle } = require('../scripts/render');
+  assert.equal(shortTitle('The verdict, explained'), 'The verdict, explained');
+  const t = shortTitle('Next.js 15.5.4 (outdated) Webpack Build Error Module build failed: UnhandledSche');
+  assert.ok(t.length <= 48 && t.endsWith('…'), t);
+  const dir = H.tmpdir();
+  fs.cpSync(fx('happy'), dir, { recursive: true });
+  fs.mkdirSync(path.join(dir, 'notes'), { recursive: true });
+  const ids = JSON.parse(fs.readFileSync(path.join(dir, 'spec.json'), 'utf8')).items.map((i) => i.id);
+  fs.writeFileSync(path.join(dir, 'notes', ids[0] + '.txt'), 'Type Dishes and press Add. I wrote the empty-list wording myself, so read it. Then it shows a long explanation nobody needs.\n');
+  fs.writeFileSync(path.join(dir, 'notes', ids[1] + '.words'), '');
+  const run = (lvl) => H.run('render.js', ['checklist', '--level', lvl, '--cohdit', dir, '--now', H.NOW], { env: { COHDIT_HOME: HOME } }).out;
+  const plain = run('plain').split('\n');
+  assert.deepEqual(plain.slice(0, 4), ['  1 Add a chore', '    Type Dishes and press Add.', '  2 Tick a chore done', '    Tick Dishes: it moves under Done']);
+  assert.equal(plain[4], "I wrote some of the words in 1 and 2 myself. Change anything that doesn't sound right.");
+  const tech = run('tech').split('\n');
+  assert.deepEqual(tech.slice(0, 2), ['  1 Add a chore (' + ids[0] + ')', '    Type Dishes and press Add.'], 'a developer gets the short list too, with ids');
 });

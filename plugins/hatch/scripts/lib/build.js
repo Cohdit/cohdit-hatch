@@ -455,6 +455,12 @@ function writeNote(dir, item, text) {
   fs.writeFileSync(path.join(notesDir(dir), item + '.txt'), String(text).trim() + '\n');
 }
 
+/** The maker wrote wording the person should read: the checklist names the item once, at its end. */
+function markWords(dir, item) {
+  fs.mkdirSync(notesDir(dir), { recursive: true });
+  fs.writeFileSync(path.join(notesDir(dir), item + '.words'), '');
+}
+
 function readNote(dir, item) {
   try { return fs.readFileSync(path.join(notesDir(dir), item + '.txt'), 'utf8').trim() || null; } catch (e) { return null; }
 }
@@ -826,6 +832,7 @@ function makerReturn(text) {
     return false;
   });
   if (r.try_note !== undefined && r.try_note !== null && typeof r.try_note !== 'string') { r.dropped.push('try_note (it must be text)'); delete r.try_note; }
+  if (r.words !== undefined && r.words !== null && typeof r.words !== 'boolean') { r.dropped.push('words (true or false)'); delete r.words; }
   return r;
 }
 
@@ -898,7 +905,7 @@ module.exports = {
   cohditDir, notesDir, readCfg, saveCfg, level, blob, emit, spoolFile, flush,
   git, gitNet, hasRemote, headSha, fullSha, currentBranch, isPrimary, mainBranch, resetTree, dirtyPaths, fetch, remoteMain, toMain, rebaseOnto, fastForward, baseSha, startBase, keepWork, pushMain, commitLedger, landMain, land, agentModel,
   active, saveActive, isLive, setPointer, clearPointer, newRunId, runStart, stopBefore, abandon,
-  allRecords, itemStatus, lastFailNote, branchFor, remoteClaims, candidates, startItem, claim, releaseClaim, writeNote, readNote,
+  allRecords, itemStatus, lastFailNote, branchFor, remoteClaims, candidates, startItem, claim, releaseClaim, writeNote, markWords, readNote,
   scaffold, ensureRepo, fetchIdea, workDir, sideCopy, findSideCopy, removeSideCopy, sweepSideCopies, brief, scanBrief, briefPath, diffPath, consultPath, scanPath, rolePath, writeRole, writeConsult, hatchCmd, refusalClause,
   parseReturn, makerReturn, checkerReturn, advisorReturn, risk, loadLenses, lensesFor, dependencies, coverage, ROLES,
 };

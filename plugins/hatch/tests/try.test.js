@@ -118,11 +118,14 @@ test('a try from start to pass: the app, the list, a fail in their words, pass f
   const lan = hintOf(s, 'lan');                                            // null on a computer with no network
   assert.equal(s.out, [
     'Open ' + url + ' to try it.',
-    '  1 Letter grid — open it; you see all 26 letters, big',
-    '  2 Tap to hear — tap a letter; you hear it',
-    '  3 Animal picture — tap a letter; you see the animal and its name',
-    '      Read the animal names; change any.',
-    '  4 On the iPad — ' + (lan ? 'on the same wifi, open ' + lan + ' on it (if this computer asks whether to allow connections, say yes); ' : '') + 'open it on the iPad',
+    '  1 Letter grid',
+    '    Open it; you see all 26 letters, big',
+    '  2 Tap to hear',
+    '    Tap a letter; you hear it',
+    '  3 Animal picture',
+    '    Read the animal names; change any.',
+    '  4 On the iPad',
+    '    ' + (lan ? 'On the same wifi, open ' + lan + ' on it (if this computer asks whether to allow connections, say yes); open it on the iPad' : 'Open it on the iPad'),
     'Say "pass", or say which one didn\'t work and what you saw.',
   ].join('\n'));
   const t0 = local(dir).try;

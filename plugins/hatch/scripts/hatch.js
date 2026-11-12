@@ -622,6 +622,15 @@ function fixDue(dir, cfg) {
   return !last || ml.hoursBetween(ml.parseTs(ml.utcNow()), ml.parseTs(last)) >= every * 24;
 }
 
+/** A bug's title from what the person saw: its first sentence, cut at a word, so a pasted error message
+ *  does not become the whole title. Their words stay whole in the check. */
+function reportTitle(saw) {
+  const first = saw.split(/(?<=[.!?])\s+/)[0] || saw;
+  if (first.length <= 60) return first;
+  const cut = first.slice(0, 59);
+  return cut.slice(0, Math.max(cut.lastIndexOf(' '), 20)).replace(/[\s,;:(-]+$/, '') + '…';
+}
+
 /** A report from a person, as a bug: their words whole, and what fixed looks like. */
 function reportBug(r) {
   const saw = String(r.saw || '').replace(/\s+/g, ' ').trim();
@@ -629,7 +638,7 @@ function reportBug(r) {
   if (r.did) parts.push('they were ' + String(r.did).trim());
   if (r.expected) parts.push('expected ' + String(r.expected).trim());
   parts.push('saw: ' + saw + (r.page ? ' (at ' + r.page + ')' : ''));
-  return { title: saw.slice(0, 80), criteria: ['Someone using it ' + parts.join('; ') + '. Once fixed, that no longer happens.'], source: 'report', by: 'person' };
+  return { title: reportTitle(saw), criteria: ['Someone using it ' + parts.join('; ') + '. Once fixed, that no longer happens.'], source: 'report', by: 'person' };
 }
 
 /** Every report waiting in `.cohdit/reports/` (pulled from the live app's store first) becomes a bug on
@@ -874,6 +883,7 @@ function cmdBuild(argv) {
         for (const f of r.findings || []) lead.push(['FINDING', { scope: f.scope, sev: f.sev, blob: bd.blob(dir, f.text) }, item]);
         for (const d of r.decisions || []) lead.push(['DECIDE', { type: d.type, choice: d.choice, who: 'hatch' }, item]);
         if (r.try_note) bd.writeNote(dir, item, r.try_note);
+        if (r.words) bd.markWords(dir, item);
         if (r.verdict === 'refused') {
           cur.stop = 'refused';
           setAside(dir, cur, item, lvl, lead.concat([['REFUSE', { category: r.refused }, item], ['STOP', { cause: 'refused' }, item]]));
