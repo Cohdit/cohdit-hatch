@@ -36,9 +36,9 @@ const limits = {
 const DOWN_MS = 60 * 1000;      // after a failed request, use the cache without asking for this long
 const KEY_RE = /^hk_sub_[A-Za-z0-9]+\.[A-Za-z0-9_-]{32}$/;
 const NAMES = {
-  skill: ['setup', 'dream', 'build', 'try', 'share', 'fix', 'remember'],
+  skill: ['setup', 'dream', 'build', 'try', 'share', 'fix', 'remember', 'ask'],
   agent: ['advisor', 'maker', 'checker', 'lens-security', 'lens-privacy', 'lens-compliance', 'lens-cost'],
-  data: ['baseline', 'codes', 'domains', 'hosting', 'interview', 'lenses', 'lessons', 'prices', 'questions', 'rails', 'stack', 'TERMS'],
+  data: ['baseline', 'codes', 'domains', 'hosting', 'interview', 'leader', 'lenses', 'lessons', 'prices', 'questions', 'rails', 'stack', 'TERMS'],
 };
 const MARKDOWN_DATA = ['TERMS'];
 // Agents with no Bash: hatch.js writes their instructions next to the brief (lib/build.js writeRole).
