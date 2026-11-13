@@ -48,7 +48,8 @@ const ls = require('./lessons');
 const ld = require('./leader');
 const api = require('./api');
 
-const DEFAULT_CAPS = { items_per_run: 8, usd_per_run: 15, rounds_per_item: 2, minutes_per_item: 40 };
+const DEFAULT_CAPS = { items_per_run: 8, usd_per_run: 15, rounds_per_item: 2, minutes_per_item: 40, lanes: 3 };
+const LANES_MAX = 3;                             // makers at once: the person's plan, their computer, and clashes all grow with it
 const DEFAULT_VERIFY = 'npm test && npm run build';
 const LONG_MS = 9 * 60000;                       // one verify, one scaffold step: under Claude Code's limit for a call
 const NET_MS = 120000;                           // one fetch, one push
@@ -267,6 +268,7 @@ function landMain(dir) {
  *  shared main; the result of that push is itself an event for the next flush. `cur` is the active
  *  run; `said_no_remote` on it keeps "not saved online" to one line per run. */
 function land(dir, cur, message) {
+  if (cur.lead) return;                                          // a lane: its records wait in the shared spool; the lead lands them
   flush(dir, cur.run);
   const result = commitLedger(dir, message);
   if (result && result !== 'no_remote') emit(dir, cur.run, [['PUSH', { branch: 'main', result }]]);
@@ -357,6 +359,13 @@ function abandon(dir, cur) {
   emit(dir, cur.run, [['RUN_END', { outcome: 'crashed' }]]);
   flush(dir, cur.run);
   for (const o of Object.values(cur.open || {})) releaseClaim(dir, o.branch);
+  for (const d of cur.lanes || []) {                             // its lanes go with it, their work kept
+    const c = active(d);
+    if (!c || c.run !== cur.run) continue;
+    for (const o of Object.values(c.open || {})) { keepWork(d, o); releaseClaim(d, o.branch); }
+    ml.clearActiveRun(d);
+    removeSideCopy(d);
+  }
   ml.clearActiveRun(dir);
 }
 
@@ -604,6 +613,12 @@ function sweepSideCopies(primary, spec) {
       const cur = active(dir);
       if (cur) {                                                 // a run still open here: alive, or abandoned long ago
         if (ml.hoursBetween(ml.parseTs(ml.utcNow()), ml.parseTs(cur.started)) <= ml.STALE_RUN_H) continue;
+        if (cur.lead) {                                          // a lane: its run is the lead's, which ends it
+          for (const o of Object.values(cur.open || {})) { keepWork(dir, o); releaseClaim(dir, o.branch); }
+          ml.clearActiveRun(dir);
+          removeSideCopy(dir);
+          continue;
+        }
         emit(dir, cur.run, [['RUN_END', { outcome: 'crashed' }]]);
         flush(dir, cur.run);
         for (const o of Object.values(cur.open || {})) releaseClaim(dir, o.branch);
@@ -639,6 +654,63 @@ function removeSideCopy(dir) {
   git(['worktree', 'remove', '--force', dir], root, false);
   git(['branch', '-q', '-D', mb], root, false);
 }
+
+// --- lanes: one run, up to LANES_MAX makers at once ---------------------------------------------------
+//
+// The lead is the working copy `build open` was called in; each other lane is a side copy beside it
+// with an active run of its own that shares the lead's run id. All lanes write to the one spool (it
+// sits in the shared git folder), only the lead lands the ledger, and every finished thing reaches the
+// shared main one at a time through the gate's fast-forward push. Lanes need the shared copy.
+
+/** How many lanes this run may use: the cap, at most LANES_MAX, and never more than there is to build. */
+function laneCount(cfg, spec, status) {
+  const cap = Math.max(1, Math.min(LANES_MAX, Number((cfg.caps || {}).lanes) || 1));
+  const left = spec.items.filter((i) => !i.device && status.get(i.id) === 'queued').length;
+  return Math.max(1, Math.min(cap, left));
+}
+
+/** The packages a fresh side copy needs before its checks can run. Throws Invalid when they fail. */
+function installDeps(dir) {
+  if (process.env.COHDIT_FAKE_SCAFFOLD || !fs.existsSync(path.join(dir, 'package.json')) || fs.existsSync(path.join(dir, 'node_modules'))) return;
+  const lock = fs.existsSync(path.join(dir, 'package-lock.json'));
+  const r = doc.realRun('npm', [lock ? 'ci' : 'install', '--no-audit', '--no-fund'], { cwd: dir, timeout: LONG_MS });
+  if (r.code !== 0) throw new Invalid('installing the packages in a lane failed: ' + (r.err || r.out || '').trim().split('\n').slice(-2).join(' '));
+}
+
+/** Open lanes 2..n for the lead's run. Returns the lane folders now open (existing ones kept). */
+function openLanes(dir, cur, spec, cfg, session, n) {
+  const live = (cur.lanes || []).filter((d) => { const c = active(d); return c && c.run === cur.run && c.lead === dir; });
+  cur.lanes = live;
+  for (let k = live.length + 2; k <= n; k++) {
+    const lane = sideCopy(ml.repoRoot(dir), spec);
+    try {
+      installDeps(lane);
+    } catch (e) {
+      removeSideCopy(lane);
+      break;                                                     // fewer lanes, never a failed run
+    }
+    saveActive(lane, { run: cur.run, started: cur.started, skill: 'build', session: (session || cur.session || 'lead') + '#' + k, lead: dir, lane: k, base: cur.base, open: {}, picked: [], remote: true });
+    cur.lanes.push(lane);
+  }
+  saveActive(dir, cur);
+  return cur.lanes;
+}
+
+/** The lead and every lane of a run, as [{dir, cur}], the lead first. Works from any lane. */
+function laneGroup(dir, cur) {
+  const leadDir = cur.lead || dir;
+  const lead = cur.lead ? active(leadDir) : cur;
+  const out = [{ dir: leadDir, cur: lead || cur }];
+  for (const d of ((lead || {}).lanes || [])) {
+    if (path.resolve(d) === path.resolve(dir)) { out.push({ dir, cur }); continue; }
+    const c = active(d);
+    if (c && c.run === cur.run) out.push({ dir: d, cur: c });
+  }
+  return out;
+}
+
+/** The folder the ledger and notes live in for this run: the lead's. */
+function homeDir(dir, cur) { return cur.lead || dir; }
 
 // --- the brief the maker reads -------------------------------------------------------------------
 
@@ -911,6 +983,6 @@ module.exports = {
   git, gitNet, hasRemote, headSha, fullSha, currentBranch, isPrimary, mainBranch, resetTree, dirtyPaths, fetch, remoteMain, toMain, rebaseOnto, fastForward, baseSha, startBase, keepWork, pushMain, commitLedger, landMain, land, agentModel,
   active, saveActive, isLive, setPointer, clearPointer, newRunId, runStart, stopBefore, abandon,
   allRecords, itemStatus, lastFailNote, branchFor, remoteClaims, candidates, startItem, claim, releaseClaim, writeNote, markWords, readNote,
-  scaffold, ensureRepo, fetchIdea, workDir, sideCopy, findSideCopy, removeSideCopy, sweepSideCopies, brief, scanBrief, briefPath, diffPath, consultPath, scanPath, rolePath, writeRole, writeConsult, hatchCmd, refusalClause,
+  scaffold, ensureRepo, fetchIdea, workDir, sideCopy, laneCount, installDeps, openLanes, laneGroup, homeDir, LANES_MAX, findSideCopy, removeSideCopy, sweepSideCopies, brief, scanBrief, briefPath, diffPath, consultPath, scanPath, rolePath, writeRole, writeConsult, hatchCmd, refusalClause,
   parseReturn, makerReturn, checkerReturn, advisorReturn, risk, loadLenses, lensesFor, dependencies, coverage, ROLES,
 };

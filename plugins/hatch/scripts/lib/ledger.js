@@ -523,12 +523,13 @@ function transcriptMeta(file) {
   return { branch, promptItems: [...items].sort() };
 }
 
-/** [item, how]. The branch beats the prompt beats the run's only open item; else none. */
+/** [item, how]. The one open item the prompt names beats the branch (several makers at once share the
+ *  session's folder, so its branch is one lane's), which beats the run's only open item; else none. */
 function attribute(meta, openItems) {
-  const m = /^item\/(\d{3})/.exec(meta.branch || '');
-  if (m) return ['ITEM-' + m[1], 'branch'];
   const named = (meta.promptItems || []).filter((i) => openItems.includes(i));
   if (named.length === 1) return [named[0], 'prompt'];
+  const m = /^item\/(\d{3})/.exec(meta.branch || '');
+  if (m) return ['ITEM-' + m[1], 'branch'];
   if (openItems.length === 1) return [openItems[0], 'window'];
   return [null, 'none'];
 }

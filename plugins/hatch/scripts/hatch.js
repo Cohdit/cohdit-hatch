@@ -563,11 +563,15 @@ function gate(dir, cur, spec, item, lvl, lead) {
     const base = bd.baseSha(dir);
     if (base && base !== o.base) {
       if (!bd.rebaseOnto(dir, base, o.branch)) {
+        if (!o.clashed) return clash(dir, cur, spec, cfg, item, lvl, lead, 'conflict');
         return blocked(dir, cur, item, lvl, 'dependency', "someone else's change conflicts with this one; it can be built again later", lead);
       }
       o.base = base;
       bd.saveActive(dir, cur);
-      if (verifyNow(dir, cur, cfg, lvl, true) !== 0) return blocked(dir, cur, item, lvl, 'other', "the checks failed after combining with others' work", lead);
+      if (verifyNow(dir, cur, cfg, lvl, true) !== 0) {
+        if (!o.clashed) return clash(dir, cur, spec, cfg, item, lvl, lead, 'checks');
+        return blocked(dir, cur, item, lvl, 'other', "the checks failed after combining with others' work", lead);
+      }
     }
     const sha = bd.fullSha(dir, o.branch);
     if (!bd.hasRemote(dir)) {
@@ -592,6 +596,54 @@ function gate(dir, cur, spec, item, lvl, lead) {
   say(dir, written.filter((r) => r.c === 'DONE'), lvl);
   hint('next', 'next');
   return 0;
+}
+
+/** Another thing reached main while this one was built, and the two clash (the same lines, or checks
+ *  that fail together). Once per thing: its work is kept, it starts again on the current main with its
+ *  earlier version beside it, and the run narrows to one lane. A second clash sets it aside. */
+function clash(dir, cur, spec, cfg, item, lvl, lead, why) {
+  const o = cur.open[item];
+  narrow(dir, cur);
+  const earlier = bd.git(['diff', o.base + '..' + o.branch], dir, false) || '';
+  bd.keepWork(dir, o);
+  bd.resetTree(dir);
+  const base = bd.baseSha(dir);
+  o.start = bd.startItem(dir, o.branch, base, item);
+  o.base = base;
+  o.fork = bd.headSha(dir, base);
+  o.clashed = true;
+  if (bd.hasRemote(dir)) bd.gitNet(['push', '-q', '-f', 'origin', 'refs/heads/' + o.branch + ':refs/heads/' + o.branch], dir);   // our own claim, restarted
+  fs.writeFileSync(bd.diffPath(dir, item), earlier);
+  o.notes = ['Another change reached main while this was being built, and the two ' + (why === 'conflict' ? 'change the same lines' : 'fail the checks together')
+    + '. Build this thing again on the current main. Your earlier version is the diff at ' + bd.diffPath(dir, item) + ': reuse what still fits.'];
+  const written = bd.emit(dir, cur.run, (lead || []).concat([['ROUND', { cause: 'gate' }, item], ['DISPATCH', { agent: 'maker', model: bd.agentModel('maker') }, item]]));
+  say(dir, written.filter((x) => x.c === 'ROUND'), lvl);
+  dispatchMaker(dir, cur, spec, cfg, item, lvl, o.notes);
+  return 0;
+}
+
+/** One lane from here on: the lead takes no more lanes and the others stop after what they hold. */
+function narrow(dir, cur) {
+  const L = bd.laneGroup(dir, cur)[0];
+  if (L.cur.narrow) return;
+  L.cur.narrow = true;
+  bd.saveActive(L.dir, L.cur);
+  if (L.cur !== cur && L.dir === dir) cur.narrow = true;
+}
+
+/** A lane's job is over: anything it still held goes back on the list (its committed work kept), and
+ *  its copy goes. Its records stay in the shared spool for the lead to land. */
+function closeLane(dir, cur) {
+  for (const item of Object.keys(cur.open || {})) {
+    const o = cur.open[item];
+    const kept = bd.keepWork(dir, o);
+    if (kept) hint('kept', kept);
+    bd.releaseClaim(dir, o.branch);
+  }
+  ml.clearActiveRun(dir);
+  bd.removeSideCopy(dir);
+  const L = cur.lead ? bd.active(cur.lead) : null;
+  if (L && L.lanes) { L.lanes = L.lanes.filter((d) => path.resolve(d) !== path.resolve(dir)); bd.saveActive(cur.lead, L); }
 }
 
 function dispatchMaker(dir, cur, spec, cfg, item, lvl, notes, status) {
@@ -766,6 +818,10 @@ function cmdBuild(argv) {
         bd.saveActive(dir, cur);
       }
       if (fixDue(dir, cfg)) hint('hint', 'fix_due');
+      if (!cur.lead && cur.remote && bd.hasRemote(dir)) {        // more makers at once, each in a lane of its own; narrowed: no more
+        const lanes = bd.openLanes(dir, cur, spec, bd.readCfg(dir), session, cur.narrow ? 1 : bd.laneCount(bd.readCfg(dir), spec, bd.itemStatus(dir, spec)));
+        if (lanes.length) hint('lanes', lanes.join(','));
+      }
       hint('run', cur.run);
       hint('next', 'next');
       return 0;
@@ -777,7 +833,9 @@ function cmdBuild(argv) {
     hint('run', cur.run);
     bd.saveActive(dir, cur);                                     // every call is a heartbeat
     if (sub === 'next') {
-      if (cur.stop) { hint('next', 'close'); return 0; }
+      const group = bd.laneGroup(dir, cur), lead = group[0];
+      const home = bd.homeDir(dir, cur);
+      if (cur.stop || (cur.lead && lead.cur.stop === 'refused')) { hint('next', 'close'); return 0; }
       const open = Object.keys(cur.open);
       if (open.length) {                                         // resuming: the same item, where it was
         const item = open[0], o = cur.open[item];
@@ -789,17 +847,28 @@ function cmdBuild(argv) {
         }
         return 0;
       }
-      if (cur.picked.length >= cfg.caps.items_per_run) { stopRun(dir, cur, 'cap', lvl); return 0; }
-      const c = new render.Ctx({ level: lvl, cohdit: sp.cohditDir(dir), spool: bd.spoolFile(dir) });
+      // A lane takes nothing new once the lead stopped, narrowed to one lane, or let it go.
+      if (cur.lead && (lead.cur.stop || lead.cur.narrow || !(lead.cur.lanes || []).includes(dir))) { hint('next', 'close'); return 0; }
+      const busy = group.some((g) => g.dir !== dir && Object.keys(g.cur.open || {}).length);   // another lane is mid-thing
+      const ease = (cause) => {                                  // a cap: lanes finish what they hold; the lead stops last
+        if (cur.lead) { hint('next', 'close'); return 0; }
+        if (busy) { hint('next', 'wait'); return 0; }
+        stopRun(dir, cur, cause, lvl);
+        return 0;
+      };
+      const picks = group.reduce((n, g) => n + (g.cur.picked || []).length, 0);
+      if (picks >= cfg.caps.items_per_run) return ease('cap');
+      const c = new render.Ctx({ level: lvl, cohdit: sp.cohditDir(home), spool: bd.spoolFile(dir) });
       const u = c.usage(c.runs.get(cur.run) || []);
-      if (u.usd !== null && u.usd >= cfg.caps.usd_per_run) { stopRun(dir, cur, 'budget', lvl); return 0; }
+      if (u.usd !== null && u.usd >= cfg.caps.usd_per_run) return ease('budget');
       const sb = bd.startBase(dir);                              // the shared main and this computer's own unpushed commits
       const base = sb.base;
       if (sb.push) bd.emit(dir, cur.run, [['PUSH', { branch: 'main', result: sb.push }]]);
-      let status = bd.itemStatus(dir, spec), claims = bd.remoteClaims(dir);
+      let status = bd.itemStatus(home, spec), claims = bd.remoteClaims(dir);
+      const held = new Set(group.flatMap((g) => Object.keys(g.cur.open || {})));
       let picked = null, branch = null, start = null;
       for (let tries = 0; tries < 4 && !picked; tries++) {
-        const cands = bd.candidates(dir, spec, status, claims);
+        const cands = bd.candidates(dir, spec, status, claims).filter((i) => !held.has(i.id));
         if (!cands.length) break;
         const it = cands[0];
         const b = bd.branchFor(it);
@@ -812,6 +881,8 @@ function cmdBuild(argv) {
         bd.fetch(dir); claims = bd.remoteClaims(dir);           // taken: someone else got there first
       }
       if (!picked) {
+        if (busy) { hint('next', 'wait'); return 0; }            // what is left may need what another lane is building
+        if (cur.lead) { hint('next', 'close'); return 0; }
         const elsewhere = spec.items.some((i) => !i.device && !cur.open[i.id]
           && (status.get(i.id) === 'building' || (status.get(i.id) === 'queued' && claims.has(bd.branchFor(i)))));
         if (elsewhere) hint('hint', 'others_building');
@@ -884,10 +955,11 @@ function cmdBuild(argv) {
         const lead = [['RETURN', { agent: 'maker', verdict: r.verdict }, item]];
         for (const f of r.findings || []) lead.push(['FINDING', { scope: f.scope, sev: f.sev, blob: bd.blob(dir, f.text) }, item]);
         for (const d of r.decisions || []) lead.push(['DECIDE', { type: d.type, choice: d.choice, who: 'hatch' }, item]);
-        if (r.try_note) bd.writeNote(dir, item, r.try_note);
-        if (r.words) bd.markWords(dir, item);
+        if (r.try_note) bd.writeNote(bd.homeDir(dir, cur), item, r.try_note);
+        if (r.words) bd.markWords(bd.homeDir(dir, cur), item);
         if (r.verdict === 'refused') {
           cur.stop = 'refused';
+          if (cur.lead) { const L = bd.laneGroup(dir, cur)[0]; L.cur.stop = 'refused'; bd.saveActive(L.dir, L.cur); }
           setAside(dir, cur, item, lvl, lead.concat([['REFUSE', { category: r.refused }, item], ['STOP', { cause: 'refused' }, item]]));
           hint('next', 'close');
           return 1;
@@ -952,7 +1024,15 @@ function cmdBuild(argv) {
       }
       return blocked(dir, cur, item, lvl, 'other', 'the review still asked for changes after ' + o.rounds + ' rounds:\n' + notes.join('\n'), [['ROUND', { cause: 'review' }, item]]);   // the last failed round counts too
     }
+    if (sub === 'narrow') {                                      // one lane from here: the others finish what they hold
+      narrow(dir, cur);
+      hint('next', 'next');
+      return 0;
+    }
     if (sub === 'close') {
+      if (cur.lead) { closeLane(dir, cur); hint('next', 'none'); return 0; }
+      for (const g of bd.laneGroup(dir, cur).slice(1)) closeLane(g.dir, g.cur);   // what a lane still held goes back on the list
+      cur.lanes = [];
       bd.emit(dir, cur.run, [['RUN_END', { outcome: cur.stop ? 'stopped' : 'ok' }]]);
       land(dir, cur, 'Hatch: ledger');
       bd.flush(dir, cur.run);                                    // the push result of the last landing
@@ -965,7 +1045,7 @@ function cmdBuild(argv) {
       hint('next', done ? 'try' : 'none');
       return cur.stop ? 1 : 0;
     }
-    return fail('build needs one of open, next, verify, commit, add, built, checked, advised, close');
+    return fail('build needs one of open, next, verify, commit, add, built, checked, advised, narrow, close');
   } catch (e) {
     if (e instanceof sp.Invalid || e instanceof bd.Invalid) {
       process.stderr.write('hatch: ' + e.message + '\n');

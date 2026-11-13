@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.15 — up to three makers at once (2026-11-13)
+
+- "Build it" runs up to three makers at once (`caps.lanes`, default 3, never more), one thing each,
+  never more than there is to build. The lead is the project folder; the others are lanes: side copies
+  under `~/Hatch/.work` with their packages installed, opened by `build open` (`lanes=` on stderr).
+- One run, one digest: every lane writes the same run, and only the lead saves the ledger.
+- Finished things reach main one at a time through the gate: replayed onto the current main, checked
+  again, pushed only as a fast-forward.
+- A clash there (the same lines, or checks that fail combined) builds the thing again once on the
+  current main, its first version kept and handed to the maker, and the run drops to one lane.
+- `build next` may answer `next=wait` (a lane sits out a round while others finish what it needs);
+  `build narrow` drops to one lane by hand (used when Claude's usage limit stops an agent).
+- Caps (things per run, budget) count the whole run. Without a shared copy on GitHub, one lane.
+- Usage is matched to the thing a prompt names before the folder's branch, so each lane is charged its own.
+- Content: deploy the new build playbook with this release. It also works with an older plugin (no
+  `lanes=` means one lane).
+
 ## 0.0.14 — the software leader decides (2026-11-13)
 
 - Builds are decided against the software leader: the owner's whole knowledge, fetched from Cohdit as
