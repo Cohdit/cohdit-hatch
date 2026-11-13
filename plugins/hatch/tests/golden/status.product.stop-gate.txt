@@ -4,5 +4,4 @@ Idea: Chore Chart (4 items)
   blocked    Reset on Sunday
   queued     Weekly scoreboard
 Not published yet — say "share it" to deploy.
-Tokens: 3M over 1 run ≈ $2.24 at API list price.
 Waiting on you: 2 items to try. Say "let me try it".

@@ -5,5 +5,4 @@ Working now: building "Weekly scoreboard" (started 10 minutes ago).
   waiting    Reset on Sunday — your answer needed
   building   Weekly scoreboard
 Not shared yet — say "share it" when you want friends to see it.
-Claude has used about 0 tokens over 1 session (roughly $0.00 at Claude's public API prices).
 Waiting on you: 2 things to try. Say "let me try it".

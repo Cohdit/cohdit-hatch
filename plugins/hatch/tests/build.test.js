@@ -12,6 +12,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const H = require('./harness');
 const bdl = require('../scripts/lib/build');
+const sp = require('../scripts/lib/spec');
 const hatch = require('../scripts/hatch');
 
 const ITEMS = [
@@ -22,7 +23,7 @@ const ITEMS = [
 ];
 const GATES = { personal_details: false, payments: false, messaging: false, children: { value: true, source: 'said' }, advice: false, uploads: false, user_content: false };
 const OK = { code: 0, out: 'ok\n' };
-const SLUGS = ['abc-friends', 'rounds', 'reports', 'dirty', 'deps', 'pointer', 'offline', 'shared', 'stale', 'checks', 'leftover', 'crash', 'lease', 'unreachable', 'ledger', 'sweep', 'lanes', 'clash'];
+const SLUGS = ['count', 'bugsonly', 'abc-friends', 'rounds', 'reports', 'dirty', 'deps', 'pointer', 'offline', 'shared', 'stale', 'checks', 'leftover', 'crash', 'lease', 'unreachable', 'ledger', 'sweep', 'lanes', 'clash'];
 
 function home(ghOk = true, extraProbes = {}) {
   const d = H.mkrepo();
@@ -101,7 +102,7 @@ test('open: the skeleton, the GitHub copy, the run; a device check is never pick
   assert.match(o.err, /^next=next$/m);
   const cfg = JSON.parse(fs.readFileSync(path.join(dir, '.cohdit', 'config.json'), 'utf8'));
   assert.equal(cfg.verify, 'npm test && npm run build');
-  assert.equal(cfg.caps.items_per_run, 8);
+  assert.equal(cfg.caps.items_per_run, 10);
   assert.equal(cfg.connectors.github.repo, 'priya-k/abc-friends');
   assert.equal(H.git(['rev-parse', '--abbrev-ref', 'HEAD'], dir), 'main');
   const pointer = JSON.parse(fs.readFileSync(path.join(h.dir, '.cohdit', 'active.json'), 'utf8'));
@@ -872,6 +873,38 @@ test('the permission hook approves exactly two shapes, and tells a build call wh
   assert.equal(r.out, '', 'no decision means the usual prompt');
 });
 
+test('build 1 stops after one thing; a bad count is refused before anything starts', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Count', ITEMS.slice(0, 3));
+  oneLane(dir);
+  assert.equal(B(h, dir, ['open', '--items', 'three']).code, 64, 'not a count');
+  assert.equal(B(h, dir, ['open', '--only', 'docs']).code, 64, 'not bugs or things');
+  const o = B(h, dir, ['open', '--items', '1']);
+  assert.equal(o.code, 0, o.err);
+  const cur = bdl.active(dir);
+  assert.deepEqual(cur.want, { items: 1, only: null });
+  cur.picked = ['ITEM-001'];                                     // as if the one thing were done
+  bdl.saveActive(dir, cur);
+  const n = B(h, dir, ['next']);
+  assert.match(n.err, /^next=close$/m, 'the count reached ends picking');
+  assert.equal(bdl.active(dir).stop, 'cap');
+});
+
+test('build all sets no count; fix all picks only bugs', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Bugsonly', ITEMS.slice(0, 2));
+  oneLane(dir);
+  const r = run(h, ['report', 'add', '--dir', dir, '--json', '{"did":"tapped B","expected":"to hear bee","saw":"nothing"}']);
+  assert.equal(r.code, 0, r.err);
+  const bug = sp.load(dir).items.find((i) => i.kind === 'bug');
+  assert.ok(bug, 'the report is a bug on the list');
+  const o = B(h, dir, ['open', '--items', 'all', '--only', 'bugs']);
+  assert.equal(o.code, 0, o.err);
+  assert.deepEqual(bdl.active(dir).want, { items: null, only: 'bugs' });
+  const n = B(h, dir, ['next']);
+  assert.equal(hintOf(n, 'item'), bug.id, 'the bug comes first, though two things sit above it');
+});
+
 test('the usage hook finds a build started from another folder through the pointer', () => {
   const h = home();
   const dir = agreedIdea(h, 'Pointer', ITEMS.slice(0, 1));
@@ -889,7 +922,7 @@ test('the usage hook finds a build started from another folder through the point
   assert.equal(recs.length, 1, 'one USAGE record in the project\'s spool, written from another folder');
   assert.equal(recs[0].r, runId);
   const close = B(h, dir, ['close']);
-  assert.match(close.out, /^This run used about 110 tokens/m, 'the digest shows what the hook measured');
+  assert.doesNotMatch(close.out, /tokens|\$/, 'a builder\'s digest carries no usage or cost');
 });
 
 test('the build skill: short, one script, the refusal clause, points at try and never at share', (t) => {

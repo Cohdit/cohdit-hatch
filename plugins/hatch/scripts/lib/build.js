@@ -48,7 +48,9 @@ const ls = require('./lessons');
 const ld = require('./leader');
 const api = require('./api');
 
-const DEFAULT_CAPS = { items_per_run: 8, usd_per_run: 15, rounds_per_item: 2, minutes_per_item: 40, lanes: 3 };
+// "build it" takes the next DEFAULT_ITEMS things; "build all" the whole list (hatch.js runWant).
+const DEFAULT_ITEMS = 10;
+const DEFAULT_CAPS = { items_per_run: DEFAULT_ITEMS, usd_per_run: 15, rounds_per_item: 2, minutes_per_item: 40, lanes: 3 };
 const LANES_MAX = 3;                             // makers at once: the person's plan, their computer, and clashes all grow with it
 const DEFAULT_VERIFY = 'npm test && npm run build';
 const LONG_MS = 9 * 60000;                       // one verify, one scaffold step: under Claude Code's limit for a call
@@ -663,10 +665,17 @@ function removeSideCopy(dir) {
 // shared main one at a time through the gate's fast-forward push. Lanes need the shared copy.
 
 /** How many lanes this run may use: the cap, at most LANES_MAX, and never more than there is to build. */
-function laneCount(cfg, spec, status) {
+function laneCount(cfg, spec, status, want) {
   const cap = Math.max(1, Math.min(LANES_MAX, Number((cfg.caps || {}).lanes) || 1));
-  const left = spec.items.filter((i) => !i.device && status.get(i.id) === 'queued').length;
-  return Math.max(1, Math.min(cap, left));
+  const left = spec.items.filter((i) => !i.device && status.get(i.id) === 'queued' && wanted(want, i)).length;
+  const asked = want && want.items ? want.items : Infinity;
+  return Math.max(1, Math.min(cap, left, asked));
+}
+
+/** Whether a run that asked for `want` (runWant) takes this thing: "fix all" takes bugs only. */
+function wanted(want, item) {
+  if (!want || !want.only) return true;
+  return want.only === 'bugs' ? item.kind === 'bug' : item.kind !== 'bug';
 }
 
 /** The packages a fresh side copy needs before its checks can run. Throws Invalid when they fail. */
@@ -1012,7 +1021,7 @@ function coverage(dir) {
 }
 
 module.exports = {
-  Invalid, DEFAULT_CAPS, DEFAULT_VERIFY, LONG_MS, NET_MS, LIVE_MIN, STALE_CLAIM_H, TOPIC, AGENTS, TERMINAL,
+  Invalid, DEFAULT_ITEMS, DEFAULT_CAPS, wanted, DEFAULT_VERIFY, LONG_MS, NET_MS, LIVE_MIN, STALE_CLAIM_H, TOPIC, AGENTS, TERMINAL,
   cohditDir, notesDir, readCfg, saveCfg, level, blob, emit, spoolFile, flush,
   git, gitNet, hasRemote, headSha, fullSha, currentBranch, isPrimary, mainBranch, resetTree, dirtyPaths, fetch, remoteMain, toMain, rebaseOnto, fastForward, baseSha, startBase, keepWork, pushMain, commitLedger, landMain, land, agentModel,
   active, saveActive, isLive, setPointer, clearPointer, newRunId, runStart, stopBefore, abandon,
