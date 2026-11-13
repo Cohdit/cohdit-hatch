@@ -60,10 +60,10 @@ test('the shape is enforced and a twin is refused, with exit 64 and nothing writ
   assert.equal(run(b, ['add', '--json', '{"gist":"Keep forms short."}']).code, 0);
   const cases = [
     ['{"gist":"keep forms short"}', /already L-001/],
-    ['{"gist":"' + 'x'.repeat(181) + '"}', /gist is 181 chars/],
+    ['{"gist":"' + 'x'.repeat(351) + '"}', /gist is 351 chars/],
     ['{"gist":"ok","for":["owner"]}', /not a reader/],
     ['{"gist":"ok","tags":["Has Space"]}', /tag "has space"/],
-    ['{"gist":"ok","tags":["a","b","c","d","e","f","g"]}', /at most 6 tags/],
+    ['{"gist":"ok","tags":["aa","bb","cc","dd","ee","ff","gg","hh","ii","jj","kk"]}', /at most 10 tags/],
     ['{"gist":"ok","detail":"' + 'y'.repeat(601) + '"}', /detail is 601 chars/],
     ['{"gist":"ok","when":"build"}', /unknown field when/],
     ['not json', /not JSON/],

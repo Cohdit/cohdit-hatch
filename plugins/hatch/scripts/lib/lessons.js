@@ -4,10 +4,10 @@
  * enough to ride in every brief. `hatch.js remember` is its only writer; `build next` reads it.
  *
  * A lesson is {id, gist, for, tags, detail, added}:
- *   gist    one line, <= 180 chars, the rule itself. This is all most readers ever see.
+ *   gist    one line, <= 350 chars, the rule itself. This is all most readers ever see.
  *   for     who it binds: maker (builds), checker (reviews), dream (interviews), maintainer (works on
  *           Hatch itself). Default maker.
- *   tags    0-6 lowercase words. A tagged lesson rides in a brief only when a tag appears in the
+ *   tags    0-10 lowercase words. A tagged lesson rides in a brief only when a tag appears in the
  *           thing's own words (title, checks, rules, pitch), and then its detail rides with it.
  *           An untagged lesson is general: its gist rides in every brief for its readers.
  *   detail  <= 600 chars, optional: the why or the exact how, when the gist cannot carry it.
@@ -24,9 +24,9 @@ const ml = require('./ledger');
 const api = require('./api');
 
 const READERS = ['maker', 'checker', 'dream', 'maintainer'];
-const GIST_MAX = 180;
+const GIST_MAX = 350;
 const DETAIL_MAX = 600;
-const TAGS_MAX = 6;
+const TAGS_MAX = 10;
 const TAG_RE = /^[a-z0-9][a-z0-9-]{1,23}$/;
 const ID_RE = /^L-\d{3,}$/;
 const CAP = 24;
