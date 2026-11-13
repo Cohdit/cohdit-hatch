@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Lesson limits raised: a gist may be up to 350 characters (was 180) and carry up to 10 tags (was 6).
+- Lesson limits raised: a gist may be up to 350 characters (was 180), carry up to 10 tags (was 6) and a
+  detail of up to 1,000 characters (was 600).
   Only the bank check uses them; installed plugins read longer lessons as they are.
 
 ## 0.0.16 — knowledge agents beside the software leader (2026-11-13)
