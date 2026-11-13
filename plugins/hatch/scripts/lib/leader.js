@@ -8,7 +8,11 @@
  * example?}], reads{reader: [domain]}}. It is optional: when it cannot be had, the sections are left out
  * and the build goes on as before.
  *
- * COHDIT_LEADER=<file> moves it (tests).
+ * Other knowledge agents come as packs of the same shape plus {slug, kind: software|domain, field}: an
+ * idea uses the ones in spec.json `experts` (the person owns them). Their calls and the rules that match one
+ * thing join the brief and the checker; the advisor carries each whole. A pack that cannot be had is left out.
+ *
+ * COHDIT_LEADER=<file> moves the leader, COHDIT_EXPERTS=<dir> the packs (<dir>/<slug>.json) (tests).
  */
 const ml = require('./ledger');
 const api = require('./api');
@@ -68,4 +72,52 @@ function forReader(l, reader) {
   return out.join('\n').trim();
 }
 
-module.exports = { load, core, rules, forReader };
+const LEADER_SLUG = 'software-leader';
+
+/** One pack by slug, or null: tests' folder, else what api preloaded (or the dev folder). */
+function pack(slug) {
+  if (slug === LEADER_SLUG) {
+    const own = process.env.COHDIT_EXPERTS ? null : api.expertJson(slug);
+    return own && Array.isArray(own.knowledge) ? own : load();
+  }
+  let p = null;
+  try {
+    p = process.env.COHDIT_EXPERTS ? ml.readJson(require('path').join(process.env.COHDIT_EXPERTS, slug + '.json'), null) : api.expertJson(slug);
+  } catch (e) { p = null; }
+  return p && Array.isArray(p.knowledge) ? Object.assign({ slug }, p) : null;
+}
+
+/** The packs an idea uses besides the leader, in the spec's order; those that cannot be had are skipped. */
+function used(spec) {
+  const slugs = ((spec && spec.experts) || []).filter((s) => typeof s === 'string' && s !== LEADER_SLUG);
+  return slugs.map(pack).filter(Boolean);
+}
+
+const STOP = new Set('a an and are as at be but by can do for from has have how if in into is it its no not of on or so that the their them then there they this to was we what when which who will with you your'.split(' '));
+function words(text) {
+  return new Set(String(text || '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !STOP.has(w)));
+}
+
+/** The domain rules that best match one thing's words, max across every pack together, best first
+ *  (ties keep pack order, then file order). [{pack, rules: [rule]}] in pack order, packs with none left out. */
+function matched(packs, text, max) {
+  const want = words(text);
+  const limit = max === undefined ? 12 : max;
+  const scored = [];
+  (packs || []).forEach((p, pi) => (p.knowledge || []).forEach((k, ki) => {
+    if (!k || !k.rule) return;
+    const have = words([k.rule, k.domain, ...(Array.isArray(k.tags) ? k.tags : [])].join(' '));
+    let score = 0;
+    for (const w of have) if (want.has(w)) score++;
+    if (score) scored.push({ pi, ki, score, k });
+  }));
+  scored.sort((a, b) => b.score - a.score || a.pi - b.pi || a.ki - b.ki);
+  const keep = scored.slice(0, limit);
+  return (packs || []).map((p, pi) => ({ pack: p, rules: keep.filter((x) => x.pi === pi).sort((a, b) => b.score - a.score || a.ki - b.ki).map((x) => x.k) }))
+    .filter((g) => g.rules.length);
+}
+
+/** Rule lines for a matched group. */
+function ruleLines(rs) { return [].concat(...rs.map(rule)); }
+
+module.exports = { LEADER_SLUG, load, core, rules, forReader, pack, used, matched, ruleLines };

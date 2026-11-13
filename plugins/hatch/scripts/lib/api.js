@@ -4,6 +4,12 @@
  * authenticated by the person's access key. docs/THIN-CLIENT.md in the site repo is the contract.
  *
  *   fetchContent(kind, name)   the text; cached at ~/.hatch/cache/{kind}/{name}
+ *                              kind `expert` is a knowledge agent's pack, named by slug (no list here:
+ *                              the server says who owns what); a 403 not_owned drops only that pack
+ *   me / askFree / buyLink / manage
+ *                              the knowledge-agent calls (JSON, never cached)
+ *   preloadExperts(slugs) / expertJson(slug)
+ *                              packs for the synchronous build loaders; a pack that fails is left out
  *   setKey(key)                check the shape, store it (mode 600), prove it with GET /skill/setup
  *   keyStatus()                'ok', 'missing', or an error code
  *   preloadData([agents]) / dataJson(name) / agentText(name)
@@ -44,6 +50,7 @@ const MARKDOWN_DATA = ['TERMS'];
 // Agents with no Bash: hatch.js writes their instructions next to the brief (lib/build.js writeRole).
 const READ_ONLY = ['advisor', 'checker', 'lens-security', 'lens-privacy', 'lens-compliance', 'lens-cost'];
 const FORBIDDEN = ['inactive', 'revoked', 'wrong_plan'];
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,28}$/;
 
 const MESSAGES = {
   bad_key: 'That key does not look right. Copy it again from your welcome page and say "set me up".',
@@ -55,6 +62,11 @@ const MESSAGES = {
   wrong_plan: 'Your Hatch plan does not include this. Write to delon@cohdit.com.',
   not_found: 'Hatch is missing a part it needs. Update Hatch, or write to delon@cohdit.com.',
   update_required: 'This part of Hatch needs a newer version. Update Hatch, then try again.',
+  not_owned: 'You don\'t have that agent. Say "what agents are there" to see it.',
+  no_free_left: 'That was your last free question for this agent.',
+  daily_limit: 'That\'s today\'s free questions used. Try again tomorrow.',
+  owned: 'You already have that agent.',
+  ask_failed: 'The agent couldn\'t answer just now. That one didn\'t count. Try again.',
 };
 
 class HatchError extends Error {
@@ -78,6 +90,7 @@ function readKey() {
 }
 
 function check(kind, name) {
+  if (kind === 'expert') { if (!SLUG_RE.test(String(name))) throw new HatchError('not_found'); return; }
   if (!NAMES[kind] || !NAMES[kind].includes(name)) throw new HatchError('not_found');
 }
 
@@ -85,6 +98,7 @@ function devPath(kind, name) {
   const d = devDir();
   if (kind === 'skill') return path.join(d, 'skills', name, 'SKILL.md');
   if (kind === 'agent') return path.join(d, 'agents', name + '.md');
+  if (kind === 'expert') return path.join(d, 'experts', name + '.json');
   return path.join(d, 'data', name + (MARKDOWN_DATA.includes(name) ? '.md' : '.json'));
 }
 
@@ -110,16 +124,18 @@ function machineId() {
   }
 }
 
-/** One GET. Resolves {status, body}; rejects on a network error or timeout. */
-function get(url, key, ms) {
+/** One GET (or, with a body, a JSON POST). Resolves {status, body}; rejects on a network error or timeout. */
+function get(url, key, ms, body) {
   const lib = url.startsWith('http:') ? require('http') : require('https');
   const headers = { Authorization: 'Bearer ' + key };
+  const payload = body === undefined ? null : Buffer.from(JSON.stringify(body));
+  if (payload) { headers['Content-Type'] = 'application/json'; headers['Content-Length'] = payload.length; }
   const machine = machineId();
   if (machine) headers['X-Hatch-Machine'] = machine;
   const version = pluginVersion();
   if (version) headers['X-Hatch-Plugin'] = version;
   return new Promise((resolve, reject) => {
-    const req = lib.get(url, { headers }, (res) => {
+    const req = lib.request(url, { method: payload ? 'POST' : 'GET', headers }, (res) => {
       const chunks = [];
       res.on('data', (c) => chunks.push(c));
       res.on('end', () => { clearTimeout(timer); resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') }); });
@@ -127,6 +143,7 @@ function get(url, key, ms) {
     });
     const timer = setTimeout(() => req.destroy(new Error('timeout')), ms || limits.slow);   // whole request, not idle time
     req.on('error', (e) => { clearTimeout(timer); reject(e); });
+    req.end(payload || undefined);
   });
 }
 
@@ -138,7 +155,7 @@ function pluginVersion() {
 /** A 200 that cannot be right (empty, or data that is not JSON) is treated like Cohdit not answering: the cached copy stays. */
 function sound(kind, name, text) {
   if (!text || !text.trim()) return false;
-  if (kind === 'data' && !MARKDOWN_DATA.includes(name)) { try { JSON.parse(text); } catch (e) { return false; } }
+  if ((kind === 'data' && !MARKDOWN_DATA.includes(name)) || kind === 'expert') { try { JSON.parse(text); } catch (e) { return false; } }
   return true;
 }
 
@@ -176,6 +193,7 @@ async function request(kind, name, key, ms) {
   if (res.status === 401) throw new HatchError('bad_key');
   if (res.status === 403) {
     const code = errorCode(res);
+    if (code === 'not_owned') throw new HatchError('not_owned');
     throw new HatchError(FORBIDDEN.includes(code) ? code : 'inactive');
   }
   if (res.status === 404) throw new HatchError('not_found');
@@ -202,6 +220,7 @@ async function fetchContent(kind, name) {
     if (e instanceof HatchError) {
       if (e.code === 'update_required' && stale) return fs.readFileSync(file, 'utf8');   // the older copy still suits this plugin
       if (FORBIDDEN.includes(e.code)) fs.rmSync(cacheDir(), { recursive: true, force: true });
+      if (e.code === 'not_owned') fs.rmSync(file, { force: true });   // that agent only; Hatch itself still works
       throw e;
     }
     markDown();
@@ -246,6 +265,41 @@ async function keyStatus() {
   }
 }
 
+// --- knowledge agents: JSON calls, never cached ---------------------------------------------------
+
+const JSON_ERRORS = { 402: 'no_free_left', 409: 'owned', 429: 'daily_limit', 502: 'ask_failed' };
+
+/** One JSON call with the key. Resolves the parsed body; rejects with a HatchError. */
+async function call(pathname, body) {
+  const key = readKey();
+  if (!key) throw new HatchError('missing');
+  let res;
+  try {
+    res = await get(base() + pathname, key, limits.slow, body);
+  } catch (e) {
+    throw new HatchError('unavailable');
+  }
+  let json = null;
+  try { json = JSON.parse(res.body); } catch (e) { /* refused below */ }
+  if (res.status === 200 && json && typeof json === 'object') return json;
+  const code = json && json.error;
+  if (res.status === 401) throw new HatchError('bad_key');
+  if (res.status === 403) throw new HatchError(code === 'not_owned' || FORBIDDEN.includes(code) ? code : 'inactive');
+  if (res.status === 404) throw new HatchError('not_found');
+  if (res.status === 426) throw new HatchError('update_required');
+  if (JSON_ERRORS[res.status]) throw new HatchError(JSON_ERRORS[res.status]);
+  throw new HatchError('unavailable');
+}
+
+/** What this key owns and could add: {experts:[{slug,name,field}], available:[{slug,name,field,pitch,price,free_left}]}. */
+function me(opts) { return call('/me' + (opts && opts.fresh ? '?fresh=1' : '')); }
+/** One free question to an agent this key does not own: {answer, left}. */
+function askFree(slug, question) { check('expert', slug); return call('/ask/' + slug, { question: String(question) }); }
+/** A link that subscribes in two clicks: {url}. */
+function buyLink(slug) { check('expert', slug); return call('/buy-link', { slug }); }
+/** The Stripe billing page: {url}. */
+function manage() { return call('/manage'); }
+
 const loaded = new Map();
 
 async function preloadData(agents) {
@@ -262,12 +316,33 @@ function loadedText(kind, name) {
   return loaded.get(kind + '/' + name);
 }
 
+/** Fetch packs for the synchronous loaders. Resolves the slugs that could not be had; never rejects. */
+async function preloadExperts(slugs) {
+  const missing = [];
+  for (const slug of slugs || []) {
+    try {
+      const text = await fetchContent('expert', slug);
+      JSON.parse(text);
+      loaded.set('expert/' + slug, text);
+    } catch (e) {
+      missing.push(slug);
+    }
+  }
+  return missing;
+}
+
+/** A preloaded (or dev-dir) pack, or null when it could not be had. */
+function expertJson(slug) {
+  try { return JSON.parse(loadedText('expert', slug)); } catch (e) { return null; }
+}
+
 function dataText(name) { return loadedText('data', name); }
 function agentText(name) { return loadedText('agent', name); }
 
 function dataJson(name) { return JSON.parse(dataText(name)); }
 
 module.exports = {
-  BASE, FRESH_MS, STALE_MS, DOWN_MS, KEY_RE, limits, NAMES, READ_ONLY, MESSAGES, HatchError, message,
+  BASE, FRESH_MS, STALE_MS, DOWN_MS, KEY_RE, SLUG_RE, limits, NAMES, READ_ONLY, MESSAGES, HatchError, message,
+  me, askFree, buyLink, manage, preloadExperts, expertJson,
   home, keyFile, cacheFile, downFile, machineFile, machineId, readKey, fetchContent, setKey, keyStatus, preloadData, dataText, dataJson, agentText,
 };

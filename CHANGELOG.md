@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.0.16 — knowledge agents beside the software leader (2026-11-13)
+
+- The software leader stays on for every key. Other knowledge agents a person subscribes to on Ten Years
+  join their ideas; the plugin keeps no list of them (content kind `expert`, any slug of the right shape;
+  the server says what a key owns).
+- `hatch.js experts`: what the person has and could add (`--json` for the playbooks). `experts offer <slug>`
+  offers one agent once per idea, recorded in spec.json `offered` before the link is asked for, and prints
+  the offer with a link that subscribes in two clicks. `experts link`, `experts manage` (billing page).
+- Five free questions per agent before subscribing: `experts ask <slug> --return -` (answered by Cohdit; the
+  agent's knowledge is never downloaded). The last answer carries the link.
+- `experts check` after a purchase: an offered agent now owned joins the idea (spec.json `experts`).
+  `experts use|stop <slug>` by hand, never during a build.
+- Builds: each agent the idea uses adds its calls and the rules that match the thing (12 at most across all
+  agents) to the maker's brief, the matching rules to the checker, and all of it to the advisor. An agent
+  that cannot be had is left out with one line at `build open`; the build goes on with the leader.
+- `leader --expert <slug>` prints an owned agent's knowledge, for `ask`.
+- A refused agent (`not_owned`) drops only its own cached copy.
+
 ## 0.0.15 — up to three makers at once (2026-11-13)
 
 - "Build it" runs up to three makers at once (`caps.lanes`, default 3, never more), one thing each,
