@@ -742,17 +742,36 @@ function stripOpt(argv, name) {
   return i < 0 ? argv : argv.slice(0, i).concat(argv.slice(i + 2));
 }
 
+/** How much this run takes on: `--items N|all` (a count, or the whole list) and `--only bugs|things`.
+ *  Null when neither is given: the project's caps then bound the run as before. */
+function runWant(argv) {
+  const raw = opt(argv, '--items'), only = opt(argv, '--only');
+  if (raw === undefined && only === undefined) return null;
+  const out = { items: bd.DEFAULT_ITEMS, only: null };
+  if (raw !== undefined) {
+    if (raw === 'all') out.items = null;
+    else if (/^[1-9]\d{0,2}$/.test(String(raw))) out.items = parseInt(raw, 10);
+    else throw new bd.Invalid('--items takes a number from 1 or "all"');
+  }
+  if (only !== undefined) {
+    if (only !== 'bugs' && only !== 'things') throw new bd.Invalid('--only takes "bugs" or "things"');
+    out.only = only;
+  }
+  return out;
+}
+
 function cmdBuild(argv) {
   const session = opt(argv, '--session') || null;             // the hook may add it anywhere after `build`
   const args = stripOpt(argv, '--session');
   const sub = args[0];
   const rest = args.slice(1);
-  const VALUED = ['--dir', '--name', '--return', '--agent', '-m'];
+  const VALUED = ['--dir', '--name', '--return', '--agent', '-m', '--items', '--only'];
   try {
     let dir = buildDir(rest);
     let lvl = bd.level(dir);
     hint('level', lvl);
     if (sub === 'open') {
+      const want = runWant(rest);
       const spec = sp.load(dir);
       if (spec.refused) {
         hint('dir', dir);
@@ -816,6 +835,11 @@ function cmdBuild(argv) {
         bd.saveActive(dir, cur);
         bd.emit(dir, run, [['RUN_START', bd.runStart(cur.base || undefined)]]);
       }
+      if (want && !cur.lead) {                                   // the latest ask wins; a count counts from now
+        const done = bd.laneGroup(dir, cur).reduce((n, g) => n + (g.cur.picked || []).length, 0);
+        cur.want = { items: want.items === null ? null : done + want.items, only: want.only };
+        bd.saveActive(dir, cur);
+      }
       bd.setPointer(dir, cur.run, session);
       if (bd.scaffold(dir, spec, cfg)) hint('hint', 'scaffolded');
       if (bd.isPrimary(dir)) bd.sweepSideCopies(dir, spec);
@@ -829,7 +853,7 @@ function cmdBuild(argv) {
       }
       if (fixDue(dir, cfg)) hint('hint', 'fix_due');
       if (!cur.lead && cur.remote && bd.hasRemote(dir)) {        // more makers at once, each in a lane of its own; narrowed: no more
-        const lanes = bd.openLanes(dir, cur, spec, bd.readCfg(dir), session, cur.narrow ? 1 : bd.laneCount(bd.readCfg(dir), spec, bd.itemStatus(dir, spec)));
+        const lanes = bd.openLanes(dir, cur, spec, bd.readCfg(dir), session, cur.narrow ? 1 : bd.laneCount(bd.readCfg(dir), spec, bd.itemStatus(dir, spec), cur.want && cur.want.items !== null ? { items: Math.max(1, cur.want.items - (cur.picked || []).length), only: cur.want.only } : cur.want));
         if (lanes.length) hint('lanes', lanes.join(','));
       }
       for (const x of (spec.experts || []).filter((e) => e !== ld.LEADER_SLUG && !ld.pack(e))) {
@@ -870,10 +894,15 @@ function cmdBuild(argv) {
         return 0;
       };
       const picks = group.reduce((n, g) => n + (g.cur.picked || []).length, 0);
-      if (picks >= cfg.caps.items_per_run) return ease('cap');
-      const c = new render.Ctx({ level: lvl, cohdit: sp.cohditDir(home), spool: bd.spoolFile(dir) });
-      const u = c.usage(c.runs.get(cur.run) || []);
-      if (u.usd !== null && u.usd >= cfg.caps.usd_per_run) return ease('budget');
+      const want = lead.cur.want || null;                        // what the person asked for: a count, or the whole list
+      if (want) {
+        if (want.items !== null && picks >= want.items) return ease('cap');
+      } else {                                                   // asked for nothing: the project's caps, as before
+        if (picks >= cfg.caps.items_per_run) return ease('cap');
+        const c = new render.Ctx({ level: lvl, cohdit: sp.cohditDir(home), spool: bd.spoolFile(dir) });
+        const u = c.usage(c.runs.get(cur.run) || []);
+        if (u.usd !== null && u.usd >= cfg.caps.usd_per_run) return ease('budget');
+      }
       const sb = bd.startBase(dir);                              // the shared main and this computer's own unpushed commits
       const base = sb.base;
       if (sb.push) bd.emit(dir, cur.run, [['PUSH', { branch: 'main', result: sb.push }]]);
@@ -881,7 +910,7 @@ function cmdBuild(argv) {
       const held = new Set(group.flatMap((g) => Object.keys(g.cur.open || {})));
       let picked = null, branch = null, start = null;
       for (let tries = 0; tries < 4 && !picked; tries++) {
-        const cands = bd.candidates(dir, spec, status, claims).filter((i) => !held.has(i.id));
+        const cands = bd.candidates(dir, spec, status, claims).filter((i) => !held.has(i.id) && bd.wanted(want, i));
         if (!cands.length) break;
         const it = cands[0];
         const b = bd.branchFor(it);

@@ -1,3 +1,2 @@
 Stopped: the deploy to vercel failed. The log is saved.
 Say "share it" to try again, or "show me the details" to see why.
-This run: 177k tokens ≈ $0.19 at API list price.

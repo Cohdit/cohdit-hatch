@@ -1,7 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.0.17 — build all, build a few, fix all (2026-11-14)
 
+- `build open --items N|all` and `--only bugs|things`: the person says how much a run takes on. "build it"
+  is the next 10 things, "build all" everything left, "build 3" three, "fix all" every bug and nothing
+  else. A count counts from when it is said; a run with one has no dollar stop. Without either, the
+  project's caps bound the run as before (now 10 things by default).
+- Lanes open only as many as the run will take.
+- Builders no longer see token counts or dollar estimates in the build digest or status; the developer
+  level still does, and the scorecard is unchanged.
 - Lesson limits raised: a gist may be up to 350 characters (was 180), carry up to 10 tags (was 6) and a
   detail of up to 1,000 characters (was 600).
   Only the bank check uses them; installed plugins read longer lessons as they are.

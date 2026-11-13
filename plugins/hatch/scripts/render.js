@@ -565,7 +565,7 @@ function viewStatus(c, a) {
   if (!items.length) out.push('  Nothing planned yet.');
   if (lastShared) out.push('Live: ' + lastShared.f.url + ' (shared ' + c.ago(lastShared.ts) + ')');
   else out.push(w.notShared);
-  if (runs.length) out.push(w.used(ml.fmtTokens(tokens, c.level === 'plain'), c.est(usd), runs.length) + (tech ? ' Prices of ' + (c.prices.date || '?') + (unpriced.size ? '; unpriced: ' + [...unpriced].sort().join(', ') : '') + '.' : ''));
+  if (runs.length && tech) out.push(w.used(ml.fmtTokens(tokens, c.level === 'plain'), c.est(usd), runs.length) + (tech ? ' Prices of ' + (c.prices.date || '?') + (unpriced.size ? '; unpriced: ' + [...unpriced].sort().join(', ') : '') + '.' : ''));
   if (waiting.length) {
     out.push(w.waitingHead(waiting.length));
     for (const h of waiting) out.push('  ' + c.title(h.i) + ' — ' + c.blob(h.f.blob));
@@ -672,7 +672,7 @@ function viewDigest(c, a) {
       if (line && r.c !== 'RUN_START' && r.c !== 'RUN_END') out.push(line);
     }
   }
-  if (tokens) out.push(w.usedRun(ml.fmtTokens(tokens, c.level === 'plain'), c.est(usd)));
+  if (tokens && c.level === 'tech') out.push(w.usedRun(ml.fmtTokens(tokens, c.level === 'plain'), c.est(usd)));
   return out.length ? out : ['Nothing to report.'];
 }
 

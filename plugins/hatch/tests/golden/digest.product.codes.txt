@@ -3,4 +3,3 @@ Built 1 of 1 item.
 Push to GitHub rejected — your work is safe locally.
 Live: https://chore-chart.vercel.app
 Next: say "let me try it" to test 1 item.
-This run: 374k tokens ≈ $0.27 at API list price.

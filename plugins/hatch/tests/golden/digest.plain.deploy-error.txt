@@ -1,3 +1,2 @@
 Publishing failed, so I stopped. The details are saved.
 Say "share it" to try again, or "show me the details" to see why.
-This run used about 177 thousand tokens (roughly $0.19 at Claude's public API prices).

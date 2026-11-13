@@ -4,7 +4,6 @@ Idea: Chore Chart
   waiting    Reset on Sunday — your answer needed
   to do      Weekly scoreboard
 Live: https://chore-chart.vercel.app (shared 7 minutes ago)
-Claude has used about 2.8 million tokens over 2 sessions (roughly $2.16 at Claude's public API prices).
 Waiting on you: 1 question.
   Reset on Sunday — Reset on Sunday night, or Monday morning before school?
 Waiting on you: 2 things to try. Say "let me try it".

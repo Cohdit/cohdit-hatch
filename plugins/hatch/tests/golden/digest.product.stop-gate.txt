@@ -4,4 +4,3 @@ Built 2 of 3 items.
   blocked   Reset on Sunday — failed tests twice
 Pushed to GitHub: delon/chore-chart.
 Next: say "let me try it" to test 2 items.
-This run: 3M tokens ≈ $2.24 at API list price.

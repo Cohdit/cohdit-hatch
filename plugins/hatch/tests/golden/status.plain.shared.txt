@@ -5,4 +5,3 @@ Idea: Chore Chart
   to do      Weekly scoreboard
   to check   On the iPad
 Live: https://chore-chart.vercel.app (shared 7 minutes ago)
-Claude has used about 2.4 million tokens over 3 sessions (roughly $1.90 at Claude's public API prices).

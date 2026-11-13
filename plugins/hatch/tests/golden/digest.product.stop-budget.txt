@@ -3,4 +3,3 @@ Built 1 of 1 item.
 Stopped: this run reached its cap (1.3M tokens ≈ $0.98 at API list price).
 Pushed to GitHub: delon/chore-chart.
 Next: say "let me try it" to test 1 item.
-This run: 1.3M tokens ≈ $0.98 at API list price.

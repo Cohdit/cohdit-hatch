@@ -4,5 +4,4 @@ Idea: Chore Chart (4 items)
   held       Reset on Sunday — your decision needed
   queued     Weekly scoreboard
 Not published yet — say "share it" to deploy.
-Tokens: 1k over 1 run no estimate (a model has no known price).
 Waiting on you: 2 items to try. Say "let me try it".

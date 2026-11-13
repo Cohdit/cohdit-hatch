@@ -6,5 +6,4 @@ Working now: waiting for your test results (started 5 minutes ago).
   queued     Weekly scoreboard
   on device  On the iPad
 Not published yet — say "share it" to deploy.
-Tokens: 2.2M over 2 runs ≈ $1.71 at API list price.
 Say "pass", or name the item that failed and what you saw.

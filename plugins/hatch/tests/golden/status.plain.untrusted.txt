@@ -4,5 +4,4 @@ Idea: Chore Chart
   waiting    Reset on Sunday — your answer needed
   to do      Weekly scoreboard
 Not shared yet — say "share it" when you want friends to see it.
-Claude has used about 1 thousand tokens over 1 session (no dollar estimate: a model has no known price).
 Waiting on you: 2 things to try. Say "let me try it".

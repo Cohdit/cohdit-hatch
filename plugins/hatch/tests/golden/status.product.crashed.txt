@@ -4,5 +4,4 @@ Idea: Chore Chart (4 items)
   held       Reset on Sunday — your decision needed
   building   Weekly scoreboard
 Not published yet — say "share it" to deploy.
-Tokens: 374k over 1 run ≈ $0.27 at API list price.
 Waiting on you: 2 items to try. Say "let me try it".

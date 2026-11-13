@@ -4,5 +4,4 @@ Idea: Chore Chart
   set aside  Reset on Sunday
   to do      Weekly scoreboard
 Not shared yet — say "share it" when you want friends to see it.
-Claude has used about 3 million tokens over 1 session (roughly $2.24 at Claude's public API prices).
 Waiting on you: 2 things to try. Say "let me try it".
