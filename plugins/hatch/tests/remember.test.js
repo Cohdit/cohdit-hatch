@@ -64,7 +64,7 @@ test('the shape is enforced and a twin is refused, with exit 64 and nothing writ
     ['{"gist":"ok","for":["owner"]}', /not a reader/],
     ['{"gist":"ok","tags":["Has Space"]}', /tag "has space"/],
     ['{"gist":"ok","tags":["aa","bb","cc","dd","ee","ff","gg","hh","ii","jj","kk"]}', /at most 10 tags/],
-    ['{"gist":"ok","detail":"' + 'y'.repeat(601) + '"}', /detail is 601 chars/],
+    ['{"gist":"ok","detail":"' + 'y'.repeat(1001) + '"}', /detail is 1001 chars/],
     ['{"gist":"ok","when":"build"}', /unknown field when/],
     ['not json', /not JSON/],
   ];
