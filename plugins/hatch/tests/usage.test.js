@@ -88,8 +88,9 @@ test('pricing is exact-match', () => {
   assert.equal(Math.round(ml.usageCost({ 'claude-sonnet-5-5': { cw5: 1000000 } }, p) * 100) / 100, 2.5, 'cache writes use the multiplier');
 });
 
-test('attribution order: branch beats prompt beats the only open item', () => {
-  assert.deepEqual(ml.attribute({ branch: 'item/003-x', promptItems: ['ITEM-001'] }, ['ITEM-001', 'ITEM-003']), ['ITEM-003', 'branch']);
+test('attribution order: the prompt beats the branch beats the only open item', () => {
+  assert.deepEqual(ml.attribute({ branch: 'item/003-x', promptItems: ['ITEM-001'] }, ['ITEM-001', 'ITEM-003']), ['ITEM-001', 'prompt'], 'makers in lanes share one folder, so its branch may be another lane\'s');
+  assert.deepEqual(ml.attribute({ branch: 'item/003-x', promptItems: [] }, ['ITEM-001', 'ITEM-003']), ['ITEM-003', 'branch']);
   assert.deepEqual(ml.attribute({ branch: 'main', promptItems: ['ITEM-001'] }, ['ITEM-001', 'ITEM-003']), ['ITEM-001', 'prompt']);
   assert.deepEqual(ml.attribute({ branch: 'main', promptItems: [] }, ['ITEM-003']), ['ITEM-003', 'window']);
   assert.deepEqual(ml.attribute({ branch: 'main', promptItems: [] }, ['ITEM-001', 'ITEM-003']), [null, 'none']);

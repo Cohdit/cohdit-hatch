@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const H = require('./harness');
+const bdl = require('../scripts/lib/build');
 const hatch = require('../scripts/hatch');
 
 const ITEMS = [
@@ -21,7 +22,7 @@ const ITEMS = [
 ];
 const GATES = { personal_details: false, payments: false, messaging: false, children: { value: true, source: 'said' }, advice: false, uploads: false, user_content: false };
 const OK = { code: 0, out: 'ok\n' };
-const SLUGS = ['abc-friends', 'rounds', 'reports', 'dirty', 'deps', 'pointer', 'offline', 'shared', 'stale', 'checks', 'leftover', 'crash', 'lease', 'unreachable', 'ledger', 'sweep'];
+const SLUGS = ['abc-friends', 'rounds', 'reports', 'dirty', 'deps', 'pointer', 'offline', 'shared', 'stale', 'checks', 'leftover', 'crash', 'lease', 'unreachable', 'ledger', 'sweep', 'lanes', 'clash'];
 
 function home(ghOk = true, extraProbes = {}) {
   const d = H.mkrepo();
@@ -61,6 +62,14 @@ function withOrigin(dir) {
   H.git(['init', '-q', '--bare', '-b', 'main'], bare);
   H.git(['remote', 'add', 'origin', bare], dir);
   return bare;
+}
+
+/** One maker at a time: for the tests of two separate sessions, whose own lanes would only get in the way. */
+function oneLane(dir) {
+  const f = path.join(dir, '.cohdit', 'config.json');
+  const cfg = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : { v: 1 };
+  cfg.caps = Object.assign({}, cfg.caps, { lanes: 1 });
+  fs.writeFileSync(f, JSON.stringify(cfg, null, 2) + '\n');
 }
 
 /** The maker's work: a file and a commit through the gate. */
@@ -390,6 +399,7 @@ test('without GitHub the build still runs and says the copy is not online', () =
 test('two sessions on one computer share the work: a side copy, claims, and combining before merging', () => {
   const h = home();
   const dir = agreedIdea(h, 'Shared', ITEMS.slice(0, 3));
+  oneLane(dir);
   const bare = withOrigin(dir);
   const A = (args, input) => run(h, ['build', args[0], '--session', 'sess-a'].concat(args.slice(1), ['--dir', dir]), input);   // the hook's shape
   const oA = A(['open']);
@@ -457,6 +467,91 @@ test('two sessions on one computer share the work: a side copy, claims, and comb
   const nA4 = B(h, dir, ['next']);
   assert.equal(hintOf(nA4, 'next'), 'close', 'nothing left: the primary sees every outcome after syncing');
   assert.match(R(h, dir, 'status', 'plain'), /^Waiting on you: 3 things to try/m);
+});
+
+test('lanes: three makers at once, one thing each, landed on main one at a time, one run and one digest', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Lanes', ITEMS);
+  const bare = withOrigin(dir);
+  const o = B(h, dir, ['open']);
+  assert.equal(o.code, 0, o.err);
+  const lanes = (hintOf(o, 'lanes') || '').split(',').filter(Boolean);
+  assert.equal(lanes.length, 2, 'three things to build: the lead and two lanes (the device check is not built)');
+  const [l2, l3] = lanes;
+  for (const l of lanes) assert.ok(l.includes(path.join('Hatch', '.work', 'lanes-')), l);
+  const n1 = B(h, dir, ['next']), n2 = B(h, l2, ['next']), n3 = B(h, l3, ['next']);
+  assert.deepEqual([n1, n2, n3].map((n) => hintOf(n, 'item')), ['ITEM-001', 'ITEM-002', 'ITEM-003'], 'each lane its own thing');
+  assert.deepEqual([n1, n2, n3].map((n) => hintOf(n, 'next')), ['maker', 'maker', 'maker']);
+  assert.ok(hintOf(n2, 'brief').endsWith('brief-ITEM-002.md'));
+  assert.match(fs.readFileSync(hintOf(n2, 'brief'), 'utf8'), new RegExp('Folder: ' + l2.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'the lane\'s maker works in the lane');
+  // they finish in any order; each lands on the shared main through the gate
+  makerCommits(h, l2, 'app/sound.tsx', 'sound\n', 'sound');
+  makerCommits(h, dir, 'app/grid.tsx', 'grid\n', 'grid');
+  makerCommits(h, l3, 'app/animal.tsx', 'animal\n', 'animal');
+  const d2 = B(h, l2, ['built', 'ITEM-002', '--return', DONE('copy', { try_note: 'Tap A. You hear it.' })]);
+  assert.equal(d2.out, 'Done: "Tap to hear".');
+  assert.equal(hintOf(B(h, l2, ['next']), 'next'), 'wait', 'nothing left to start, but others are mid-thing');
+  const d1 = B(h, dir, ['built', 'ITEM-001', '--return', DONE('copy')]);
+  assert.equal(d1.out, 'The checks passed.\nDone: "Letter grid".', 'combined with the lane\'s work, checked again');
+  const d3 = B(h, l3, ['built', 'ITEM-003', '--return', DONE('copy')]);
+  assert.match(d3.out, /Done: "Animal picture"\.$/);
+  const files = bareLs(bare);
+  for (const f of ['app/grid.tsx', 'app/sound.tsx', 'app/animal.tsx']) assert.ok(files.includes(f), f);
+  assert.equal(hintOf(B(h, l2, ['next']), 'next'), 'close');
+  assert.equal(hintOf(B(h, l3, ['next']), 'next'), 'close');
+  assert.equal(hintOf(B(h, dir, ['next']), 'next'), 'close');
+  assert.equal(fs.readFileSync(path.join(dir, '.cohdit', 'notes', 'ITEM-002.txt'), 'utf8'), 'Tap A. You hear it.\n', 'a lane\'s try note is kept with the lead');
+  const close = B(h, dir, ['close']);
+  assert.equal(close.code, 0, close.err);
+  assert.match(close.out, /^Built 3 of 3 things\.$/m, 'one digest for the whole run');
+  for (const l of lanes) assert.ok(!fs.existsSync(l), 'the lanes are removed: ' + l);
+  assert.equal(H.git(['branch', '--list', 'hatch/*'], dir), '');
+  assert.match(R(h, dir, 'status', 'plain'), /^Waiting on you: 3 things to try/m);
+  const runs = bareLs(bare).filter((f) => /^\.cohdit\/ledger\/runs\/.*\.jsonl$/.test(f));
+  const recs = runs.flatMap((f) => spawnSync('git', ['show', 'main:' + f], { cwd: bare, encoding: 'utf8' }).stdout.split('\n').filter(Boolean).map((l) => JSON.parse(l)));
+  assert.equal(recs.filter((r) => r.c === 'DONE').length, 3, 'every lane\'s outcome is in the ledger on the shared copy');
+  assert.equal(new Set(recs.filter((r) => r.c === 'PICK').map((r) => r.r)).size, 1, 'one run');
+});
+
+test('lanes: a clash rebuilds the thing once on the new main and narrows the run to one lane', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Clash', ITEMS.slice(0, 2));
+  const bare = withOrigin(dir);
+  const o = B(h, dir, ['open']);
+  const [l2] = (hintOf(o, 'lanes') || '').split(',');
+  assert.ok(l2, o.err);
+  B(h, dir, ['next']);
+  B(h, l2, ['next']);
+  makerCommits(h, l2, 'app/page.tsx', 'from the lane\n', 'lane');
+  makerCommits(h, dir, 'app/page.tsx', 'from the lead\n', 'lead');
+  assert.match(B(h, l2, ['built', 'ITEM-002', '--return', DONE('copy')]).out, /Done/);
+  const c = B(h, dir, ['built', 'ITEM-001', '--return', DONE('copy')]);
+  assert.equal(c.code, 0, c.err);
+  assert.equal(hintOf(c, 'next'), 'maker', 'built again, not set aside');
+  assert.equal(c.out, 'Fixing and rebuilding "Letter grid".');
+  const brief = fs.readFileSync(hintOf(c, 'brief'), 'utf8');
+  assert.match(brief, /Build this thing again on the current main\. Your earlier version is the diff at /);
+  assert.match(fs.readFileSync(bdl.diffPath(dir, 'ITEM-001'), 'utf8'), /\+from the lead/, 'the earlier version is kept beside it');
+  assert.equal(H.git(['merge-base', '--is-ancestor', 'origin/main', 'item/001-letter-grid'], dir), '', 'restarted on the current main');
+  assert.ok(H.git(['branch', '--list', 'kept/001-letter-grid'], dir), 'its first version is kept');
+  assert.equal(hintOf(B(h, l2, ['next']), 'next'), 'close', 'narrowed: the lane takes nothing new');
+  makerCommits(h, dir, 'app/page.tsx', 'from the lane\nand the lead\n', 'both');
+  assert.match(B(h, dir, ['built', 'ITEM-001', '--return', DONE('copy')]).out, /Done: "Letter grid"/);
+  assert.equal(spawnSync('git', ['show', 'main:app/page.tsx'], { cwd: bare, encoding: 'utf8' }).stdout, 'from the lane\nand the lead\n');
+  assert.match(B(h, dir, ['close']).out, /^Built 2 of 2 things\.$/m);
+});
+
+test('narrow: the lanes finish what they hold and take nothing new', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Lanes', ITEMS.slice(0, 3));
+  withOrigin(dir);
+  const [l2, l3] = hintOf(B(h, dir, ['open']), 'lanes').split(',');
+  B(h, dir, ['next']);
+  assert.equal(hintOf(B(h, l2, ['next']), 'item'), 'ITEM-002');
+  assert.equal(B(h, dir, ['narrow']).code, 0);
+  assert.equal(hintOf(B(h, l2, ['next']), 'item'), 'ITEM-002', 'what it holds, it finishes');
+  assert.equal(hintOf(B(h, l3, ['next']), 'next'), 'close', 'nothing new');
+  assert.equal(hintOf(B(h, dir, ['open']), 'lanes'), [l2, l3].join(','), 'a resumed run keeps its lanes and opens no more');
 });
 
 test('a claim untouched for a day is taken over; a live one is not', () => {
@@ -597,6 +692,7 @@ test("the maker's half work never reaches the next thing, the person, or a run t
 test('a side copy keeps its outcomes when the shared main moved under it', () => {
   const h = home();
   const dir = agreedIdea(h, 'Lease', ITEMS.slice(0, 3));
+  oneLane(dir);
   const bare = withOrigin(dir);
   const A = (args, input) => run(h, ['build'].concat(args, ['--dir', dir, '--session', 'sess-a']), input);
   A(['open']);

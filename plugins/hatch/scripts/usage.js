@@ -52,7 +52,12 @@ function subagentStop(h, cwd, cur) {
   const key = 'transcript:' + file;
   const { models, lastTs } = ml.transcriptUsage(file, ml.checkpoint(key, cwd));
   if (!Object.keys(models).length) return;
-  const [item, how] = ml.attribute(ml.transcriptMeta(file), Object.keys(cur.open || {}).sort());
+  const open = Object.keys(cur.open || {});
+  for (const d of cur.lanes || []) {                             // a run built in lanes: every lane's things are this run's
+    const c = activeAt(d);
+    if (c && c.run === cur.run) open.push(...Object.keys(c.open || {}));
+  }
+  const [item, how] = ml.attribute(ml.transcriptMeta(file), open.sort());
   const agent = String(h.agent_type || 'unknown').split(':').pop();
   ml.appendSpool(usageRec(cur, lastTs, agent, how, models, item, { agent_id: h.agent_id, session: h.session_id }), cwd);
   ml.checkpoint(key, cwd, lastTs);
