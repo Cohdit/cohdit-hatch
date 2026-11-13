@@ -62,7 +62,17 @@
  *   hatch.js remember list [--for <reader>]
  *                                       the bank, one line each: what every brief draws on
  *   hatch.js remember show <L-NNN>      the whole lesson
- *   hatch.js leader [--for <reader>]    the software leader's knowledge as text (ask: all; dream: --for dream)
+ *   hatch.js leader [--for <reader>] [--expert <slug>]
+ *                                       the software leader's knowledge as text (ask: all; dream: --for dream);
+ *                                       --expert: another agent the person owns
+ *   hatch.js experts [--fresh] [--json] the agents this key has, and those it could add (--json: for playbooks)
+ *   hatch.js experts offer <slug>       offer one agent for this idea, once ever per idea; prints the offer and link
+ *   hatch.js experts link <slug>        a fresh link to add an agent
+ *   hatch.js experts ask <slug> --return -
+ *                                       one free question (stdin) to an agent the key does not own
+ *   hatch.js experts check              after a purchase: an offered agent now owned joins the idea
+ *   hatch.js experts use|stop <slug>    this idea uses an owned agent, or stops (never during a build)
+ *   hatch.js experts manage             the billing page link
  *   hatch.js allow                      PreToolUse hook: approves Hatch's own calls and edits in its own folders
  *   hatch.js content skill|agent|data <name>
  *                                       the text, from Cohdit with the access key (lib/api.js); an error line
@@ -659,7 +669,7 @@ function dispatchMaker(dir, cur, spec, cfg, item, lvl, notes, status) {
 /** The lenses still to report on an item under review; the skill dispatches exactly these. */
 function awaitReview(dir, item, o) {
   const left = o.review.expected.filter((a) => !o.review.got[a]);
-  for (const a of left) bd.writeRole(dir, a);
+  for (const a of left) bd.writeRole(dir, a, item);
   hint('item', item); hint('diff', bd.diffPath(dir, item)); hint('agents', left.join(',')); hint('roles', ml.spoolDir(dir)); hint('next', 'review');
 }
 
@@ -821,6 +831,9 @@ function cmdBuild(argv) {
       if (!cur.lead && cur.remote && bd.hasRemote(dir)) {        // more makers at once, each in a lane of its own; narrowed: no more
         const lanes = bd.openLanes(dir, cur, spec, bd.readCfg(dir), session, cur.narrow ? 1 : bd.laneCount(bd.readCfg(dir), spec, bd.itemStatus(dir, spec)));
         if (lanes.length) hint('lanes', lanes.join(','));
+      }
+      for (const x of (spec.experts || []).filter((e) => e !== ld.LEADER_SLUG && !ld.pack(e))) {
+        process.stdout.write(slugName(x) + ' isn\'t available right now, so this build uses the software leader alone.\n');
       }
       hint('run', cur.run);
       hint('next', 'next');
@@ -1700,10 +1713,29 @@ function contentError(e) {
   return 1;
 }
 
-/** `leader [--for <reader>]`: the software leader's knowledge as text, for the ask skill (everything)
- *  and dream (`--for dream`). An error line for the person and exit 1 when it cannot be fetched. */
+/** `leader [--for <reader>] [--expert <slug>]`: the software leader's knowledge as text, for the ask skill
+ *  (everything) and dream (`--for dream`); with --expert, an agent the person owns. An error line for the
+ *  person and exit 1 when it cannot be fetched. */
 function cmdLeader(args) {
   const reader = opt(args, '--for') || 'all';
+  const slug = opt(args, '--expert');
+  if (slug && slug !== ld.LEADER_SLUG) {
+    if (process.env.COHDIT_EXPERTS) {
+      const p = ld.pack(slug);
+      if (!p) return contentError(new api.HatchError('not_owned'));
+      process.stdout.write(ld.forReader(p, reader) + '\n');
+      return 0;
+    }
+    return api.fetchContent('expert', slug).then((text) => {
+      let p = null;
+      try { p = JSON.parse(text); } catch (e) { /* refused below */ }
+      if (!p || !Array.isArray(p.knowledge)) return contentError(new Error('pack is not valid'));
+      const out = ld.forReader(p, reader);
+      if (!out) return fail(slug + ' has nothing for ' + reader);
+      process.stdout.write(out + '\n');
+      return 0;
+    }, contentError);
+  }
   const show = (l) => {
     const text = ld.forReader(l, reader);
     if (!text) return fail('the software leader has nothing for ' + reader);
@@ -1716,6 +1748,139 @@ function cmdLeader(args) {
     try { l = JSON.parse(text); } catch (e) { /* refused below */ }
     return l && Array.isArray(l.knowledge) ? show(l) : contentError(new Error('leader is not valid'));
   }, contentError);
+}
+
+// --- knowledge agents ----------------------------------------------------------------------------
+
+/** "restaurant-ops" → "Restaurant ops", for an agent whose pack or listing cannot be had. */
+function slugName(slug) {
+  const t = String(slug).replace(/-/g, ' ');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+function ideaDir(args) {
+  try { return sp.findProject(opt(args, '--dir'), process.cwd()); } catch (e) { return null; }
+}
+
+function building(dir) {
+  const cur = bd.active(dir);
+  return !!(cur && cur.skill === 'build');
+}
+
+/** The idea's agents (`experts`) and the ones Hatch has offered (`offered`), as spec.json holds them. */
+function ideaAgents(spec) {
+  return { use: (spec && Array.isArray(spec.experts) ? spec.experts : []), offered: (spec && Array.isArray(spec.offered) ? spec.offered : []) };
+}
+
+function freeClause(n) { return n === 1 ? '1 free question' : n + ' free questions'; }
+
+/** `experts …`: what the person has, offers, free questions, and the link to add an agent. */
+function cmdExperts(argv) {
+  const sub = argv[0] && !argv[0].startsWith('--') ? argv[0] : 'list';
+  const rest = sub === 'list' ? argv : argv.slice(1);
+  const slug = words(rest, ['--dir', '--return'])[0];
+  const dir = ideaDir(rest);
+  if (dir) hint('dir', dir);
+  const spec = dir ? ml.readJson(sp.specPath(dir), null) : null;
+  const say = (line) => { process.stdout.write(line + '\n'); return 0; };
+  const refuse = (why) => { hint('hint', why); return 3; };
+  const needSlug = () => (slug && api.SLUG_RE.test(slug) ? null : fail('experts ' + sub + ' needs an agent\'s short name'));
+
+  if (sub === 'list') {
+    return api.me({ fresh: hasOpt(rest, '--fresh') }).then((m) => {
+      if (hasOpt(rest, '--json')) return say(JSON.stringify({ experts: m.experts || [], available: m.available || [], idea: spec ? ideaAgents(spec) : null }));
+      const mine = (m.experts || []).map((e) => (e.slug === ld.LEADER_SLUG ? e.name + ' (always on)' : e.name));
+      say('Your agents: ' + mine.join(', ') + '.');
+      if ((m.available || []).length) {
+        say('You could add:');
+        for (const a of m.available) {
+          const bits = [a.price, a.free_left ? freeClause(a.free_left) + ' left' : null].filter(Boolean);
+          say('- ' + a.name + (a.pitch ? ': ' + a.pitch : '') + (bits.length ? ' (' + bits.join('; ') + ')' : ''));
+        }
+      }
+      return 0;
+    }, contentError);
+  }
+  if (sub === 'manage') {
+    return api.manage().then((r) => say('Your billing page (cancel or change a card): ' + r.url), contentError);
+  }
+  if (sub === 'offer') {
+    const bad = needSlug(); if (bad) return bad;
+    if (!spec) return refuse('no_idea');
+    const idea = ideaAgents(spec);
+    if (idea.offered.includes(slug)) return refuse('offered');
+    return api.me({}).then((m) => {
+      if ((m.experts || []).some((e) => e.slug === slug)) return refuse('owned');
+      const a = (m.available || []).find((x) => x.slug === slug);
+      if (!a) return refuse('not_available');
+      spec.offered = idea.offered.concat(slug);                  // offered once, even if the link fails
+      sp.save(dir, spec);
+      const head = 'There\'s an agent for this: ' + a.name + '.' + (a.pitch ? ' ' + a.pitch : '') + (a.price ? ' ' + a.price + ', cancel any time.' : '');
+      return api.buyLink(slug).then((r) => {
+        hint('url', r.url);
+        return say(head + (a.free_left ? ' You can ask it ' + freeClause(a.free_left) + ' first, or add it here: ' : ' Add it here: ') + r.url);
+      }, () => say(head + ' Say "add ' + a.name + '" later and I\'ll get you the link.'));
+    }, contentError);
+  }
+  if (sub === 'link') {
+    const bad = needSlug(); if (bad) return bad;
+    return api.me({}).then((m) => {
+      if ((m.experts || []).some((e) => e.slug === slug)) return refuse('owned');
+      const a = (m.available || []).find((x) => x.slug === slug);
+      if (!a) return refuse('not_available');
+      return api.buyLink(slug).then((r) => { hint('url', r.url); return say('Add ' + a.name + ' here: ' + r.url); }, contentError);
+    }, contentError);
+  }
+  if (sub === 'ask') {
+    const bad = needSlug(); if (bad) return bad;
+    let question;
+    try { question = readReturn(rest).trim(); } catch (e) { return fail(e.message); }
+    if (!question) return fail('experts ask needs the question on stdin');
+    return api.me({}).then((m) => {
+      if ((m.experts || []).some((e) => e.slug === slug)) return refuse('owned');
+      const a = (m.available || []).find((x) => x.slug === slug);
+      const name = a ? a.name : slugName(slug);
+      return api.askFree(slug, question).then((r) => {
+        say(String(r.answer || '').trim());
+        if (r.left > 0) return say(freeClause(r.left) + ' left for ' + name + '.');
+        return api.buyLink(slug).then((l) => { hint('url', l.url); return say('That was your last free question for ' + name + '. Add it here: ' + l.url); },
+          () => say('That was your last free question for ' + name + '.'));
+      }, contentError);
+    }, contentError);
+  }
+  if (sub === 'check') {
+    if (!spec || building(dir)) return 0;
+    const idea = ideaAgents(spec);
+    const waiting = idea.offered.filter((x) => !idea.use.includes(x));
+    if (!waiting.length) return 0;
+    return api.me({ fresh: true }).then((m) => {
+      const now = (m.experts || []).filter((e) => waiting.includes(e.slug));
+      if (!now.length) return 0;
+      spec.experts = idea.use.concat(now.map((e) => e.slug));
+      sp.save(dir, spec);
+      for (const e of now) say(e.name + ' is yours now. I\'ll use it for this idea.');
+      return 0;
+    }, () => 0);                                                  // a check that cannot reach Cohdit says nothing
+  }
+  if (sub === 'use' || sub === 'stop') {
+    const bad = needSlug(); if (bad) return bad;
+    if (!spec) return refuse('no_idea');
+    if (building(dir)) return refuse('building');
+    const idea = ideaAgents(spec);
+    if (slug === ld.LEADER_SLUG) return refuse('always_on');
+    if (sub === 'stop') {
+      spec.experts = idea.use.filter((x) => x !== slug);
+      sp.save(dir, spec);
+      return 0;
+    }
+    return api.me({}).then((m) => {
+      const e = (m.experts || []).find((x) => x.slug === slug);
+      if (!e) return refuse('not_owned');
+      if (!idea.use.includes(slug)) { spec.experts = idea.use.concat(slug); sp.save(dir, spec); }
+      return 0;
+    }, contentError);
+  }
+  return fail('experts takes list, offer, link, ask, check, use, stop or manage');
 }
 
 /** `content <kind> <name>`: the playbook, brief or data, with the plugin's own path filled in
@@ -1749,18 +1914,30 @@ function cmdKey(args) {
 }
 
 /** Commands that need no Hatch data; every other one loads it first. */
-const NO_DATA = new Set(['content', 'key', 'allow', undefined]);
+const NO_DATA = new Set(['content', 'key', 'allow', 'experts', undefined]);
+
+/** The other agents an idea uses, fetched before a build's synchronous loaders. One that fails is left out. */
+function preloadAgents(argv) {
+  if (argv[0] !== 'build' || process.env.COHDIT_EXPERTS) return Promise.resolve();
+  const name = opt(argv, '--name');
+  const hit = name ? sp.registry().projects.find((p) => p.name.toLowerCase() === name.trim().toLowerCase() || p.slug === sp.slugify(name)) : null;
+  const dir = name ? (hit ? hit.path : null) : ideaDir(argv);
+  const spec = dir ? ml.readJson(sp.specPath(dir), null) : null;
+  const slugs = spec && Array.isArray(spec.experts) ? spec.experts.filter((x) => x !== ld.LEADER_SLUG) : [];
+  return slugs.length ? api.preloadExperts(slugs) : Promise.resolve();
+}
 
 function main(argv) {
   if (NO_DATA.has(argv[0]) || process.env.HATCH_DEV_DIR) return dispatch(argv);
   const agents = argv[0] === 'build' || argv[0] === 'fix';   // they write the read-only agents' files
-  return api.preloadData(agents).then(() => dispatch(argv), contentError);
+  return api.preloadData(agents).then(() => preloadAgents(argv)).then(() => dispatch(argv), contentError);
 }
 
 function dispatch(argv) {
   switch (argv[0]) {
     case 'content': return cmdContent(argv.slice(1));
     case 'leader': return cmdLeader(argv.slice(1));
+    case 'experts': return cmdExperts(argv.slice(1));
     case 'key': return cmdKey(argv.slice(1));
     case 'setup': return cmdSetup();
     case 'doctor': return cmdDoctor();
