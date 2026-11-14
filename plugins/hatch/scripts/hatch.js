@@ -711,11 +711,12 @@ function importReports(dir, cfg) {
   const into = path.join(sp.cohditDir(dir), 'reports');
   sh.pullReports(doc.runner(), dir, cfg, (cfg.hosting || {}).scope || null, into);
   const bugs = [];
+  bugs.filed = [];                                               // ids of the bugs the person filed in words
   for (const f of ml.listFiles(into, '.json')) {
     const r = ml.readJson(f, null);
     if (r && r.saw) {
       const bug = sp.addBug(dir, reportBug(r));
-      if (!bug.twin) bugs.push(bug);
+      if (!bug.twin) { bugs.push(bug); if (r.filed) bugs.filed.push(bug.id); }
     }
     fs.unlinkSync(f);
   }
@@ -1599,7 +1600,7 @@ function cmdFix(argv) {
       hint('next', 'scan');
       return 0;
     }
-    if (!cur || cur.skill !== 'fix') { hint('hint', 'no_run'); process.stderr.write('hatch: no fix run here; say "fix the bugs" first\n'); return 2; }
+    if (!cur || cur.skill !== 'fix') { hint('hint', 'no_run'); process.stderr.write('hatch: no scan here; say "scan it" first\n'); return 2; }
     hint('run', cur.run);
     bd.saveActive(dir, cur);
     if (sub === 'found') {
@@ -1670,10 +1671,20 @@ function cmdReport(argv) {
       const into = path.join(sp.cohditDir(dir), 'reports');
       fs.mkdirSync(into, { recursive: true });
       r.at = r.at || ml.utcNow();
+      r.filed = true;                                            // the person's own: said back as filed, not as a report
       fs.writeFileSync(path.join(into, r.at.replace(/[^0-9A-Za-z]/g, '') + '.json'), JSON.stringify(r) + '\n');
     } else if (sub !== 'pull') return fail('report needs one of add, pull');
     const bugs = importReports(dir, cfg);
-    sayLine(dir, lvl, 'reported', bugs.length);
+    const filed = bugs.filter((b) => bugs.filed.includes(b.id));
+    const pulled = bugs.length - filed.length;
+    if (sub === 'add') {
+      for (const b of filed) sayLine(dir, lvl, 'filed', b.title);
+      if (!filed.length) sayLine(dir, lvl, 'filedTwin');
+      if (pulled) sayLine(dir, lvl, 'reported', pulled);
+      const spec = sp.load(dir), st = bd.itemStatus(dir, spec);
+      const waiting = spec.items.filter((i) => i.kind === 'bug' && st.get(i.id) === 'queued').length;
+      if (waiting) sayLine(dir, lvl, 'bugsWaiting', waiting);
+    } else sayLine(dir, lvl, 'reported', bugs.length);
     for (const b of bugs) hint('item', b.id);
     return 0;
   } catch (e) {

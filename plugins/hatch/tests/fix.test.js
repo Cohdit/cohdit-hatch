@@ -58,7 +58,7 @@ test('a problem told in words becomes a bug on the list, in their words; a twin 
   const dir = builtIdea(h, 'Words');
   const r = run(h, ['report', 'add', '--dir', dir, '--json', '-'], '{"did":"tapped B","expected":"to hear bee","saw":"a weird box with a question mark"}');
   assert.equal(r.code, 0, r.err);
-  assert.equal(r.out, '1 report from people using it, now on the list to fix.');
+  assert.equal(r.out, 'Bug filed: a weird box with a question mark.\n1 bug waiting. Say "fix all" when you want them fixed.');
   assert.equal(hintOf(r, 'item'), 'ITEM-003');
   const it = spec(dir).items[2];
   assert.equal(it.kind, 'bug');
@@ -67,8 +67,10 @@ test('a problem told in words becomes a bug on the list, in their words; a twin 
   assert.equal(it.title, 'a weird box with a question mark');
   assert.equal(it.criteria[0], 'Someone using it they were tapped B; expected to hear bee; saw: a weird box with a question mark. Once fixed, that no longer happens.');
   const again = run(h, ['report', 'add', '--dir', dir, '--json', '{"saw":"A weird box with a question mark"}']);
-  assert.equal(again.out, 'No new reports.');
+  assert.equal(again.out, 'That bug is already on the list.\n1 bug waiting. Say "fix all" when you want them fixed.');
   assert.equal(spec(dir).items.length, 3, 'a twin by title is not queued twice');
+  const second = run(h, ['report', 'add', '--dir', dir, '--json', '-'], '{"saw":"the back button does nothing"}');
+  assert.equal(second.out, 'Bug filed: the back button does nothing.\n2 bugs waiting. Say "fix all" when you want them fixed.');
   assert.equal(run(h, ['report', 'add', '--dir', dir, '--json', '{"did":"x"}']).code, 64, 'a report needs what they saw');
   assert.equal(fs.readdirSync(path.join(dir, '.cohdit', 'reports')).length, 0, 'the file is gone once the bug is on the list');
   assert.match(R(h, dir, 'status', 'plain'), /^  to do      a weird box with a question mark$/m);
@@ -128,7 +130,7 @@ test('a fix run: reports pulled from the live app, every lens over the whole pro
   assert.equal(items[4].lens, 'technical', 'a scan\'s bug is the architect\'s');
   const close = F(h, dir, ['close']);
   assert.equal(close.code, 0, close.err);
-  assert.equal(close.out, ['Found 4 things to fix:', '  report abc', '  report def', '  the Z key renders nothing', '  PRI-NOLOG: the name is logged', 'Next: say "build it" and I\'ll fix it.'].join('\n'));
+  assert.equal(close.out, ['Found 4 things to fix:', '  report abc', '  report def', '  the Z key renders nothing', '  PRI-NOLOG: the name is logged', 'Next: say "fix all" and I\'ll fix them.'].join('\n'));
   assert.equal(hintOf(close, 'next'), 'build');
   assert.equal(H.git(['status', '--porcelain'], dir), '', 'the ledger is committed');
   const events = R(h, dir, 'events', 'tech', '--last');
@@ -158,9 +160,9 @@ test('the schedule: every N days, due when the last fix run is older than that, 
   assert.equal(F(h, dir, ['due']).out, 'No check is due yet.');
   assert.equal(F(h, dir, ['every', 'soon']).code, 64);
   const set = F(h, dir, ['every', '7']);
-  assert.equal(set.out, 'Noted: I\'ll say when a check for problems is due, every 7 days. Say "fix the bugs" then.');
+  assert.equal(set.out, 'Noted: I\'ll say when a check for problems is due, every 7 days. Say "scan it" then.');
   const due = F(h, dir, ['due']);
-  assert.equal(due.out, 'A check for problems is due. Say "fix the bugs".');
+  assert.equal(due.out, 'A check for problems is due. Say "scan it".');
   assert.equal(hintOf(due, 'due'), 'yes', 'never run: due now');
   F(h, dir, ['open']);
   for (const a of ['checker', 'lens-security', 'lens-privacy', 'lens-cost']) F(h, dir, ['found', a, '--return', PASS]);
@@ -171,7 +173,7 @@ test('the schedule: every N days, due when the last fix run is older than that, 
   const o = B(later, dir, ['open']);
   assert.match(o.err, /^hint=fix_due$/m, 'the build says a check is due');
   B(later, dir, ['close']);
-  assert.equal(F(h, dir, ['every', 'off']).out, 'Noted: no regular check. Say "fix the bugs" whenever you like.');
+  assert.equal(F(h, dir, ['every', 'off']).out, 'Noted: no regular check. Say "scan it" whenever you like.');
   assert.equal(hintOf(F(later, dir, ['due']), 'due'), 'no');
   assert.equal(F(h, dir, ['found', 'checker', '--return', PASS]).code, 2, 'no run open');
 });
