@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.18 — file a bug, then fix all (2026-11-14)
+
+- `report add` said back as filed: "Bug filed: <title>." and "N bugs waiting. Say "fix all" when you want
+  them fixed." (or "That bug is already on the list."). Reports pulled from the live app keep their own line.
+- Words: "bug: …" files one (several in one message, one each); "fix all", "fix the bugs", "fix 3 bugs"
+  fix them; "scan it" looks for more (was "fix the bugs"). The scan's summary now ends at "fix all".
+
 ## 0.0.17 — build all, build a few, fix all (2026-11-14)
 
 - `build open --items N|all` and `--only bugs|things`: the person says how much a run takes on. "build it"

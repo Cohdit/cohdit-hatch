@@ -92,6 +92,7 @@ const WORDS = {
     tried: (n, ok, bad) => n === 0 ? 'Nothing tried yet.' : 'Tried ' + plural(n, 'thing') + ': ' + (bad === 0 ? 'all worked.' : ok + ' worked, ' + bad + " didn't."),
     failRow: "didn't",
     nextFix: 'Next: say "build it" and I\'ll fix it.',
+    nextFixAll: 'Next: say "fix all" and I\'ll fix them.',
     nextShare: 'Next: say "share it" when you want friends to see it.',
     tryAgain: 'Say "let me try it" when you\'re ready.',
     publishAsk: (url) => 'Put it live at ' + url + '? Anyone with the link can open it; the code and anything typed into it stay in your accounts.',
@@ -105,9 +106,12 @@ const WORDS = {
     found: (n) => n === 0 ? 'Nothing to fix: the scan found no problems and nobody reported any.' : 'Found ' + plural(n, 'thing') + ' to fix:',
     reported: (n) => n === 0 ? 'No new reports.' : plural(n, 'report') + ' from people using it, now on the list to fix.',
     nothingToFix: 'Nothing built yet, so nothing to check. Say "build it".',
-    fixEvery: (n) => 'Noted: I\'ll say when a check for problems is due, every ' + (n === 1 ? 'day' : n + ' days') + '. Say "fix the bugs" then.',
-    fixOff: 'Noted: no regular check. Say "fix the bugs" whenever you like.',
-    fixDue: 'A check for problems is due. Say "fix the bugs".',
+    fixEvery: (n) => 'Noted: I\'ll say when a check for problems is due, every ' + (n === 1 ? 'day' : n + ' days') + '. Say "scan it" then.',
+    fixOff: 'Noted: no regular check. Say "scan it" whenever you like.',
+    fixDue: 'A check for problems is due. Say "scan it".',
+    filed: (title) => 'Bug filed: ' + title + '.',
+    filedTwin: 'That bug is already on the list.',
+    bugsWaiting: (n) => plural(n, 'bug') + ' waiting. Say "fix all" when you want them fixed.',
     fixNotDue: 'No check is due yet.',
   },
   product: {
@@ -157,6 +161,7 @@ const WORDS = {
     tried: (n, ok, bad) => n === 0 ? 'Nothing tested yet.' : 'Tested ' + plural(n, 'item') + ': ' + (bad === 0 ? 'all passed.' : ok + ' passed, ' + bad + ' failed.'),
     failRow: 'failed',
     nextFix: 'Next: say "build it" to fix it.',
+    nextFixAll: 'Next: say "fix all" to fix them.',
     nextShare: 'Next: say "share it" to deploy.',
     tryAgain: 'Say "let me try it" to pick it up again.',
     publishAsk: (url) => 'Put it live at ' + url + '? Anyone with the link can open it; the code and anything typed into it stay in your accounts.',
@@ -170,9 +175,12 @@ const WORDS = {
     found: (n) => n === 0 ? 'Nothing to fix: no findings from the lenses, no reports.' : 'Found ' + plural(n, 'item') + ' to fix:',
     reported: (n) => n === 0 ? 'No new reports.' : plural(n, 'report') + ' pulled from the app, queued as bugs.',
     nothingToFix: 'Nothing built yet. Say "build it".',
-    fixEvery: (n) => 'Fix run due every ' + plural(n, 'day') + '; "status" and "build it" say when. Say "fix the bugs" then.',
-    fixOff: 'No scheduled fix run. Say "fix the bugs" when wanted.',
-    fixDue: 'A fix run is due. Say "fix the bugs".',
+    fixEvery: (n) => 'Scan due every ' + plural(n, 'day') + '; "status" and "build it" say when. Say "scan it" then.',
+    fixOff: 'No scheduled scan. Say "scan it" when wanted.',
+    fixDue: 'A scan is due. Say "scan it".',
+    filed: (title) => 'Filed: ' + title + '.',
+    filedTwin: 'Already on the list.',
+    bugsWaiting: (n) => plural(n, 'bug') + ' queued. "fix all" fixes them.',
     fixNotDue: 'No fix run due yet.',
   },
 };
@@ -649,7 +657,7 @@ function viewDigest(c, a) {
     out.push(w.found(found.length) + (tech ? ' (run ' + run + ')' : ''));
     for (const r of found) out.push('  ' + c.title(r.i) + (tech ? ' (' + r.i + ')' : ''));
     for (const r of stop) out.push(c.line(r, kind, rs));
-    if (found.length) out.push(w.nextFix);
+    if (found.length) out.push(w.nextFixAll);
   } else if (skill === 'dream') {
     for (const r of rs) if (['SPEC', 'REFUSE', 'HELD', 'DECIDE'].includes(r.c)) out.push(c.line(r, kind, rs));
   } else if (skill === 'try') {

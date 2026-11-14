@@ -1,6 +1,6 @@
 ---
 name: fix
-description: Find what is wrong before anyone else does. Pulls the problems people reported from the live app onto the list, then sets the four lenses (bugs, security, cost, privacy) over the whole project; what they find joins the list, and "build it" fixes it. Triggers on "fix the bugs", "scan it", "check for problems", "anything wrong?", "is it safe", "fix the bugs every week", "stop the weekly check", "is a check due".
+description: File a bug, or find what is wrong before anyone else does. Files a bug the person describes onto the list in their words, one per problem; pulls the problems people reported from the live app; sets the four lenses (bugs, security, cost, privacy) over the whole project. Fixes nothing: "fix all" does. Triggers on "bug: <what is wrong>", "file a bug", "log a bug", "there's a bug", "I found a bug", "this is broken", "add a bug", "scan it", "check for problems", "anything wrong?", "is it safe", "scan it every week", "stop the weekly check", "is a scan due".
 ---
 
 Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/hatch.js" content skill fix`.
