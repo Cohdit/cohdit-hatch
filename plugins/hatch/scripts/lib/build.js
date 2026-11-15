@@ -756,8 +756,6 @@ function brief(dir, spec, item, cfg, notes, status, advice) {
     out.push('', '## Rules attached to this idea');
     for (const r of spec.rails) if (rails[r]) out.push('- ' + r + ': ' + rails[r].build);
   }
-  const how = ld.core(ld.load());
-  if (how.length) out.push('', '## How Cohdit decides', 'The software leader\'s values and calls. When a choice is yours, make it this way; the review judges by them too.', ...how);
   const about = [it.title].concat(it.criteria || [], spec.rails || [], [spec.pitch || '', spec.name || '', tried || '']).join(' ');
   out.push(...expertSections(spec, about));
   const bank = ls.load();
@@ -829,36 +827,39 @@ function itemAbout(spec, it, tried) {
   return [it.title].concat(it.criteria || [], spec.rails || [], [spec.pitch || '', spec.name || '', tried || '']).join(' ');
 }
 
-/** The brief's part from the other agents the idea uses: each one's calls, then the rules that match this
- *  thing (12 at most across all of them). Nothing when the idea uses none. */
+/** The brief's part from the agents the idea uses: each one's values and calls (how it decides; when a choice
+ *  is the maker's, it is made this way and the review judges by it too), then the rules that match this thing
+ *  (12 at most across all of them). Nothing when the idea uses none: the build goes on with the person's own model. */
 function expertSections(spec, about) {
   const packs = ld.used(spec);
   if (!packs.length) return [];
   const hit = ld.matched(packs, about, 12);
   const out = [];
   for (const p of packs) {
-    const calls = (p.calls || []).filter((c) => typeof c === 'string' && c.trim());
+    const how = ld.core(p);
     const g = hit.find((h) => h.pack === p);
-    if (!calls.length && !g) continue;
+    if (!how.length && !g) continue;
     out.push('', '## What ' + p.name + ' knows about this business');
-    if (calls.length) out.push('Calls:', ...calls.map((c) => '- ' + c));
-    if (g) out.push((calls.length ? '\n' : '') + 'Rules for this thing:', ...ld.ruleLines(g.rules));
+    if (how.length) out.push('When a choice is yours, make it this way; the review judges by it too.', ...how);
+    if (g) out.push((how.length ? '\n' : '') + 'Rules for this thing:', ...ld.ruleLines(g.rules));
   }
   return out;
 }
 
-/** The role file for a read-only agent. `item`, when there is one, lets the checker carry the rules of the
- *  idea's other agents that match that thing; the advisor carries each of those agents whole. */
+/** The role file for a read-only agent. Each agent the idea uses is carried: the advisor whole, the others
+ *  by its core and the rules of their own areas; `item`, when there is one, lets the checker carry the rules
+ *  that match that thing as well. */
 function writeRole(dir, name, item) {
   const parts = [api.agentText(name).split('${CLAUDE_PLUGIN_ROOT}').join(ml.PLUGIN).trim()];
   const rules = AGENT_RULES[name];
   if (rules) parts.push('## The rules (' + rules + '.json)', '```json\n' + api.dataText(rules).trim() + '\n```');
-  const known = ld.forReader(ld.load(), name);
-  if (known) parts.push('## The software leader', known);
   let spec = null;
   try { spec = sp.load(dir); } catch (e) { spec = null; }
   const packs = spec ? ld.used(spec) : [];
-  if (packs.length && name === 'advisor') for (const p of packs) parts.push('## ' + p.name, ld.forReader(p, 'all'));
+  for (const p of packs) {
+    const known = ld.forReader(p, name === 'advisor' ? 'all' : name);
+    if (known) parts.push('## ' + p.name, known);
+  }
   const it = item && spec ? (spec.items || []).find((i) => i.id === item) : null;
   if (packs.length && name === 'checker' && it) {
     for (const g of ld.matched(packs, itemAbout(spec, it, lastFailNote(dir, item)), 12)) parts.push('## ' + g.pack.name + '\'s rules for this thing', ld.ruleLines(g.rules).join('\n'));

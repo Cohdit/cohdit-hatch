@@ -63,8 +63,8 @@
  *                                       the bank, one line each: what every brief draws on
  *   hatch.js remember show <L-NNN>      the whole lesson
  *   hatch.js leader [--for <reader>] [--expert <slug>]
- *                                       the software leader's knowledge as text (ask: all; dream: --for dream);
- *                                       --expert: another agent the person owns
+ *                                       an agent's knowledge as text (ask: all; dream: --for dream): the
+ *                                       software leader, or with --expert any agent the person owns
  *   hatch.js experts [--fresh] [--json] the agents this key has, and those it could add (--json: for playbooks)
  *   hatch.js experts offer <slug>       offer one agent for this idea, once ever per idea; prints the offer and link
  *   hatch.js experts link <slug>        a fresh link to add an agent
@@ -857,8 +857,8 @@ function cmdBuild(argv) {
         const lanes = bd.openLanes(dir, cur, spec, bd.readCfg(dir), session, cur.narrow ? 1 : bd.laneCount(bd.readCfg(dir), spec, bd.itemStatus(dir, spec), cur.want && cur.want.items !== null ? { items: Math.max(1, cur.want.items - (cur.picked || []).length), only: cur.want.only } : cur.want));
         if (lanes.length) hint('lanes', lanes.join(','));
       }
-      for (const x of (spec.experts || []).filter((e) => e !== ld.LEADER_SLUG && !ld.pack(e))) {
-        process.stdout.write(slugName(x) + ' isn\'t available right now, so this build uses the software leader alone.\n');
+      for (const x of (spec.experts || []).filter((e) => !ld.pack(e))) {
+        process.stdout.write(slugName(x) + ' isn\'t available right now, so this build goes on without it.\n');
       }
       hint('run', cur.run);
       hint('next', 'next');
@@ -1753,41 +1753,34 @@ function contentError(e) {
   return 1;
 }
 
-/** `leader [--for <reader>] [--expert <slug>]`: the software leader's knowledge as text, for the ask skill
- *  (everything) and dream (`--for dream`); with --expert, an agent the person owns. An error line for the
- *  person and exit 1 when it cannot be fetched. */
+/** `leader [--for <reader>] [--expert <slug>]`: an agent's knowledge as text, for the ask skill (everything) and
+ *  dream (`--for dream`): the software leader, or with --expert any agent the person owns. An error line for
+ *  the person and exit 1 when it cannot be had; a software leader the person does not own says how to add it. */
+const LEADER_SLUG = 'software-leader';
 function cmdLeader(args) {
   const reader = opt(args, '--for') || 'all';
-  const slug = opt(args, '--expert');
-  if (slug && slug !== ld.LEADER_SLUG) {
-    if (process.env.COHDIT_EXPERTS) {
-      const p = ld.pack(slug);
-      if (!p) return contentError(new api.HatchError('not_owned'));
-      process.stdout.write(ld.forReader(p, reader) + '\n');
-      return 0;
-    }
-    return api.fetchContent('expert', slug).then((text) => {
-      let p = null;
-      try { p = JSON.parse(text); } catch (e) { /* refused below */ }
-      if (!p || !Array.isArray(p.knowledge)) return contentError(new Error('pack is not valid'));
-      const out = ld.forReader(p, reader);
-      if (!out) return fail(slug + ' has nothing for ' + reader);
-      process.stdout.write(out + '\n');
-      return 0;
-    }, contentError);
-  }
-  const show = (l) => {
-    const text = ld.forReader(l, reader);
-    if (!text) return fail('the software leader has nothing for ' + reader);
-    process.stdout.write(text + '\n');
+  const slug = opt(args, '--expert') || LEADER_SLUG;
+  const show = (p) => {
+    const out = ld.forReader(p, reader);
+    if (!out) return fail((p.name || slug) + ' has nothing for ' + reader);
+    process.stdout.write(out + '\n');
     return 0;
   };
-  if (process.env.COHDIT_LEADER) return show(ld.load());
-  return api.fetchContent('data', 'leader').then((text) => {
-    let l = null;
-    try { l = JSON.parse(text); } catch (e) { /* refused below */ }
-    return l && Array.isArray(l.knowledge) ? show(l) : contentError(new Error('leader is not valid'));
-  }, contentError);
+  const notOwned = () => {
+    if (slug !== LEADER_SLUG) return contentError(new api.HatchError('not_owned'));
+    process.stdout.write('The software leader isn\'t one of your agents yet. Say "what agents are there" to add it.\n');
+    return 1;
+  };
+  if (process.env.COHDIT_EXPERTS) {
+    const p = ld.pack(slug);
+    return p ? show(p) : notOwned();
+  }
+  return api.fetchContent('expert', slug).then((text) => {
+    let p = null;
+    try { p = JSON.parse(text); } catch (e) { /* refused below */ }
+    if (!p || !Array.isArray(p.knowledge)) return contentError(new Error('pack is not valid'));
+    return show(p);
+  }, (e) => (e instanceof api.HatchError && e.code === 'not_owned' ? notOwned() : contentError(e)));
 }
 
 // --- knowledge agents ----------------------------------------------------------------------------
@@ -1829,8 +1822,8 @@ function cmdExperts(argv) {
   if (sub === 'list') {
     return api.me({ fresh: hasOpt(rest, '--fresh') }).then((m) => {
       if (hasOpt(rest, '--json')) return say(JSON.stringify({ experts: m.experts || [], available: m.available || [], idea: spec ? ideaAgents(spec) : null }));
-      const mine = (m.experts || []).map((e) => (e.slug === ld.LEADER_SLUG ? e.name + ' (always on)' : e.name));
-      say('Your agents: ' + mine.join(', ') + '.');
+      const mine = (m.experts || []).map((e) => e.name);
+      say(mine.length ? 'Your agents: ' + mine.join(', ') + '.' : 'You have no agents yet; Hatch builds with your own model.');
       if ((m.available || []).length) {
         say('You could add:');
         for (const a of m.available) {
@@ -1907,7 +1900,6 @@ function cmdExperts(argv) {
     if (!spec) return refuse('no_idea');
     if (building(dir)) return refuse('building');
     const idea = ideaAgents(spec);
-    if (slug === ld.LEADER_SLUG) return refuse('always_on');
     if (sub === 'stop') {
       spec.experts = idea.use.filter((x) => x !== slug);
       sp.save(dir, spec);
@@ -1963,7 +1955,7 @@ function preloadAgents(argv) {
   const hit = name ? sp.registry().projects.find((p) => p.name.toLowerCase() === name.trim().toLowerCase() || p.slug === sp.slugify(name)) : null;
   const dir = name ? (hit ? hit.path : null) : ideaDir(argv);
   const spec = dir ? ml.readJson(sp.specPath(dir), null) : null;
-  const slugs = spec && Array.isArray(spec.experts) ? spec.experts.filter((x) => x !== ld.LEADER_SLUG) : [];
+  const slugs = spec && Array.isArray(spec.experts) ? spec.experts.filter((x) => typeof x === 'string') : [];
   return slugs.length ? api.preloadExperts(slugs) : Promise.resolve();
 }
 

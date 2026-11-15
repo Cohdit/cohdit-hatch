@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.19 — the software leader is an agent like any other (2026-11-15)
+
+- Hatch builds with your own Claude model by default. No agent comes with a Hatch key; the software leader is
+  added from Ten Years like any other knowledge agent, and an idea uses it only when it is one of yours
+  (`experts use software-leader`). Its values, calls and rules then shape the brief, the advisor, the checker
+  and the lenses exactly as any other agent's do.
+- `leader` prints the software leader when you have it; without it, one line says how to add it. `--expert`
+  still prints any agent you own. The plugin no longer fetches `data/leader`.
+- "<agent> isn't available right now, so this build goes on without it." (was "…uses the software leader alone").
+
 ## 0.0.18 — file a bug, then fix all (2026-11-14)
 
 - `report add` said back as filed: "Bug filed: <title>." and "N bugs waiting. Say "fix all" when you want

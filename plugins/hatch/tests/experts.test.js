@@ -1,5 +1,5 @@
 'use strict';
-// experts.test.js — knowledge agents beside the software leader: the `expert` content kind and the JSON calls
+// experts.test.js — knowledge agents (the software leader among them): the `expert` content kind and the JSON calls
 // (lib/api.js), the `experts` commands against a stub server, and the brief and roles carrying the agents an
 // idea uses. The agents and their knowledge here are made up; real packs are private.
 const test = require('node:test');
@@ -151,7 +151,7 @@ test('the JSON calls send the key, POST their body, and map each refusal to its 
 test('experts lists what the person has and could add; --json carries the idea too', async () => {
   const r = await hatch(['experts']);
   assert.equal(r.code, 0, r.err);
-  assert.equal(r.out, ['Your agents: Software leader (always on).', 'You could add:',
+  assert.equal(r.out, ['Your agents: Software leader.', 'You could add:',
     '- Bakery operations: Knows orders, deposits and stock. ($9 a month; 5 free questions left)', '- Payroll'].join('\n'));
   const dir = idea({ experts: [], offered: ['payroll'] });
   const j = await hatch(['experts', '--json', '--dir', dir]);
@@ -214,7 +214,9 @@ test('use and stop edit the idea, need the agent owned, and never change a build
   assert.equal((await hatch(['experts', 'use', 'bakery-ops', '--dir', dir])).code, 0);
   assert.deepEqual(specOf(dir).experts, ['bakery-ops']);
   assert.match((await hatch(['experts', 'use', 'payroll', '--dir', dir])).err, /hint=not_owned/);
-  assert.match((await hatch(['experts', 'use', 'software-leader', '--dir', dir])).err, /hint=always_on/);
+  assert.equal((await hatch(['experts', 'use', 'software-leader', '--dir', dir])).code, 0, 'the software leader is an agent like any other');
+  assert.deepEqual(specOf(dir).experts, ['bakery-ops', 'software-leader']);
+  assert.equal((await hatch(['experts', 'stop', 'software-leader', '--dir', dir])).code, 0);
   H.git(['init', '-q', '-b', 'main'], dir);
   bd.saveActive(dir, { run: 'r1', started: ml.utcNow(), skill: 'build', open: {}, picked: [] });
   const busy = await hatch(['experts', 'stop', 'bakery-ops', '--dir', dir]);
@@ -260,7 +262,7 @@ test('the brief carries the idea\'s agents only when it uses them; the checker a
     assert.doesNotMatch(plain, /knows about this business/, 'no agents used: the brief is as before');
     const used = Object.assign({}, spec, { experts: ['bakery-ops', 'missing-one'] });
     const brief = bd.brief(dir, used, 'ITEM-001', { verify: 'npm test' }, null, st);
-    assert.match(brief, /## What Bakery operations knows about this business\nCalls:\n- Fresh vs cheap/);
+    assert.match(brief, /## What Bakery operations knows about this business\n[^\n]+\nTrade-off calls[^\n]*\n- Fresh vs cheap/);
     assert.ok(brief.includes('Take a deposit on every custom cake order.') && !brief.includes('Count flour weekly.'));
     fs.mkdirSync(path.join(dir, '.cohdit'), { recursive: true });
     fs.writeFileSync(path.join(dir, '.cohdit', 'spec.json'), JSON.stringify(used));

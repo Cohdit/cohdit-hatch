@@ -1,31 +1,18 @@
 'use strict';
 /**
- * leader.js — the software leader: the owner's whole knowledge, fetched from Cohdit as data `leader`.
- * Builds are decided against it: every maker brief carries the values and trade-off calls, the advisor
- * carries all of it, and the checker and each lens carry the rules of their own areas.
+ * leader.js — knowledge agents' packs: an expert's whole knowledge, fetched from Cohdit as `expert/<slug>`.
+ * An idea uses the packs in spec.json `experts` (the person owns them; the software leader is one of them).
+ * Builds are decided against them: every maker brief carries each pack's values and trade-off calls and the
+ * rules that match the thing, the advisor carries each whole, and the checker and each lens carry the rules
+ * of their own areas. With no packs, the build goes on with the person's own model alone.
  *
- * The file is {v, name, sha, values[], calls[], limits[], knowledge[{id, domain, rule, why?, unless?,
- * example?}], reads{reader: [domain]}}. It is optional: when it cannot be had, the sections are left out
- * and the build goes on as before.
+ * A pack is {v, name, sha, slug, kind: software|domain, field, values[], calls[], limits[], knowledge[{id,
+ * domain, rule, why?, unless?, example?}], reads{reader: [domain]}}. A pack that cannot be had is left out.
  *
- * Other knowledge agents come as packs of the same shape plus {slug, kind: software|domain, field}: an
- * idea uses the ones in spec.json `experts` (the person owns them). Their calls and the rules that match one
- * thing join the brief and the checker; the advisor carries each whole. A pack that cannot be had is left out.
- *
- * COHDIT_LEADER=<file> moves the leader, COHDIT_EXPERTS=<dir> the packs (<dir>/<slug>.json) (tests).
+ * COHDIT_EXPERTS=<dir> moves the packs (<dir>/<slug>.json) (tests).
  */
 const ml = require('./ledger');
 const api = require('./api');
-
-/** The leader, or null when it cannot be had (an older content service, Cohdit unreachable). */
-function load() {
-  try {
-    const l = process.env.COHDIT_LEADER ? ml.readJson(process.env.COHDIT_LEADER, null) : api.dataJson('leader');
-    return l && Array.isArray(l.knowledge) ? l : null;
-  } catch (e) {
-    return null;
-  }
-}
 
 function list(xs) { return (xs || []).filter((x) => typeof x === 'string' && x.trim()); }
 
@@ -37,7 +24,7 @@ function rule(k) {
   return out;
 }
 
-/** The values and the trade-off calls: how Cohdit decides, for every brief. */
+/** The values and the trade-off calls: how this agent decides, for every brief. */
 function core(l) {
   if (!l) return [];
   const out = [];
@@ -66,20 +53,14 @@ function forReader(l, reader) {
   const all = reader === 'all' || reader === 'advisor';
   const domains = all ? null : ((l.reads || {})[reader] || []);
   const out = core(l);
-  if (all && list(l.limits).length) out.push('', 'Where the leader does not advise:', ...list(l.limits).map((x) => '- ' + x));
+  if (all && list(l.limits).length) out.push('', 'Where ' + (l.name || 'this agent') + ' does not advise:', ...list(l.limits).map((x) => '- ' + x));
   const r = rules(l, domains);
   if (r.length) out.push('', 'Rules' + (all ? '' : ' for this review') + ':', ...r);
   return out.join('\n').trim();
 }
 
-const LEADER_SLUG = 'software-leader';
-
 /** One pack by slug, or null: tests' folder, else what api preloaded (or the dev folder). */
 function pack(slug) {
-  if (slug === LEADER_SLUG) {
-    const own = process.env.COHDIT_EXPERTS ? null : api.expertJson(slug);
-    return own && Array.isArray(own.knowledge) ? own : load();
-  }
   let p = null;
   try {
     p = process.env.COHDIT_EXPERTS ? ml.readJson(require('path').join(process.env.COHDIT_EXPERTS, slug + '.json'), null) : api.expertJson(slug);
@@ -87,9 +68,9 @@ function pack(slug) {
   return p && Array.isArray(p.knowledge) ? Object.assign({ slug }, p) : null;
 }
 
-/** The packs an idea uses besides the leader, in the spec's order; those that cannot be had are skipped. */
+/** The packs an idea uses, in the spec's order; those that cannot be had are skipped. */
 function used(spec) {
-  const slugs = ((spec && spec.experts) || []).filter((s) => typeof s === 'string' && s !== LEADER_SLUG);
+  const slugs = ((spec && spec.experts) || []).filter((s) => typeof s === 'string');
   return slugs.map(pack).filter(Boolean);
 }
 
@@ -120,4 +101,4 @@ function matched(packs, text, max) {
 /** Rule lines for a matched group. */
 function ruleLines(rs) { return [].concat(...rs.map(rule)); }
 
-module.exports = { LEADER_SLUG, load, core, rules, forReader, pack, used, matched, ruleLines };
+module.exports = { core, rules, forReader, pack, used, matched, ruleLines };
