@@ -14,11 +14,11 @@ bad()  { printf '  FAIL  %s\n' "$1"; status=1; }
 TMPF="$(mktemp -d)"; trap 'rm -rf "$TMPF"' EXIT
 
 # The playbooks, agent briefs, data and maintainer docs are private: they live in the site repo
-# (cohdit-hatch-private/hatch-content and cohdit-hatch-private/docs) and reach the plugin through
+# (cohdit-expertise/hatch-content and cohdit-expertise/docs) and reach the plugin through
 # scripts/lib/api.js. With them (HATCH_DEV_DIR, or the sibling site repo) every check runs. Without them
 # (the public CI) only the code checks run, so no log ever prints private text.
-if [ -z "${HATCH_DEV_DIR:-}" ] && [ -d "$ROOT/../cohdit-hatch-private/hatch-content" ]; then
-  HATCH_DEV_DIR="$(cd "$ROOT/../cohdit-hatch-private/hatch-content" && pwd)"
+if [ -z "${HATCH_DEV_DIR:-}" ] && [ -d "$ROOT/../cohdit-expertise/hatch-content" ]; then
+  HATCH_DEV_DIR="$(cd "$ROOT/../cohdit-expertise/hatch-content" && pwd)"
 fi
 CONTENT=0
 if [ -n "${HATCH_DEV_DIR:-}" ] && [ -f "$HATCH_DEV_DIR/data/codes.json" ]; then CONTENT=1; fi
@@ -27,7 +27,7 @@ if [ "$CONTENT" -eq 1 ]; then export HATCH_DEV_DIR; else unset HATCH_DEV_DIR; fi
 C="${HATCH_DEV_DIR:-}"
 CONTRACTS="$C/../docs/CONTRACTS.md"
 STUB_END='Otherwise follow the printed instructions exactly as if they were this file.'
-if [ "$CONTENT" -eq 1 ]; then echo "content: $C"; else echo "content: none (code-only checks; the full run needs cohdit-hatch-private beside this repo)"; fi
+if [ "$CONTENT" -eq 1 ]; then echo "content: $C"; else echo "content: none (code-only checks; the full run needs cohdit-expertise beside this repo)"; fi
 # Steps that read private content say so and are skipped without it.
 needs_content() { [ "$CONTENT" -eq 1 ] && return 0; echo "  skipped: needs the private content"; return 1; }
 

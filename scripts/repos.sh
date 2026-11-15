@@ -2,13 +2,13 @@
 # repos.sh — where every repo behind Hatch stands, so nothing is changed in one and forgotten in another.
 #   bash scripts/repos.sh
 # Read-only. Prints branch, uncommitted files, and commits not yet pushed or not yet pulled, per repo.
-# Which repo owns which change: CLAUDE.md here, and docs/ARCHITECTURE.md in cohdit-hatch-private.
+# Which repo owns which change: CLAUDE.md here, and docs/ARCHITECTURE.md in cohdit-expertise.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PARENT="$(dirname "$HERE")"
 REPOS=(
   "cohdit-hatch|public plugin: code, hooks, stubs"
-  "cohdit-hatch-private|private: ALL Hatch content and docs; deploys the content service"
+  "cohdit-expertise|private: ALL Hatch content and docs; deploys the content service"
   "cohdit-access|private: site, keys, subscriptions; the API that fetches the content"
   "cohdit-knowledge-software-leader|private: the owner's knowledge; confirmed atoms become lessons"
   "cohdit-knowlege-interviewer|private: tools that read and export the knowledge"
