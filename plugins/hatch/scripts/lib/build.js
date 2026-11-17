@@ -729,6 +729,16 @@ function refusalClause() {
   return cz.loadRails().refusal_clause || 'Cohdit does not build apps in a refused category. State the refusal once, in the fixed sentence, and stop.';
 }
 
+/** The baseline rules the idea's reviewers will check: the ones that always apply, and those whose gate the person answered yes
+ *  (spec.rails). The maker is told them up front, so the review is a check and not the first time it hears of them. A baseline that
+ *  cannot be read leaves the section out; a build never fails for it. */
+function baselineFor(spec) {
+  try {
+    const gates = new Set(spec.rails || []);
+    return (api.dataJson('baseline').rules || []).filter((r) => r && r.id && typeof r.build === 'string' && r.build.trim() && (r.applies === 'always' || gates.has(r.applies)));
+  } catch (e) { return []; }
+}
+
 function hatchCmd() { return 'node "' + path.join(ml.SCRIPTS, 'hatch.js') + '"'; }
 
 function brief(dir, spec, item, cfg, notes, status, advice) {
@@ -755,6 +765,11 @@ function brief(dir, spec, item, cfg, notes, status, advice) {
   if ((spec.rails || []).length) {
     out.push('', '## Rules attached to this idea');
     for (const r of spec.rails) if (rails[r]) out.push('- ' + r + ': ' + rails[r].build);
+  }
+  const built = baselineFor(spec);
+  if (built.length) {
+    out.push('', '## Built in from the start', 'Your reviewers check these, by these ids. Build each in the first time: it is cheaper than a review round.');
+    for (const r of built) out.push('- ' + r.id + ': ' + r.build);
   }
   const about = [it.title].concat(it.criteria || [], spec.rails || [], [spec.pitch || '', spec.name || '', tried || '']).join(' ');
   out.push(...expertSections(spec, about));
@@ -1027,6 +1042,6 @@ module.exports = {
   git, gitNet, hasRemote, headSha, fullSha, currentBranch, isPrimary, mainBranch, resetTree, dirtyPaths, fetch, remoteMain, toMain, rebaseOnto, fastForward, baseSha, startBase, keepWork, pushMain, commitLedger, landMain, land, agentModel,
   active, saveActive, isLive, setPointer, clearPointer, newRunId, runStart, stopBefore, abandon,
   allRecords, itemStatus, lastFailNote, branchFor, remoteClaims, candidates, startItem, claim, releaseClaim, writeNote, markWords, readNote,
-  scaffold, ensureRepo, fetchIdea, workDir, sideCopy, laneCount, installDeps, openLanes, laneGroup, homeDir, LANES_MAX, findSideCopy, removeSideCopy, sweepSideCopies, brief, expertSections, itemAbout, scanBrief, briefPath, diffPath, consultPath, scanPath, rolePath, writeRole, writeConsult, hatchCmd, refusalClause,
+  scaffold, ensureRepo, fetchIdea, workDir, sideCopy, laneCount, installDeps, openLanes, laneGroup, homeDir, LANES_MAX, findSideCopy, removeSideCopy, sweepSideCopies, brief, baselineFor, expertSections, itemAbout, scanBrief, briefPath, diffPath, consultPath, scanPath, rolePath, writeRole, writeConsult, hatchCmd, refusalClause,
   parseReturn, makerReturn, checkerReturn, advisorReturn, risk, loadLenses, lensesFor, dependencies, coverage, ROLES,
 };

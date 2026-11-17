@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.20 — the builder knows what the review will check (2026-11-17)
+
+- Every thing's brief now has a "Built in from the start" section: the security, privacy and cost rules the reviewers check,
+  by their ids, with how to build each one. The rules that always apply come first; a rule behind a gate (personal details,
+  payments, uploads …) comes only when the person said yes to that gate. Before, only the reviewers saw them, so the builder
+  wrote code that the review then sent back; a real project lost two things to exactly that after two review rounds.
+- A baseline that cannot be read leaves the section out; a build never fails for it.
+
 ## 0.0.19 — the software leader is an agent like any other (2026-11-15)
 
 - Hatch builds with your own Claude model by default. No agent comes with a Hatch key; the software leader is
