@@ -932,13 +932,11 @@ test('the build skill: short, one script, the refusal clause, points at try and 
   assert.match(skill, /hatch\.js" build/);
   assert.match(skill, /CONTRACTS\.md/);
   assert.match(skill, /Cohdit does not build apps in a refused category/);
-  assert.match(skill, /hatch:maker/);
-  assert.match(skill, /hatch:checker/);
-  assert.match(skill, /hatch:advisor/);
-  assert.match(skill, /agents=/);
+  assert.match(skill, /hatch:runner/);
+  assert.doesNotMatch(skill, /hatch:maker/, 'the lead never dispatches the maker: the runner does');
   assert.doesNotMatch(skill, /new chat/i);
   assert.doesNotMatch(skill, /say "share it"/i);
-  for (const a of ['maker', 'checker', 'lens-security', 'lens-privacy', 'lens-cost', 'advisor']) {
+  for (const a of ['maker', 'runner', 'checker', 'lens-security', 'lens-privacy', 'lens-cost', 'advisor']) {
     const text = fs.readFileSync(path.join(__dirname, '..', 'agents', a + '.md'), 'utf8');
     const body = H.playbook('agent', a);
     if (body) assert.ok(body.split('\n').length <= 60, a + ' is one page');

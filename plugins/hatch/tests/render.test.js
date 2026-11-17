@@ -206,3 +206,11 @@ test('the try standard: at every level, a short title and one short line; drafte
   const tech = run('tech').split('\n');
   assert.deepEqual(tech.slice(0, 2), ['  1 Add a chore (' + ids[0] + ')', '    Type Dishes and press Add.'], 'a developer gets the short list too, with ids');
 });
+
+test('the runner only carries messages, so its cost is coordination; the maker is build, a lens is check', () => {
+  const R = require('../scripts/render.js');
+  const none = new Map();
+  assert.equal(R.stageOf({ f: { agent: 'runner' }, i: 'ITEM-001', ts: '2026-01-01T00:00:00Z' }, none), 'orchestrator');
+  assert.equal(R.stageOf({ f: { agent: 'maker' }, i: 'ITEM-001', ts: '2026-01-01T00:00:00Z' }, none), 'build');
+  assert.equal(R.stageOf({ f: { agent: 'lens-cost' }, i: 'ITEM-001', ts: '2026-01-01T00:00:00Z' }, none), 'check');
+});
