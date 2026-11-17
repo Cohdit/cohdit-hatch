@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.21 — a fresh helper for every thing (2026-11-18)
+
+- A build now hands each thing to its own helper (`runner`), which takes it from the pick to the script's decision in a
+  fresh context: it calls the script, sends the work to the builder and the reviewers, and returns only what the script said.
+  Before, the main conversation carried every report in and out for every thing, so it grew heavier with each one and a
+  build cost about twice what it should. The main conversation now only starts the run, hands out things and closes it.
+- Cost the helper spends counts as coordination in the scorecard, so the orchestrator share stays comparable.
+- Needs this version: the build instructions on the server now ask for the helper, and an older plugin is told to update.
+
 ## 0.0.20 — the builder knows what the review will check (2026-11-17)
 
 - Every thing's brief now has a "Built in from the start" section: the security, privacy and cost rules the reviewers check,

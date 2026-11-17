@@ -737,7 +737,7 @@ function previousSetup(c, run) {
 
 function stageOf(u, firstRound) {
   const agent = u.f.agent || '';
-  if (agent === 'orchestrator') return 'orchestrator';
+  if (agent === 'orchestrator' || agent === 'runner') return 'orchestrator';   // the runner only carries messages: it is coordination
   const fr = firstRound.get(u.i);
   if (fr && ml.parseTs(u.ts).getTime() > fr.getTime()) return 'rework';
   if (agent === 'maker') return 'build';
@@ -1178,4 +1178,4 @@ if (require.main === module) {
     return 1;
   }).then((code) => { process.exitCode = code; });
 }
-module.exports = { Ctx, WORDS, score, VIEWS, parseArgs, resolveLevel, main, shortLine, shortTitle };
+module.exports = { Ctx, WORDS, score, stageOf, VIEWS, parseArgs, resolveLevel, main, shortLine, shortTitle };
