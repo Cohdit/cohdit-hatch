@@ -2,13 +2,13 @@
 'use strict';
 /**
  * ip-guard.js — this repo is public; the playbooks, agent briefs, data, lessons and maintainer docs are
- * not. They live in cohdit-hatch-private (hatch-content/, docs/); the Ten Years agents are in cohdit-expertise. Fails, naming each file, when:
+ * not. They live in hatch-private (hatch-content/, docs/); the Ten Years agents are in cohdit-expertise. Fails, naming each file, when:
  *
  *   1. a tracked file is not on the public list below;
  *   2. a skill or agent in the plugin is more than a thin stub;
  *   3. a file carries a customer's mark (48 spaces/tabs at a line end: a copied cache file);
  *   4. a file holds an access key or a Stripe key;
- *   5. with the content beside this repo (HATCH_DEV_DIR or ../cohdit-hatch-private/hatch-content, and the Ten Years packs in ../cohdit-expertise/hatch-content when present), any line of
+ *   5. with the content beside this repo (HATCH_DEV_DIR or ../hatch-private/hatch-content, and the Ten Years packs in ../cohdit-expertise/hatch-content when present), any line of
  *      it of 60+ characters appears here (front matter excepted: the stubs share it).
  *
  * Checks staged files when called with --staged (the pre-commit hook), else every tracked file.
@@ -27,7 +27,7 @@ const PUBLIC = [
   /^(README|CHANGELOG|CLAUDE|LICENSE)(\.md)?$/,
   /^docs\/TERMS\.md$/,
   /^scripts\/(check\.sh|ip-guard\.js|repos\.sh)$/,
-  /^tasks\/backlog-loop\.config\.json$/,   // settings only; the backlog itself lives in cohdit-hatch-private/tasks
+  /^tasks\/backlog-loop\.config\.json$/,   // settings only; the backlog itself lives in hatch-private/tasks
   /^plugins\/hatch\/\.claude-plugin\/plugin\.json$/,
   /^plugins\/hatch\/(hooks|scripts|templates|tests)\//,
   /^plugins\/hatch\/skills\/[\w-]+\/SKILL\.md$/,
@@ -67,7 +67,7 @@ function bodyLines(text) {
  *  packs when they sit beside this repo (they are private too). Null when no content folder is found. */
 function contentLines() {
   const env = process.env.HATCH_DEV_DIR;
-  const hatch = env && fs.existsSync(path.join(env, 'data', 'codes.json')) ? env : path.join(ROOT, '..', 'cohdit-hatch-private', 'hatch-content');
+  const hatch = env && fs.existsSync(path.join(env, 'data', 'codes.json')) ? env : path.join(ROOT, '..', 'hatch-private', 'hatch-content');
   const tenYears = path.join(ROOT, '..', 'cohdit-expertise', 'hatch-content');
   const dirs = [hatch, tenYears].filter((d) => fs.existsSync(d));
   if (!dirs.length) return null;
@@ -91,14 +91,14 @@ function main() {
   const problems = [];
   for (const f of list) {
     if (!PUBLIC.some((re) => re.test(f))) {
-      problems.push(`${f}: not on the public list. Playbooks, data, lessons and notes go in cohdit-hatch-private.`);
+      problems.push(`${f}: not on the public list. Playbooks, data, lessons and notes go in hatch-private.`);
       continue;
     }
     const text = read(f, staged);
     if (text == null || text.includes('\0')) continue;
     const lines = text.split('\n');
     if (/^plugins\/hatch\/(skills\/[\w-]+\/SKILL|agents\/[\w-]+)\.md$/.test(f) && lines.length > STUB_MAX_LINES) {
-      problems.push(`${f}: ${lines.length} lines; the plugin keeps stubs only (limit ${STUB_MAX_LINES}). The body goes in cohdit-hatch-private/hatch-content.`);
+      problems.push(`${f}: ${lines.length} lines; the plugin keeps stubs only (limit ${STUB_MAX_LINES}). The body goes in hatch-private/hatch-content.`);
     }
     if (f === SELF) continue;
     const body = new Set(bodyLines(text));
