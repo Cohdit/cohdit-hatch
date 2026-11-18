@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.22 — a second lane can read its own folder (2026-11-18)
+
+- A builder working in a second lane lives in a side copy under `~/Hatch/.work`. Hatch already let it edit and run there, but
+  not read, so it was stopped by a permission question (or, with nobody to answer, built nothing and the thing was set aside).
+  Reading and searching inside a project folder now needs no question. Secrets files, `.git` and anything outside a project
+  still ask.
+
 ## 0.0.21 — a fresh helper for every thing (2026-11-18)
 
 - A build now hands each thing to its own helper (`runner`), which takes it from the pick to the script's decision in a

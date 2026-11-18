@@ -1459,6 +1459,7 @@ function cmdShare(argv) {
 // --- the permission hook --------------------------------------------------------------------------
 
 const EDIT_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit'];
+const READ_TOOLS = ['Read', 'Glob', 'Grep'];     // a maker in a second lane works in a side copy outside the session's folder
 
 /** Why a tool call may run without asking, or null. Two shapes only: one plain call of this very
  *  script, and an edit inside a folder Hatch itself created (never under .git, never a secrets file).
@@ -1485,14 +1486,14 @@ function allowDecision(h, projects, hatchPath) {
     const script = m[1] || m[2] || m[3];
     return path.resolve(script) === path.resolve(hatchPath) ? 'Hatch: its own script, the one permission you gave' : null;
   }
-  if (EDIT_TOOLS.includes(tool)) {
-    const fp = inp.file_path || inp.notebook_path;
+  if (EDIT_TOOLS.includes(tool) || READ_TOOLS.includes(tool)) {
+    const fp = inp.file_path || inp.notebook_path || inp.path;
     if (!fp) return null;
     const abs = path.resolve(fp);
     if (abs.split(path.sep).includes('.git') || /(^|[\\/])\.env(\.|$)/.test(abs)) return null;
     for (const p of projects) {
       const root = path.resolve(p);
-      if (abs === root || abs.startsWith(root + path.sep)) return 'Hatch: a file inside its own project folder';
+      if (abs === root || abs.startsWith(root + path.sep)) return READ_TOOLS.includes(tool) ? 'Hatch: reading inside its own project folder' : 'Hatch: a file inside its own project folder';
     }
   }
   return null;
