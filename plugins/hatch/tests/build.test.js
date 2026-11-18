@@ -963,3 +963,11 @@ test('a thing that waits on a set-aside thing is not picked, and one that waits 
   const picked = bdl.candidates('/nowhere', { items }, status, new Map()).map((i) => i.id);
   assert.deepEqual(picked, ['ITEM-004'], 'only the thing whose need is done');
 });
+
+test('measured: a list screen reports what it sent; a bad entry is dropped, not fatal', () => {
+  const r = bdl.makerReturn('```json\n' + JSON.stringify({ verdict: 'done', change: 'logic', criteria: [], measured: [
+    { what: 'the runs list', rows: 200, kb: 42.5 }, { what: 'no rows', kb: 3 }] }) + '\n```');
+  assert.equal(r.measured.length, 1);
+  assert.equal(r.measured[0].kb, 42.5);
+  assert.ok(r.dropped.some((d) => d.startsWith('measured 2')));
+});

@@ -8,4 +8,5 @@ tokens 177k  (input 5k · output 2k · cache read 150k · cache write 20k)  ≈ 
 5 owner load             n/a questions per item · asked 1 · defaulted 0 · done→shared median n/a · 0 waiting
 6 tokens per shared link n/a
 7 said to you            ≈67 words/run  (400 chars)
+8 speed                  not measured (no list screen reported a size)
 -- digest: n/a tokens/item no estimate (a model has no known price) · orchestrator 100% · first-pass n/a · n/a questions/item

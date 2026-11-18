@@ -904,6 +904,22 @@ function score(c, since, until) {
   };
 }
 
+/** What the built app sends for its list screens, as the makers measured it (notes/<item>.measured.json). */
+const SPEED_KB_MAX = 100;
+function speedLines(c) {
+  const fs = require('fs');
+  const got = [];
+  let names = [];
+  try { names = fs.readdirSync(path.join(c.cohdit, 'notes')).filter((n) => n.endsWith('.measured.json')).sort(); } catch (e) { /* none */ }
+  for (const n of names) {
+    for (const m of ml.readJson(path.join(c.cohdit, 'notes', n), [])) got.push({ item: n.replace('.measured.json', ''), what: m.what, rows: m.rows, kb: m.kb });
+  }
+  if (!got.length) return ['8 speed                  not measured (no list screen reported a size)'];
+  const over = got.filter((g) => g.kb > SPEED_KB_MAX);
+  return ['8 speed                  ' + got.length + ' measured · ' + (over.length ? over.length + ' over ' + SPEED_KB_MAX + ' KB' : 'all under ' + SPEED_KB_MAX + ' KB'),
+    ...got.map((g) => '    ' + g.item + ' ' + g.what + ': ' + g.kb + ' KB at ' + g.rows + ' rows' + (g.kb > SPEED_KB_MAX ? '  TOO BIG' : ''))];
+}
+
 function viewScore(c, a) {
   const until = a.until ? ml.parseTs(a.until) : c.now;
   const since = a.since ? ml.parseTs(a.since) : new Date(Date.UTC(2000, 0, 1));
@@ -958,6 +974,7 @@ function viewScore(c, a) {
   out.push('5 owner load             ' + qpi + ' questions per item · asked ' + o.asked + ' · defaulted ' + o.defaulted + ' · done→shared median ' + hours(o.median_done_to_shared_h) + ' · ' + o.waiting + ' waiting');
   out.push('6 tokens per shared link ' + ml.fmtTokens(k.per_shared) + (k.per_shared === null ? '' : '  ' + c.est(e.per_shared_usd)));
   out.push('7 said to you            ' + (o.said_words_per_run === null ? 'n/a' : '≈' + o.said_words_per_run + ' words/run') + '  (' + o.said_chars + ' chars)');
+  out.push(...speedLines(c));
   out.push('-- digest: ' + ml.fmtTokens(k.per_done) + ' tokens/item ' + c.est(e.per_done_usd) + ' · orchestrator ' + pct(s.orchestrator_share) + ' · first-pass ' + pct(r.first_pass_rate) + ' · ' + qpi + ' questions/item');
   return out;
 }

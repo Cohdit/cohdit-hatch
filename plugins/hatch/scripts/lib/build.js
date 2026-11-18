@@ -473,6 +473,12 @@ function markWords(dir, item) {
   fs.writeFileSync(path.join(notesDir(dir), item + '.words'), '');
 }
 
+/** What the maker measured on a list screen (what, rows, kb), kept beside the notes for the scorecard. */
+function writeMeasured(dir, item, list) {
+  fs.mkdirSync(notesDir(dir), { recursive: true });
+  fs.writeFileSync(path.join(notesDir(dir), item + '.measured.json'), JSON.stringify(list) + '\n');
+}
+
 function readNote(dir, item) {
   try { return fs.readFileSync(path.join(notesDir(dir), item + '.txt'), 'utf8').trim() || null; } catch (e) { return null; }
 }
@@ -832,9 +838,9 @@ function brief(dir, spec, item, cfg, notes, status, advice) {
   out.push('', '## Return', 'Your final message is exactly one fenced JSON block, nothing else (docs/CONTRACTS.md § Agents):',
     '```json', '{"verdict":"done|blocked|refused|consult","change":"copy|style|docs|test-only|logic|config|mixed",',
     ' "criteria":[{"n":1,"met":true,"ref":"app/page.tsx:41","test":"app/page.test.tsx:9"}],', ' "blocked":null,', ' "refused":null,', ' "consult":null,',
-    ' "decisions":[{"type":"design","choice":"fox_for_x"}],', ' "try_note":null,',
+    ' "decisions":[{"type":"design","choice":"fox_for_x"}],', ' "try_note":null,', ' "measured":[{"what":"the list the screen loads","rows":200,"kb":42}],',
     ' "findings":[{"scope":"in|out","sev":"low|medium|high|critical","text":"…"}]}', '```',
-    'Limits the script enforces: `decisions[].choice` is a short slug of letters, digits and `. _ / : @ -`, at most 96 characters, no spaces or punctuation (the detail goes in `findings` or `try_note`). `criteria[].test` is exactly one test file path, optionally `:line`; other files go in `ref`.');
+    'Limits the script enforces: `decisions[].choice` is a short slug of letters, digits and `. _ / : @ -`, at most 96 characters, no spaces or punctuation (the detail goes in `findings` or `try_note`). `criteria[].test` is exactly one test file path, optionally `:line`; other files go in `ref`. `measured` is for a thing with a list screen: what its test measured (the size in KB of what the list sends, at that many rows); leave it empty otherwise.');
   return out.join('\n') + '\n';
 }
 
@@ -995,6 +1001,11 @@ function makerReturn(text) {
     return false;
   });
   if (r.try_note !== undefined && r.try_note !== null && typeof r.try_note !== 'string') { r.dropped.push('try_note (it must be text)'); delete r.try_note; }
+  r.measured = (Array.isArray(r.measured) ? r.measured : []).filter((m, i) => {
+    if (m && typeof m.what === 'string' && m.what.trim() && Number.isInteger(m.rows) && m.rows > 0 && typeof m.kb === 'number' && m.kb >= 0) { m.what = m.what.trim().slice(0, 60); return true; }
+    r.dropped.push('measured ' + (i + 1) + ' (what, rows as a whole number, kb as a number)');
+    return false;
+  });
   if (r.words !== undefined && r.words !== null && typeof r.words !== 'boolean') { r.dropped.push('words (true or false)'); delete r.words; }
   return r;
 }
@@ -1069,7 +1080,7 @@ module.exports = {
   cohditDir, notesDir, readCfg, saveCfg, level, blob, emit, spoolFile, flush,
   git, gitNet, hasRemote, headSha, fullSha, currentBranch, isPrimary, mainBranch, resetTree, dirtyPaths, fetch, remoteMain, toMain, rebaseOnto, fastForward, baseSha, startBase, keepWork, pushMain, commitLedger, landMain, land, agentModel,
   active, saveActive, isLive, setPointer, clearPointer, newRunId, runStart, stopBefore, abandon,
-  allRecords, itemStatus, lastFailNote, branchFor, remoteClaims, candidates, startItem, claim, releaseClaim, writeNote, markWords, readNote,
+  allRecords, itemStatus, lastFailNote, branchFor, remoteClaims, candidates, startItem, claim, releaseClaim, writeNote, writeMeasured, markWords, readNote,
   scaffold, ensureRepo, fetchIdea, workDir, sideCopy, laneCount, installDeps, openLanes, laneGroup, homeDir, LANES_MAX, findSideCopy, removeSideCopy, sweepSideCopies, brief, baselineFor, expertSections, itemAbout, scanBrief, briefPath, diffPath, consultPath, scanPath, rolePath, writeRole, writeConsult, hatchCmd, refusalClause,
   parseReturn, makerReturn, checkerReturn, advisorReturn, risk, loadLenses, lensesFor, dependencies, coverage, ROLES,
 };

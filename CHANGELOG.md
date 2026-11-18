@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.25 — speed is measured, not claimed (2026-11-19)
+
+- A thing with a list screen reports what its test measured (how much the list sends, at how many rows). The tech scorecard has a
+  new line 8: each measurement, anything over 100 KB marked, and "not measured" when nothing reported one.
+
 ## 0.0.24 — fewer repeats, and a project that learns (2026-11-18)
 
 - A bug found twice in different words (two reviewers, or a reviewer and a person's report) is filed once. A bug that was fixed and

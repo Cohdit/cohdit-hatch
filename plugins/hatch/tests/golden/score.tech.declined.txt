@@ -8,4 +8,5 @@ tokens 1.3M  (input 65k · output 14k · cache read 1.1M · cache write 170k)  �
 5 owner load             0.00 questions per item · asked 1 · defaulted 0 · done→shared median n/a · 0 waiting
 6 tokens per shared link n/a
 7 said to you            ≈100 words/run  (1800 chars)
+8 speed                  not measured (no list screen reported a size)
 -- digest: 1.3M tokens/item ≈ $0.99 at API list price · orchestrator 58% · first-pass 100% · 0.00 questions/item

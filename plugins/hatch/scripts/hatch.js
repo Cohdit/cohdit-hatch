@@ -1007,6 +1007,7 @@ function cmdBuild(argv) {
         for (const f of r.findings || []) lead.push(['FINDING', { scope: f.scope, sev: f.sev, blob: bd.blob(dir, f.text) }, item]);
         for (const d of r.decisions || []) lead.push(['DECIDE', { type: d.type, choice: d.choice, who: 'hatch' }, item]);
         if (r.try_note) bd.writeNote(bd.homeDir(dir, cur), item, r.try_note);
+        if (r.measured && r.measured.length) bd.writeMeasured(bd.homeDir(dir, cur), item, r.measured);
         if (r.words) bd.markWords(bd.homeDir(dir, cur), item);
         if (r.verdict === 'refused') {
           cur.stop = 'refused';

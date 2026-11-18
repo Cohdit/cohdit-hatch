@@ -8,4 +8,5 @@ tokens 1k  (input 1k · output 100 · cache read 0 · cache write 0)  no estimat
 5 owner load             0.00 questions per item · asked 0 · defaulted 0 · done→shared median n/a · 0 waiting
 6 tokens per shared link n/a
 7 said to you            ≈0 words/run  (0 chars)
+8 speed                  not measured (no list screen reported a size)
 -- digest: 1k tokens/item no estimate (a model has no known price) · orchestrator 0% · first-pass 100% · 0.00 questions/item
