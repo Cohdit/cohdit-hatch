@@ -863,7 +863,13 @@ test('the permission hook approves exactly two shapes, and tells a build call wh
   assert.equal(A(edit('/Users/p/Hatch/abc-friends/.env.local')), null);
   assert.equal(A(edit('/Users/p/Hatch/abc-friends/.env')), null);
   assert.ok(A(edit('/Users/p/Hatch/abc-friends/app/.envelope.ts')), 'only secrets files are held back');
-  assert.equal(A({ tool_name: 'Read', tool_input: { file_path: '/Users/p/Hatch/abc-friends/x' } }), null);
+  assert.ok(A({ tool_name: 'Read', tool_input: { file_path: '/Users/p/Hatch/abc-friends/x' } }), 'a maker reads inside its own folder, a side copy too');
+  assert.ok(A({ tool_name: 'Grep', tool_input: { pattern: 'a', path: '/Users/p/Hatch/abc-friends/app' } }));
+  assert.ok(A({ tool_name: 'Glob', tool_input: { pattern: '*.ts', path: '/Users/p/Hatch/abc-friends' } }));
+  assert.equal(A({ tool_name: 'Read', tool_input: { file_path: '/Users/p/other/x' } }), null, 'reading elsewhere still asks');
+  assert.equal(A({ tool_name: 'Read', tool_input: { file_path: '/Users/p/Hatch/abc-friends/.env.local' } }), null, 'a secrets file is never read without asking');
+  assert.equal(A({ tool_name: 'Read', tool_input: { file_path: '/Users/p/Hatch/abc-friends/../../other/x' } }), null);
+  assert.equal(A({ tool_name: 'Grep', tool_input: { pattern: 'a' } }), null, 'no path means the session folder: the usual rules');
   assert.equal(hatch.withSession('node "' + hatchPath + '" build next --dir x', 'sess-1'), 'node "' + hatchPath + '" build next --session sess-1 --dir x');
   assert.equal(hatch.withSession('node "' + hatchPath + '" build built ITEM-001 --return - <<\'EOF\'\n{}\nEOF', 'sess-1'), 'node "' + hatchPath + '" build built --session sess-1 ITEM-001 --return - <<\'EOF\'\n{}\nEOF');
   assert.equal(hatch.withSession('node "' + hatchPath + '" idea show', 'sess-1'), null, 'only build calls carry the session');
