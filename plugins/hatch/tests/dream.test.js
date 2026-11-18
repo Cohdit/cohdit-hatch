@@ -232,3 +232,37 @@ test('the dream skill: short, one script, the refusal clause, the interview file
   assert.equal(iv.voice.opener, 'Go on then, what is it?');
   for (const g of Object.keys(iv.gates)) if (!g.startsWith('rule_attached') && !g.startsWith('_')) assert.ok(iv.gates[g].ask && iv.gates[g].assume_no && iv.gates[g].assume_yes, g);
 });
+
+test('depends: a list names what must be built first, by position, id or title; it is stored as ids', () => {
+  const mk = () => ({ agreed: false, items: [], gates: {}, decisions: [], out: [] });
+  const list = [
+    { title: 'Sign in', criteria: ['c'] },
+    { title: 'Chat', criteria: ['c'], depends: [1] },
+    { title: 'Chat history', criteria: ['c'], depends: ['chat', 'ITEM-001'] },
+  ];
+  const spec = mk();
+  sp.applyPatch(spec, { items: list });
+  assert.deepEqual(spec.items.map((i) => i.depends || null), [null, ['ITEM-001'], ['ITEM-002', 'ITEM-001']]);
+  for (const bad of [
+    [{ title: 'A', criteria: ['c'], depends: ['Nothing like it'] }],
+    [{ title: 'A', criteria: ['c'], depends: [1] }],
+    [{ title: 'A', criteria: ['c'], depends: [2] }, { title: 'B', criteria: ['c'], depends: [1] }],
+    [{ title: 'A', criteria: ['c'], depends: 'B' }, { title: 'B', criteria: ['c'] }],
+  ]) {
+    const s = mk();
+    assert.throws(() => sp.applyPatch(s, { items: bad }), sp.Invalid, JSON.stringify(bad));
+    assert.deepEqual(s.items, [], 'a refused list writes nothing');
+  }
+});
+
+test('depends: a change can add a thing that waits on one already there, and edit a queued one', () => {
+  const spec = { agreed: true, items: [], gates: {}, decisions: [], out: [] };
+  sp.applyPatch(Object.assign(spec, { agreed: false }), { items: [{ title: 'Sign in', criteria: ['c'] }, { title: 'Profile', criteria: ['c'] }] });
+  spec.agreed = true;
+  sp.applyChange(spec, { add: [{ title: 'Avatar', criteria: ['c'], depends: ['Profile'] }] });
+  assert.deepEqual(spec.items[2].depends, ['ITEM-002']);
+  sp.applyChange(spec, { edit: [{ id: 'ITEM-002', depends: ['ITEM-001'] }] });
+  assert.deepEqual(spec.items[1].depends, ['ITEM-001']);
+  assert.throws(() => sp.applyChange(spec, { edit: [{ id: 'ITEM-001', depends: ['Avatar'] }] }), sp.Invalid, 'a loop through an added thing is refused');
+  assert.equal(spec.items[0].depends, undefined, 'a refused change writes nothing');
+});

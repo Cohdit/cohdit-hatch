@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.23 — a thing that needs another waits for it (2026-11-18)
+
+- The interview can now record that one thing needs another first (a thing for signed-in people needs the sign-in). An
+  unknown name, a thing waiting on itself or two things waiting on each other is refused with a plain reason.
+- A thing whose need was set aside is not started. Before, nothing could record this, so each of them was tried and set aside in
+  turn; one blocked chat thing took nine others with it. `status` now says "waits for <thing>, which was set aside".
+- `idea change` can add a thing that waits on one already there, or edit what a queued thing waits on.
+
 ## 0.0.22 — a second lane can read its own folder (2026-11-18)
 
 - A builder working in a second lane lives in a side copy under `~/Hatch/.work`. Hatch already let it edit and run there, but

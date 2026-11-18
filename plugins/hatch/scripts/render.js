@@ -568,7 +568,9 @@ function viewStatus(c, a) {
   for (const i of items) {
     const st = c.statusOf(i);
     const word = i.device && st === 'queued' ? w.deviceWord : (w.status[st] || st || '?');
-    out.push('  ' + pad(word, 10) + ' ' + (tech ? i.id + ' ' : '') + i.title + (st === 'held' ? w.yourAnswer : ''));
+    const stuck = st === 'queued' ? (i.depends || []).map((d) => items.find((x) => x.id === d)).filter((d) => d && c.statusOf(d) === 'blocked') : [];
+    out.push('  ' + pad(word, 10) + ' ' + (tech ? i.id + ' ' : '') + i.title + (st === 'held' ? w.yourAnswer : '')
+      + (stuck.length ? ' — waits for "' + stuck.map((d) => d.title).join('", "') + '", which was set aside' : ''));
   }
   if (!items.length) out.push('  Nothing planned yet.');
   if (lastShared) out.push('Live: ' + lastShared.f.url + ' (shared ' + c.ago(lastShared.ts) + ')');

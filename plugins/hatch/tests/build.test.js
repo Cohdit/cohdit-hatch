@@ -951,3 +951,15 @@ test('the build skill: short, one script, the refusal clause, points at try and 
     assert.match(text, /^model: /m);
   }
 });
+
+test('a thing that waits on a set-aside thing is not picked, and one that waits on a done thing is', () => {
+  const items = [
+    { id: 'ITEM-001', title: 'Chat', criteria: ['c'] },
+    { id: 'ITEM-002', title: 'History', criteria: ['c'], depends: ['ITEM-001'] },
+    { id: 'ITEM-003', title: 'Profile', criteria: ['c'] },
+    { id: 'ITEM-004', title: 'Avatar', criteria: ['c'], depends: ['ITEM-003'] },
+  ];
+  const status = new Map([['ITEM-001', 'blocked'], ['ITEM-002', 'queued'], ['ITEM-003', 'done'], ['ITEM-004', 'queued']]);
+  const picked = bdl.candidates('/nowhere', { items }, status, new Map()).map((i) => i.id);
+  assert.deepEqual(picked, ['ITEM-004'], 'only the thing whose need is done');
+});

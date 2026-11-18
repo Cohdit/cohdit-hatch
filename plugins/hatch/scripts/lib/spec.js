@@ -138,6 +138,43 @@ function makeItem(it, i, id, maxCrit) {
   return out;
 }
 
+/** What a thing needs built first, as the interview names it: a position in the same list (1, 2, …), a
+ *  thing's id, or its title. Stored as ids in `depends`. An unknown name, itself, or a loop is refused: a
+ *  thing that waits on itself would never be built, and the picker would skip it without a word. */
+function resolveDepends(items, raw, what) {
+  const byTitle = new Map(items.map((x) => [x.title.trim().toLowerCase(), x.id]));
+  const ids = new Set(items.map((x) => x.id));
+  const refs = new Map();
+  for (const [id, list, label] of raw) {
+    if (list === undefined || list === null) continue;
+    if (!Array.isArray(list)) throw new Invalid(label + '.depends must be a list');
+    const out = [];
+    for (const r of list) {
+      let dep = null;
+      if (Number.isInteger(r) && r >= 1 && r <= items.length) dep = items[r - 1].id;
+      else if (typeof r === 'string' && ids.has(r.trim())) dep = r.trim();
+      else if (typeof r === 'string' && byTitle.has(r.trim().toLowerCase())) dep = byTitle.get(r.trim().toLowerCase());
+      if (!dep) throw new Invalid(label + '.depends names a thing that is not on the list: ' + JSON.stringify(r));
+      if (dep === id) throw new Invalid(label + '.depends names itself');
+      if (!out.includes(dep)) out.push(dep);
+    }
+    refs.set(id, out);
+  }
+  for (const it of items) {
+    if (refs.has(it.id)) { if (refs.get(it.id).length) it.depends = refs.get(it.id); else delete it.depends; }
+  }
+  const next = (id) => (items.find((x) => x.id === id) || {}).depends || [];
+  const state = new Map();
+  const visit = (id, trail) => {
+    if (state.get(id) === 2) return;
+    if (state.get(id) === 1) throw new Invalid(what + ': these wait on each other, so none could start: ' + trail.concat(id).join(' → '));
+    state.set(id, 1);
+    for (const d of next(id)) visit(d, trail.concat(id));
+    state.set(id, 2);
+  };
+  for (const it of items) visit(it.id, []);
+}
+
 function itemNo(id) { const m = /^ITEM-(\d+)$/.exec(id || ''); return m ? Number(m[1]) : 0; }
 function idFor(n) { return 'ITEM-' + String(n).padStart(3, '0'); }
 
@@ -206,19 +243,21 @@ function applyChange(spec, patch, interview) {
   const maxItems = rb.max_items || 8, maxCrit = rb.max_criteria_per_item || 3;
   const trial = JSON.parse(JSON.stringify(spec));
   const res = { added: [], edited: [] };
+  const deps = [];
   if (patch.edit !== undefined) {
     if (!Array.isArray(patch.edit)) throw new Invalid('edit must be a list');
     patch.edit.forEach((e, i) => {
       const it = e && trial.items.find((x) => x.id === e.id);
       if (!it) throw new Invalid('edit[' + i + '] names a thing that is not there');
       if (it.status !== 'queued') throw new Invalid('edit[' + i + '] is already built; add a new thing instead');
-      if (e.title === undefined && e.criteria === undefined) throw new Invalid('edit[' + i + '] changes nothing');
+      if (e.title === undefined && e.criteria === undefined && e.depends === undefined) throw new Invalid('edit[' + i + '] changes nothing');
       if (e.title !== undefined) it.title = str(e.title, 'edit[' + i + '].title');
       if (e.criteria !== undefined) {
         const crit = strList(e.criteria, 'edit[' + i + '].criteria');
         if (!crit.length || crit.length > maxCrit) throw new Invalid('edit[' + i + '] needs 1 to ' + maxCrit + ' checks');
         it.criteria = crit;
       }
+      if (e.depends !== undefined) deps.push([it.id, e.depends, 'edit[' + i + ']']);
       res.edited.push(it.id);
     });
   }
@@ -230,9 +269,11 @@ function applyChange(spec, patch, interview) {
       const made = makeItem(it, i, nextId(trial), maxCrit);
       if (!made.criteria.length) throw new Invalid('add[' + i + '] needs one check: where you go, what you do, what you see');
       trial.items.push(made);
+      if (it.depends !== undefined) deps.push([made.id, it.depends, 'add[' + i + ']']);
       res.added.push(made.id);
     });
   }
+  if (deps.length) resolveDepends(trial.items, deps, 'depends');
   if (patch.decisions !== undefined) applyDecisions(trial, patch.decisions);
   if (patch.out !== undefined) trial.out = strList(patch.out, 'out');
   if (patch.open_questions !== undefined) trial.open_questions = strList(patch.open_questions, 'open_questions');
@@ -263,7 +304,9 @@ function applyPatch(spec, patch, interview) {
         if (!Array.isArray(v)) throw new Invalid('items must be a list');
         if (v.length > maxItems) throw new Invalid('two_ideas: ' + v.length + ' things is more than ' + maxItems + '; that is two ideas');
         const ids = listIds(spec, v);
-        spec.items = v.map((it, i) => makeItem(it, i, ids[i], maxCrit));
+        const made = v.map((it, i) => makeItem(it, i, ids[i], maxCrit));
+        resolveDepends(made, v.map((it, i) => [ids[i], it.depends, 'items[' + i + ']']), 'items');
+        spec.items = made;
         break;
       }
       case 'gates': {
