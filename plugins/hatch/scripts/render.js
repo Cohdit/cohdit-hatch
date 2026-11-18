@@ -571,6 +571,12 @@ function viewStatus(c, a) {
     const stuck = st === 'queued' ? (i.depends || []).map((d) => items.find((x) => x.id === d)).filter((d) => d && c.statusOf(d) === 'blocked') : [];
     out.push('  ' + pad(word, 10) + ' ' + (tech ? i.id + ' ' : '') + i.title + (st === 'held' ? w.yourAnswer : '')
       + (stuck.length ? ' — waits for "' + stuck.map((d) => d.title).join('", "') + '", which was set aside' : ''));
+    if (st === 'blocked') {                                       // what the person can do about it, in the builder's own words
+      const rec = [...c.recs].reverse().find((r) => r.c === 'BLOCKED' && r.i === i.id);
+      const why = rec && c.w.blockWhy[rec.f.reason];
+      const mine = rec && ['ambiguous', 'access', 'env'].includes(rec.f.reason) && rec.f.blob ? c.blob(rec.f.blob) : null;
+      if (why) out.push('             ' + (mine ? 'what I need from you: ' + mine : why.charAt(0).toUpperCase() + why.slice(1)));
+    }
   }
   if (!items.length) out.push('  Nothing planned yet.');
   if (lastShared) out.push('Live: ' + lastShared.f.url + ' (shared ' + c.ago(lastShared.ts) + ')');

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.24 — fewer repeats, and a project that learns (2026-11-18)
+
+- A bug found twice in different words (two reviewers, or a reviewer and a person's report) is filed once. A bug that was fixed and
+  comes back is filed again, not swallowed as a twin of the old one.
+- When a thing is set aside, the reason is kept in the project (the newest eight), and the next builders read it in their brief
+  under "Learned on this project", so one project's mistake is made once. A format slip or a merge clash teaches nothing and is left out.
+- `status` says what to do about a set-aside thing: the builder's own words when it needs you to decide, give access or fix
+  something on your computer, and "waits for X" when it is held up by another.
+
 ## 0.0.23 — a thing that needs another waits for it (2026-11-18)
 
 - The interview can now record that one thing needs another first (a thing for signed-in people needs the sign-in). An

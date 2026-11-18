@@ -199,3 +199,11 @@ test('share creates the private report store once and records it; the deploy goe
     delete process.env.COHDIT_HOME;
   }
 });
+
+test('a bug worded differently by another lens is a twin; the same words after a fix are a new bug', () => {
+  const sp = require('../scripts/lib/spec');
+  assert.ok(sp.sameBug('The search endpoint reads every person\'s history, not only the signed-in person\'s', 'Search reads the whole history of all people instead of the signed in person'));
+  assert.ok(sp.sameBug('Login button does nothing', 'login button does nothing!'));
+  assert.ok(!sp.sameBug('Stars are lost when the page reloads', 'Sound still plays when turned off'));
+  assert.ok(!sp.sameBug('Missing check on input', 'Missing alt text on images'), 'a shared opening is not a twin');
+});

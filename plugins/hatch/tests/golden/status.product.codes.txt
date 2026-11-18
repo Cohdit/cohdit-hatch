@@ -3,6 +3,7 @@ Idea: Chore Chart (4 items)
   queued     Tick a chore done
   held       Reset on Sunday — your decision needed
   blocked    Weekly scoreboard
+             Depends on something not built yet
 Live: https://chore-chart.vercel.app (shared 1 hour ago)
 Held for you: 1 question.
   Reset on Sunday — Reset on Sunday night, or Monday morning before school?

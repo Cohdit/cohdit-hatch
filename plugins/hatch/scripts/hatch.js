@@ -533,6 +533,7 @@ function setAside(dir, cur, item, lvl, recs) {
 }
 
 function blocked(dir, cur, item, lvl, reason, text, lead) {
+  try { bd.noteSetAside(dir, sp.load(dir), item, reason, text); } catch (e) { /* a lesson never stops a run */ }
   setAside(dir, cur, item, lvl, (lead || []).concat([['BLOCKED', { reason, blob: bd.blob(dir, text) }, item]]));
   hint('next', 'next');
   return 0;
@@ -705,6 +706,13 @@ function reportBug(r) {
   return { title: reportTitle(saw), criteria: ['Someone using it ' + parts.join('; ') + '. Once fixed, that no longer happens.'], source: 'report', by: 'person' };
 }
 
+/** The ids of the things not done yet (queued, building, set aside), for telling a returning bug from a repeated one. */
+function notDone(dir) {
+  const spec = sp.load(dir);
+  const st = bd.itemStatus(dir, spec);
+  return new Set(spec.items.filter((i) => !['done', 'tried'].includes(st.get(i.id))).map((i) => i.id));
+}
+
 /** Every report waiting in `.cohdit/reports/` (pulled from the live app's store first) becomes a bug on
  *  the list; the files are removed once in. Returns the new bugs. */
 function importReports(dir, cfg) {
@@ -715,7 +723,7 @@ function importReports(dir, cfg) {
   for (const f of ml.listFiles(into, '.json')) {
     const r = ml.readJson(f, null);
     if (r && r.saw) {
-      const bug = sp.addBug(dir, reportBug(r));
+      const bug = sp.addBug(dir, reportBug(r), notDone(dir));
       if (!bug.twin) { bugs.push(bug); if (r.filed) bugs.filed.push(bug.id); }
     }
     fs.unlinkSync(f);
@@ -1618,7 +1626,7 @@ function cmdFix(argv) {
       cur.review.got[agent] = { verdict: r.verdict, must_fix: r.must_fix.length, nits: r.nits };
       for (const m of r.must_fix) {
         const text = (m.ref ? m.ref + ': ' : '') + m.text;
-        const bug = sp.addBug(dir, { title: m.text, criteria: [text], source: 'scan', by: agent });
+        const bug = sp.addBug(dir, { title: m.text, criteria: [text], source: 'scan', by: agent }, notDone(dir));
         if (bug.twin) continue;
         cur.bugs.push(bug.id);
         bd.emit(dir, cur.run, [['FINDING', { scope: 'in', sev: 'high', blob: bd.blob(dir, text) }, bug.id]]);
