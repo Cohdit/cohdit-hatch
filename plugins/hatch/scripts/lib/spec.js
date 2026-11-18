@@ -353,13 +353,29 @@ const TITLE_MAX = 80;
 /** A bug a lens found on a scan or a person reported, appended as a queued thing after the idea's own
  *  (never re-numbering them). A twin, by title, is returned with `twin: true` and nothing is written.
  *  `lens` says which role raised it: a person's report is the product owner's, a scan the architect's. */
-function addBug(dir, bug) {
+const STOP = new Set('the a an and or of to in on at is are was were be it its this that with for from by as not no when then than but if so do does did has have had can will would should could into out up'.split(' '));
+function words(t) {
+  return new Set(String(t).toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ').filter((w) => w.length > 2 && !STOP.has(w)));
+}
+/** Two bug titles that say the same thing in different words: most of the shorter one's words are in the other
+ *  (two lenses, or a lens and a person's report, find the same flaw and word it their own way). */
+function sameBug(a, b) {
+  const x = words(a), y = words(b);
+  if (!x.size || !y.size) return String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+  let both = 0;
+  for (const w of x) if (y.has(w)) both++;
+  return both / Math.min(x.size, y.size) >= 0.6 && both / (x.size + y.size - both) >= 0.4;
+}
+
+/** `open` (optional): the ids of things not done. A bug already fixed is not a twin of the same words filed again:
+ *  it came back, and it is filed again. Without it every bug counts. */
+function addBug(dir, bug, open) {
   const spec = load(dir);
   if (!BUG_SOURCES.includes(bug.source)) throw new Invalid('bug source must be scan or report');
   const title = str(bug.title, 'bug title').replace(/\s+/g, ' ').slice(0, TITLE_MAX).trim();
   const criteria = strList(bug.criteria || [], 'bug criteria').slice(0, 3);
   if (!criteria.length) throw new Invalid('a bug needs one check: what must be true once it is fixed');
-  const twin = spec.items.find((i) => i.kind === 'bug' && i.title.toLowerCase() === title.toLowerCase());
+  const twin = spec.items.find((i) => i.kind === 'bug' && (!open || open.has(i.id)) && sameBug(i.title, title));
   if (twin) return Object.assign({ twin: true }, twin);
   const it = { id: nextId(spec), title, criteria, source: bug.source, kind: 'bug', status: 'queued', lens: bug.source === 'report' ? 'product' : 'technical' };
   if (bug.by) it.by = str(bug.by, 'bug by');
@@ -399,6 +415,6 @@ function railsFor(spec) {
 module.exports = {
   Invalid, SOURCES, SHAPES, applyChange,
   loadInterview, loadStack, loadHosting, terms, slugify, homeDir, cohditDir, specPath, load, save, readLocal, writeLocal,
-  registry, saveRegistry, newProject, findProject, applyPatch, addBug, agreeProblems, checkStack, railsFor,
+  registry, saveRegistry, newProject, findProject, applyPatch, addBug, sameBug, agreeProblems, checkStack, railsFor,
   nextId, raiseIdFloor,
 };

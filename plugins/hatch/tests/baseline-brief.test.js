@@ -41,3 +41,18 @@ test('an unreadable baseline leaves the section out and the brief still builds',
     assert.doesNotMatch(brief([]), /## Built in from the start/);
   } finally { api.dataJson = was; }
 });
+
+test('what this project learned from a set-aside thing rides in the next thing\'s brief, never its own', () => {
+  const dir = H.mkrepo();
+  const sp = spec([]);
+  sp.items.push({ id: 'ITEM-002', title: 'Chat', criteria: ['c'], source: 'said', status: 'queued' });
+  assert.equal(bd.noteSetAside(dir, sp, 'ITEM-002', 'other', 'the review still asked for changes after 2 rounds:\nunchecked input in the search route'), true);
+  assert.equal(bd.noteSetAside(dir, sp, 'ITEM-002', 'other', 'the report was not one valid JSON block, twice: x'), false, 'a format slip teaches the project nothing');
+  assert.equal(bd.noteSetAside(dir, sp, 'ITEM-002', 'dependency', "someone else's change conflicts with this one"), false, 'a clash is not the project\'s mistake');
+  const status = new Map([['ITEM-001', 'queued'], ['ITEM-002', 'blocked']]);
+  const b = bd.brief(dir, sp, 'ITEM-001', { verify: 'npm test' }, null, status);
+  assert.match(b, /## Learned on this project\n.*\n- "Chat" \(other\): the review still asked for changes after 2 rounds: unchecked input in the search route/);
+  assert.doesNotMatch(bd.brief(dir, sp, 'ITEM-002', { verify: 'npm test' }, null, status), /Learned on this project/);
+  for (let i = 0; i < 12; i++) bd.noteSetAside(dir, sp, 'ITEM-002', 'other', 'problem number ' + i);
+  assert.equal(bd.learned(dir).length, 8, 'the newest eight');
+});

@@ -477,6 +477,28 @@ function readNote(dir, item) {
   try { return fs.readFileSync(path.join(notesDir(dir), item + '.txt'), 'utf8').trim() || null; } catch (e) { return null; }
 }
 
+// --- what this project has taught --------------------------------------------------------------
+
+const LEARNED_KEEP = 8;
+/** The project's own short lessons: why a thing was set aside, in the words the script recorded. The next
+ *  makers read them in their brief, so one project's mistake is made once. The newest eight; no model writes them. */
+function learnedFile(dir) { return path.join(cohditDir(dir), 'learned.json'); }
+function learned(dir) {
+  const v = ml.readJson(learnedFile(dir), []);
+  return Array.isArray(v) ? v.filter((x) => x && typeof x.text === 'string') : [];
+}
+function noteSetAside(dir, spec, item, reason, text) {
+  const first = String(text || '').split('\n').map((l) => l.trim()).filter(Boolean).join(' ').slice(0, 260);
+  if (!first || /^the report was not one valid JSON/.test(first) || reason === 'dependency' && /conflicts|combining|merged|shared copy/.test(first)) return false;
+  const it = (spec.items || []).find((i) => i.id === item);
+  const line = { item, title: it ? it.title : item, reason, text: first };
+  const all = learned(dir).filter((x) => !(x.item === item && x.text === first));
+  all.push(line);
+  fs.mkdirSync(path.dirname(learnedFile(dir)), { recursive: true });
+  fs.writeFileSync(learnedFile(dir), JSON.stringify(all.slice(-LEARNED_KEEP), null, 2) + '\n');
+  return true;
+}
+
 // --- scaffold and the shared copy ---------------------------------------------------------------
 
 /** The first version's skeleton, from stack.json's scaffold entry; COHDIT_FAKE_SCAFFOLD writes a stub
@@ -782,6 +804,11 @@ function brief(dir, spec, item, cfg, notes, status, advice) {
     out.push(...ls.lines(forMaker));
     if (count(forChecker)) out.push('', 'For the review (the checker judges these):', ...ls.lines(forChecker));
   }
+  const lessonsHere = learned(dir).filter((x) => x.item !== item);
+  if (lessonsHere.length) {
+    out.push('', '## Learned on this project', 'Things set aside earlier, and why. Do not make the same mistake.');
+    for (const x of lessonsHere) out.push('- "' + x.title + '" (' + x.reason + '): ' + x.text);
+  }
   out.push('', '## Technology', 'Only what is on this list. Anything else is a decision you do not take: leave it out and say so in `findings`.');
   for (const cap of Object.keys(stack.capabilities || {})) {
     for (const k of Object.keys(stack.capabilities[cap].options || {})) {
@@ -1037,6 +1064,7 @@ function coverage(dir) {
 }
 
 module.exports = {
+  noteSetAside, learned,
   Invalid, DEFAULT_ITEMS, DEFAULT_CAPS, wanted, DEFAULT_VERIFY, LONG_MS, NET_MS, LIVE_MIN, STALE_CLAIM_H, TOPIC, AGENTS, TERMINAL,
   cohditDir, notesDir, readCfg, saveCfg, level, blob, emit, spoolFile, flush,
   git, gitNet, hasRemote, headSha, fullSha, currentBranch, isPrimary, mainBranch, resetTree, dirtyPaths, fetch, remoteMain, toMain, rebaseOnto, fastForward, baseSha, startBase, keepWork, pushMain, commitLedger, landMain, land, agentModel,
