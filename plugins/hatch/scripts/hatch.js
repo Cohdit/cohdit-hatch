@@ -895,7 +895,7 @@ function cmdBuild(argv) {
       }
       // A lane takes nothing new once the lead stopped, narrowed to one lane, or let it go.
       if (cur.lead && (lead.cur.stop || lead.cur.narrow || !(lead.cur.lanes || []).includes(dir))) { hint('next', 'close'); return 0; }
-      const busy = group.some((g) => g.dir !== dir && Object.keys(g.cur.open || {}).length);   // another lane is mid-thing
+      let busy = group.some((g) => g.dir !== dir && Object.keys(g.cur.open || {}).length);   // another lane is mid-thing
       const ease = (cause) => {                                  // a cap: lanes finish what they hold; the lead stops last
         if (cur.lead) { hint('next', 'close'); return 0; }
         if (busy) { hint('next', 'wait'); return 0; }
@@ -923,7 +923,10 @@ function cmdBuild(argv) {
         if (!cands.length) break;
         const it = cands[0];
         const b = bd.branchFor(it);
-        start = bd.startItem(dir, b, base, it.id);
+        try { start = bd.startItem(dir, b, base, it.id); } catch (e) {
+          if (!/already (used|checked out)/i.test(String(e && e.message))) throw e;
+          held.add(it.id); busy = true; continue;                // another lane on this computer opened it a moment ago
+        }
         const res = bd.claim(dir, b, claims.get(b));
         if (res === 'ok' || res === 'no_remote') { picked = it; branch = b; break; }
         bd.toMain(dir);

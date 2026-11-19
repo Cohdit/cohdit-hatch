@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.26 — lanes no longer crash on the same thing (2026-11-19)
+
+- Two build lanes that reached for the same thing at the same moment crashed the later lane. It now skips what another lane
+  on the computer has just opened and takes the next thing, or waits.
+
 ## 0.0.25 — speed is measured, not claimed (2026-11-19)
 
 - A thing with a list screen reports what its test measured (how much the list sends, at how many rows). The tech scorecard has a

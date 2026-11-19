@@ -971,3 +971,17 @@ test('measured: a list screen reports what it sent; a bad entry is dropped, not 
   assert.equal(r.measured[0].kb, 42.5);
   assert.ok(r.dropped.some((d) => d.startsWith('measured 2')));
 });
+
+test('lanes: a thing another lane on this computer just opened is skipped, not a crash', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Lane race', ITEMS);
+  withOrigin(dir);
+  const o = B(h, dir, ['open']);
+  assert.equal(o.code, 0, o.err);
+  const [l2] = (hintOf(o, 'lanes') || '').split(',').filter(Boolean);
+  H.git(['checkout', '-q', '-b', 'item/001-letter-grid'], dir);   // the lead holds it, but has not recorded it yet
+  const n = B(h, l2, ['next']);
+  assert.equal(n.code, 0, n.err);
+  assert.equal(hintOf(n, 'item'), 'ITEM-002', 'the lane took the next thing instead');
+  H.git(['checkout', '-q', 'main'], dir);
+});
