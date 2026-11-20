@@ -1079,6 +1079,23 @@ function cmdBuild(argv) {
       }
       return blocked(dir, cur, item, lvl, 'other', 'the review still asked for changes after ' + o.rounds + ' rounds:\n' + notes.join('\n'), [['ROUND', { cause: 'review' }, item]]);   // the last failed round counts too
     }
+    if (sub === 'retry') {                                       // a set-aside thing goes back on the list, with what stopped it
+      const spec = sp.load(dir);
+      const st = bd.itemStatus(dir, spec);
+      const named = words(rest, VALUED);
+      const ids = (named.length ? named : spec.items.map((i) => i.id)).filter((id) => st.get(id) === 'blocked');
+      if (!ids.length) { hint('hint', 'nothing_set_aside'); hint('next', 'next'); return 0; }
+      const all = bd.allRecords(dir);
+      for (const id of ids) {
+        const last = all.filter((r) => r.c === 'BLOCKED' && r.i === id).sort((x, y) => (x.ts < y.ts ? -1 : 1)).pop();
+        const why = (last && last.f && last.f.blob && ml.readBlob(sp.cohditDir(dir), last.f.blob, dir)) || 'it was set aside';
+        const recs = bd.emit(dir, cur.run, [['TRY_RESULT', { result: 'fail', blob: bd.blob(dir, 'Tried again. What stopped it last time: ' + String(why).trim().slice(0, 1500)) }, id]]);
+        say(dir, recs, lvl);
+      }
+      hint('retried', ids.join(','));
+      hint('next', 'next');
+      return 0;
+    }
     if (sub === 'narrow') {                                      // one lane from here: the others finish what they hold
       narrow(dir, cur);
       hint('next', 'next');

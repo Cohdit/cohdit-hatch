@@ -985,3 +985,22 @@ test('lanes: a thing another lane on this computer just opened is skipped, not a
   assert.equal(hintOf(n, 'item'), 'ITEM-002', 'the lane took the next thing instead');
   H.git(['checkout', '-q', 'main'], dir);
 });
+
+test('retry: a set-aside thing goes back on the list and its brief says what stopped it last time', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Retry', ITEMS.slice(0, 2));
+  B(h, dir, ['open']);
+  B(h, dir, ['next']);
+  B(h, dir, ['built', 'ITEM-001', '--return', '{"verdict":"blocked","blocked":{"reason":"ambiguous","text":"Which voice: the letter name or its sound?"},"findings":[]}']);
+  B(h, dir, ['close']);
+  const o = B(h, dir, ['open']);
+  assert.equal(o.code, 0, o.err);
+  const r = B(h, dir, ['retry']);
+  assert.equal(r.code, 0, r.err);
+  assert.equal(hintOf(r, 'retried'), 'ITEM-001');
+  const n = B(h, dir, ['next']);
+  assert.equal(hintOf(n, 'item'), 'ITEM-001', 'the set-aside thing is picked again');
+  assert.match(fs.readFileSync(hintOf(n, 'brief'), 'utf8'), /Which voice: the letter name or its sound\?/);
+  const again = B(h, dir, ['retry']);
+  assert.equal(hintOf(again, 'hint'), 'nothing_set_aside', 'nothing else is set aside');
+});

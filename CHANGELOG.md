@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.27 — try again, and a push that fails once is tried again (2026-11-21)
+
+- `build retry`: a thing that was set aside goes back on the list when you ask to try it again, and the builder is told what
+  stopped it last time.
+- When three lanes claim things at the same moment, a push to the shared copy that fails is tried twice more before the run
+  stops with "couldn't reach GitHub", and the refusal's own words are shown.
+
 ## 0.0.26 — lanes no longer crash on the same thing (2026-11-19)
 
 - Two build lanes that reached for the same thing at the same moment crashed the later lane. It now skips what another lane

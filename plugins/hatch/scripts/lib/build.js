@@ -438,9 +438,18 @@ function startItem(dir, branch, base, item) {
 function claim(dir, branch, stale) {
   if (!hasRemote(dir)) return 'no_remote';
   const lease = 'refs/heads/' + branch + ':' + (stale ? stale.sha : '');
-  const r = gitNet(['push', '-q', 'origin', 'refs/heads/' + branch + ':refs/heads/' + branch, '--force-with-lease=' + lease], dir);
-  if (r.code === 0) return 'ok';
-  return /\[rejected\]|stale info|fetch first/i.test(r.err) ? 'taken' : 'failed';   // "[remote rejected]" is the server refusing: failed
+  // Lanes push to the same remote at the same moment; a push that fails on that is tried again before the shared
+  // copy is called out of reach. A refusal because someone holds the thing is final.
+  const waits = [0, 600, 1800];
+  let r;
+  for (const ms of waits) {
+    if (ms) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+    r = gitNet(['push', '-q', 'origin', 'refs/heads/' + branch + ':refs/heads/' + branch, '--force-with-lease=' + lease], dir);
+    if (r.code === 0) return 'ok';
+    if (/\[rejected\]|stale info|fetch first/i.test(r.err)) return 'taken';   // "[remote rejected]" is the server refusing: failed
+  }
+  process.stderr.write('hatch: the shared copy refused the claim: ' + String(r.err || '').trim().split('\n').slice(-2).join(' ').slice(0, 300) + '\n');
+  return 'failed';
 }
 
 /** Work committed on an item that is set aside is kept, never deleted: its branch is saved as
