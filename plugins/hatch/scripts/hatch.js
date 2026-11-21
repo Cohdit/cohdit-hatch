@@ -366,7 +366,7 @@ function cmdIdea(argv) {
       const run = newRunId(path.join(cd, 'ledger', 'runs'), ml.utcNow());
       const events = [['RUN_START', runStart('dream')]];
       if (sub === 'change') {
-        const res = sp.applyChange(spec, readPatch(rest), sp.loadInterview());
+        const res = sp.applyChange(spec, readPatch(rest), sp.loadInterview(), bd.itemStatus(dir, spec));
         events.push(['DECIDE', { type: 'scope', choice: 'changed', who: 'you' }]);
         events.push(['SPEC', { items: spec.items.length, gates_yes: (spec.rails || []).length, held: spec.open_questions.length }]);
         for (const id of res.added) hint('added', id);

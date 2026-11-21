@@ -299,14 +299,15 @@ function runRecords(run, cohditDir, cwd) {
 /** Statuses after which a pick means nothing until the item is queued again. */
 const SETTLED = ['done', 'blocked', 'refused', 'tried'];
 
-/** Every item's status, derived from the records (every run, every session), with spec.json's own
- *  status as the floor. The one rule render.js, build and try share, so a status is the same
+/** Every item's status, derived from the records (every run, every session); a thing with no
+ *  records is queued. spec.json holds no status, and one written there by an older version is ignored.
+ *  The one rule render.js, build and try share, so a status is the same
  *  everywhere: DONE → done (to try), BLOCKED, REFUSE, HELD as named, TRY_RESULT pass → tried,
  *  TRY_RESULT fail → queued again, PICK → building while the picking run is alive (no RUN_END and a
  *  record under STALE_RUN_H old at `now`), else the pick lapsed and the item is queued. Returns a Map. */
 function itemStatus(recs, items, now) {
   const out = new Map();
-  for (const it of items || []) out.set(it.id, it.status || 'queued');
+  for (const it of items || []) out.set(it.id, 'queued');
   const all = (recs || []).filter((r) => r && typeof r === 'object');
   const ended = new Set(), last = new Map();
   for (const r of all) {

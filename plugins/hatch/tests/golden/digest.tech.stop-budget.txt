@@ -1,4 +1,4 @@
-Built 1 of 1 item (run 20261101T090000Z-delons-laptop-0001).
+Built 1 of 1 item (run 20261101T090000Z-delons-laptop-0002).
   done      Add a chore (ITEM-001, a1b2c3d1) — type "Dishes", press Add: it appears in the list
 Stopped: this run reached its cap (1.3M tokens ≈ $0.98 at API list price).
 Pushed to GitHub: delon/chore-chart.

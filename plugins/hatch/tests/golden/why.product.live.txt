@@ -1,3 +1,4 @@
 Working now: builder started on "Weekly scoreboard" (started 10 minutes ago).
 Steps: started building → started "Weekly scoreboard" → building it.
+Held for you: 1 question. Say "status" to see it.
 Say "technical" for the full event list.

@@ -1,4 +1,4 @@
-Runs: 1 · items done: 0 · blocked: 0 · held: 0 · published: 0
-No items done yet; 177k tokens so far ≈ $0.19 at API list price.
-Review: 0 must-fix across 0 reviews. Questions for you: 1 asked, 0 defaulted, 0 open.
-Measurements incomplete: nothing finished yet.
+Runs: 2 · items done: 2 · blocked: 0 · held: 1 · published: 0
+Tokens: 177k total, 89k per item ≈ $0.19 at API list price; first-pass 100%; 0 fix rounds.
+Review: 0 must-fix across 0 reviews. Questions for you: 1 asked, 0 defaulted, 1 open.
+Measurements incomplete: some steps weren't recorded.

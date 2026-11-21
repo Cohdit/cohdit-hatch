@@ -30,7 +30,6 @@
    ],
    "depends": [],
    "id": "ITEM-001",
-   "status": "done",
    "title": "Add a chore"
   },
   {
@@ -41,7 +40,6 @@
     "ITEM-001"
    ],
    "id": "ITEM-002",
-   "status": "done",
    "title": "Tick a chore done"
   },
   {
@@ -52,7 +50,6 @@
     "ITEM-002"
    ],
    "id": "ITEM-003",
-   "status": "held",
    "title": "Reset on Sunday"
   },
   {
@@ -63,7 +60,6 @@
     "ITEM-002"
    ],
    "id": "ITEM-004",
-   "status": "queued",
    "title": "Weekly scoreboard"
   }
  ],

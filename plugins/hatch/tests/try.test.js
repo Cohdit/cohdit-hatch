@@ -74,7 +74,7 @@ test('a free port is one nothing answers on, whichever address family the other 
 });
 
 test('the status rule: done, tried, queued again after a fail, building only while the pick\'s run lives', () => {
-  const items = [{ id: 'ITEM-001' }, { id: 'ITEM-002', status: 'queued' }, { id: 'ITEM-003' }];
+  const items = [{ id: 'ITEM-001' }, { id: 'ITEM-002' }, { id: 'ITEM-003' }];
   const recs = [
     { c: 'RUN_START', r: 'a', ts: '2026-11-01T09:00:00Z', f: {} },
     { c: 'PICK', r: 'a', ts: '2026-11-01T09:01:00Z', i: 'ITEM-001', f: {} },
@@ -91,7 +91,7 @@ test('the status rule: done, tried, queued again after a fail, building only whi
   assert.deepEqual(at('2026-11-03T10:00:00Z'), { 'ITEM-001': 'tried', 'ITEM-002': 'queued', 'ITEM-003': 'queued' }, 'the pick lapsed with its run');
   const ended = recs.concat([{ c: 'RUN_END', r: 'a', ts: '2026-11-01T09:40:00Z', f: {} }, { c: 'PICK', r: 'c', ts: '2026-11-01T09:50:00Z', i: 'ITEM-002', f: {} }, { c: 'DONE', r: 'c', ts: '2026-11-01T09:55:00Z', i: 'ITEM-002', f: {} }]);
   assert.deepEqual(Object.fromEntries(ml.itemStatus(ended, items, '2026-11-01T10:00:00Z')), { 'ITEM-001': 'tried', 'ITEM-002': 'done', 'ITEM-003': 'queued' }, 'built again after the fail: to try again');
-  assert.equal(ml.itemStatus([], [{ id: 'ITEM-009', status: 'tried' }], '2026-11-01T10:00:00Z').get('ITEM-009'), 'tried', 'spec.json is the floor');
+  assert.equal(ml.itemStatus([], [{ id: 'ITEM-009', status: 'tried' }], '2026-11-01T10:00:00Z').get('ITEM-009'), 'queued', 'a status written in spec.json is ignored; no records, queued');
 });
 
 test('which thing they mean: a number, an id, a title, a unique part; nothing else', () => {
@@ -172,7 +172,7 @@ test('a try from start to pass: the app, the list, a fail in their words, pass f
   assert.equal(said.out, status.trimEnd());
   assert.equal(hintOf(said, 'next'), 'build');
   const raw = JSON.parse(fs.readFileSync(path.join(dir, '.cohdit', 'spec.json'), 'utf8'));
-  assert.equal(raw.items[0].status, 'queued', 'the plan file is not the state');
+  assert.equal(raw.items[0].status, undefined, 'the plan file holds no state');
   assert.match(status, /^  tested     On the iPad$/m);
   assert.doesNotMatch(status, /things to try/);
   const none = T(h, dir, ['start']);

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.29 — a thing's state lives in one place (2026-11-22)
+
+- The list no longer stores a state. Every thing used to be saved as "queued" and never changed, so anything that read the
+  file saw built things as still to do. What happened to a thing is now only what the record of builds, tries and set-asides
+  says; a thing with no record is queued, and a state an older version wrote into the file is ignored.
+- Rewording a thing in "add to my idea" now checks that record: a thing already built is refused ("add a new thing instead").
+  Before, the check read the stale field and let it through.
+- Status now also shows the question a held thing is waiting on, where before it had no record of it.
+
 ## 0.0.28 — "status" works, and new features have a clear home (2026-11-22)
 
 - `status` is a real command and a skill. Hatch's own messages told you to say "status", but nothing answered it, so Claude

@@ -1,12 +1,12 @@
-scorecard 2000-01-01 → 2026-11-01 · 1 run(s) · 0 done · 0 blocked · 0 held · 0 shared
-UNTRUSTED (no items closed in this window) — the numbers below undercount
+scorecard 2000-01-01 → 2026-11-01 · 2 run(s) · 2 done · 0 blocked · 1 held · 0 shared
+UNTRUSTED (events 33%) — the numbers below undercount
 tokens 177k  (input 5k · output 2k · cache read 150k · cache write 20k)  ≈ $0.19 at API list price of 2026-10-06
-1 tokens per done item   n/a  (no usage)  no estimate (a model has no known price)
+1 tokens per done item   89k  (orchestrator 89k)  ≈ $0.10 at API list price
 2 orchestrator share     100%  (of tokens; target < 25%)
-3 rework                 first-pass n/a · n/a of item tokens after first round · rounds 0
+3 rework                 first-pass 100% · n/a of item tokens after first round · rounds 0
 4 review yield           checker 0 must-fix / 0 dispatches
-5 owner load             n/a questions per item · asked 1 · defaulted 0 · done→shared median n/a · 0 waiting
+5 owner load             0.50 questions per item · asked 1 · defaulted 0 · done→shared median n/a · 1 waiting
 6 tokens per shared link n/a
-7 said to you            ≈67 words/run  (400 chars)
+7 said to you            ≈33 words/run  (400 chars)
 8 speed                  not measured (no list screen reported a size)
--- digest: n/a tokens/item no estimate (a model has no known price) · orchestrator 100% · first-pass n/a · n/a questions/item
+-- digest: 89k tokens/item ≈ $0.10 at API list price · orchestrator 100% · first-pass 100% · 0.50 questions/item

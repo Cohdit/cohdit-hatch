@@ -5,3 +5,5 @@ Idea: Chore Chart (5 items)
   queued     Weekly scoreboard
   on device  On the iPad
 Live: https://chore-chart.vercel.app (shared 7 minutes ago)
+Held for you: 1 question.
+  Reset on Sunday — Reset on Sunday night, or Monday morning before school?

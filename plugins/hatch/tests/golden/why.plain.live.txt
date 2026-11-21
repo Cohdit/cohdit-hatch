@@ -1,3 +1,4 @@
 Working now: building "Weekly scoreboard" (started 10 minutes ago).
 Steps: started building → started "Weekly scoreboard" → building it.
+Waiting on you: 1 question. Say "status" to see it.
 Say "show me the details" for the technical view.

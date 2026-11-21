@@ -1,3 +1,4 @@
 Stopped 16 minutes ago. Publishing failed, so I stopped. The details are saved.
 Steps: started publishing → you decided → publishing → publishing failed → stopped.
+Waiting on you: 1 question. Say "status" to see it.
 Say "show me the details" for the technical view.

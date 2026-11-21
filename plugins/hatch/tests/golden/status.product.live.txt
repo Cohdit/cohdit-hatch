@@ -5,4 +5,6 @@ Working now: builder started on "Weekly scoreboard" (started 10 minutes ago).
   held       Reset on Sunday — your decision needed
   building   Weekly scoreboard
 Not published yet — say "share it" to deploy.
+Held for you: 1 question.
+  Reset on Sunday — Reset on Sunday night, or Monday morning before school?
 Waiting on you: 2 items to try. Say "let me try it".

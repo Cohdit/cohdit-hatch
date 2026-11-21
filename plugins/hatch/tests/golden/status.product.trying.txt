@@ -6,4 +6,6 @@ Working now: waiting for your test results (started 5 minutes ago).
   queued     Weekly scoreboard
   on device  On the iPad
 Not published yet — say "share it" to deploy.
+Held for you: 1 question.
+  Reset on Sunday — Reset on Sunday night, or Monday morning before school?
 Say "pass", or name the item that failed and what you saw.

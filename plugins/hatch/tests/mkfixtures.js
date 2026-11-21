@@ -31,10 +31,10 @@ const SPEC = {
   decisions: [{ n: 1, q: 'Who can reset the week?', a: 'a parent' }],
   open_questions: ['What happens to unticked chores on Sunday?'],
   items: [
-    { id: 'ITEM-001', title: 'Add a chore', status: 'done', criteria: ['type "Dishes", press Add: it appears in the list'], depends: [] },
-    { id: 'ITEM-002', title: 'Tick a chore done', status: 'done', criteria: ['tick Dishes: it moves under Done'], depends: ['ITEM-001'] },
-    { id: 'ITEM-003', title: 'Reset on Sunday', status: 'held', criteria: ['on Sunday night the list is empty again'], depends: ['ITEM-002'] },
-    { id: 'ITEM-004', title: 'Weekly scoreboard', status: 'queued', criteria: ['the top of the page shows who ticked most this week'], depends: ['ITEM-002'] },
+    { id: 'ITEM-001', title: 'Add a chore', criteria: ['type "Dishes", press Add: it appears in the list'], depends: [] },
+    { id: 'ITEM-002', title: 'Tick a chore done', criteria: ['tick Dishes: it moves under Done'], depends: ['ITEM-001'] },
+    { id: 'ITEM-003', title: 'Reset on Sunday', criteria: ['on Sunday night the list is empty again'], depends: ['ITEM-002'] },
+    { id: 'ITEM-004', title: 'Weekly scoreboard', criteria: ['the top of the page shows who ticked most this week'], depends: ['ITEM-002'] },
   ],
 };
 
@@ -150,6 +150,24 @@ function buildRun(fx, day, itemsDone = ['ITEM-001', 'ITEM-002'], held = null, ba
   return minute;
 }
 
+/** An earlier, finished build run (the day before) that settled what the default list says was settled
+ *  before the fixture's own story begins: `done` things built, and the third thing held for the person.
+ *  A status is the ledger's; a fixture whose list shows a thing done must have the record that did it. */
+function earlier(fx, done, held = true, day = '2026-10-31') {
+  const t = (m) => hm(day, '08:' + two(m) + ':00');
+  let m = 0;
+  fx.start('build', t(m), '3f2a9c1e');
+  for (const i of done) {
+    fx.ev('PICK', t(++m), i, { branch: 'item/' + i.slice(-3) + '-earlier', fork: '3f2a9c1e' });
+    fx.ev('DONE', t(++m), i, { head: 'e411e5' + i.slice(-1), touches: 'app/' });
+  }
+  if (held) {
+    fx.ev('PICK', t(++m), 'ITEM-003', { branch: 'item/003-reset-sunday', fork: '3f2a9c1e' });
+    fx.ev('HELD', t(++m), 'ITEM-003', { reason: 'decision', blob: fx.blob('Reset on Sunday night, or Monday morning before school?') });
+  }
+  fx.ev('RUN_END', t(++m), null, { outcome: 'ok' });
+}
+
 function main() {
   fs.mkdirSync(FIX, { recursive: true });
   const D = '2026-11-01';
@@ -170,7 +188,6 @@ function main() {
 
   // stop-gate: the third item failed its checks twice and was set aside.
   const specGate = JSON.parse(JSON.stringify(SPEC));
-  specGate.items[2].status = 'blocked';
   fx = new Fixture('stop-gate', specGate);
   m = buildRun(fx, D);
   let i = 'ITEM-003';
@@ -193,12 +210,14 @@ function main() {
 
   // stop-budget
   fx = new Fixture('stop-budget');
+  earlier(fx, ['ITEM-002']);
   m = buildRun(fx, D, ['ITEM-001']);
   fx.ev('STOP', t(m + 2), null, { cause: 'budget' });
   fx.ev('RUN_END', t(m + 2, '10'), null, { outcome: 'stopped' });
 
   // deploy-error: a share run whose deploy failed.
   fx = new Fixture('deploy-error');
+  earlier(fx, ['ITEM-001', 'ITEM-002']);
   fx.start('share', hm(D, '09:40:00'));
   fx.ev('DECIDE', hm(D, '09:40:20'), null, { type: 'publish', choice: 'live', who: 'you' });
   fx.ev('DEPLOY', hm(D, '09:40:30'), null, { target: 'vercel', env: 'production', state: 'building', dep: 'dpl_zz91q' });
@@ -225,6 +244,8 @@ function main() {
 
   // crashed: the builder was dispatched 2 hours ago and never came back; no RUN_END.
   fx = new Fixture('crashed');
+  m = buildRun(fx, '2026-10-31', undefined, 'ITEM-003');   // the day before: two done, one held for the person
+  fx.ev('RUN_END', hm('2026-10-31', '09:' + two(m + 2) + ':00'), null, { outcome: 'stopped' });
   fx.start('build', hm(D, '07:50:00'), '3f2a9c1e');
   fx.ev('PICK', hm(D, '07:51:00'), 'ITEM-004', { branch: 'item/004-scoreboard', fork: '3f2a9c1e' });
   fx.ev('DISPATCH', hm(D, '07:51:10'), 'ITEM-004', { agent: 'maker', model: 'claude-sonnet-5-5' });
@@ -232,6 +253,7 @@ function main() {
 
   // live: a build run whose last event is 3 minutes old.
   fx = new Fixture('live');
+  earlier(fx, ['ITEM-001', 'ITEM-002']);
   fx.start('build', hm(D, '09:50:00'), '3f2a9c1e');
   fx.ev('PICK', hm(D, '09:51:00'), 'ITEM-004', { branch: 'item/004-scoreboard', fork: '3f2a9c1e' });
   fx.ev('DISPATCH', hm(D, '09:51:10'), 'ITEM-004', { agent: 'maker', model: 'claude-sonnet-5-5' });
@@ -250,10 +272,10 @@ function main() {
   const DRAFT = {
     v: 1, name: 'ABC Friends', slug: 'abc-friends', shape: 'use', for: 'Maya, 4', anchor: 'she asks to play it again',
     items: [
-      { id: 'ITEM-001', title: 'Letter grid', criteria: ['open it; you see all 26 letters, big'], source: 'said', status: 'queued' },
-      { id: 'ITEM-002', title: 'Tap to hear', criteria: ['tap a letter; you hear "A, a, alligator"'], source: 'said', status: 'queued' },
-      { id: 'ITEM-003', title: 'Animal picture', criteria: ['tap a letter; you see the animal and its name'], source: 'said', status: 'queued' },
-      { id: 'ITEM-004', title: 'On the iPad', criteria: ['open it on the iPad; the letters fill the screen'], source: 'inferred', device: true, status: 'queued' },
+      { id: 'ITEM-001', title: 'Letter grid', criteria: ['open it; you see all 26 letters, big'], source: 'said' },
+      { id: 'ITEM-002', title: 'Tap to hear', criteria: ['tap a letter; you hear "A, a, alligator"'], source: 'said' },
+      { id: 'ITEM-003', title: 'Animal picture', criteria: ['tap a letter; you see the animal and its name'], source: 'said' },
+      { id: 'ITEM-004', title: 'On the iPad', criteria: ['open it on the iPad; the letters fill the screen'], source: 'inferred', device: true },
     ],
     out: ['scores', 'levels', 'remembering what she has done'],
     gates: {
@@ -273,6 +295,7 @@ function main() {
 
   // tried: a build run (2 done), then a try: one worked, one did not. The failed thing is queued again.
   fx = new Fixture('tried');
+  earlier(fx, []);
   m = buildRun(fx, D);
   fx.ev('RUN_END', t(m + 2), null, { outcome: 'ok' });
   fx.start('try', hm(D, '09:40:00'));
@@ -284,8 +307,9 @@ function main() {
 
   // trying: a try in progress, 3 minutes old, with a device check and a maker's note on the list.
   const specTry = JSON.parse(JSON.stringify(SPEC));
-  specTry.items.push({ id: 'ITEM-005', title: 'On the iPad', status: 'queued', criteria: ['the list fills the screen'], depends: [], device: true, source: 'inferred' });
+  specTry.items.push({ id: 'ITEM-005', title: 'On the iPad', criteria: ['the list fills the screen'], depends: [], device: true, source: 'inferred' });
   fx = new Fixture('trying', specTry);
+  earlier(fx, []);
   fx.note('ITEM-002', 'I drafted the chore names; read them and change any.');
   m = buildRun(fx, D);
   fx.ev('RUN_END', t(m + 2), null, { outcome: 'ok' });
@@ -297,8 +321,9 @@ function main() {
   // went ahead with what works (ruling 2026-10-28): the failed thing is named as not fixed yet, and the
   // device check is offered again at the public link.
   const specShared = JSON.parse(JSON.stringify(SPEC));
-  specShared.items.push({ id: 'ITEM-005', title: 'On the iPad', status: 'queued', criteria: ['the list fills the screen'], depends: [], device: true, source: 'inferred' });
+  specShared.items.push({ id: 'ITEM-005', title: 'On the iPad', criteria: ['the list fills the screen'], depends: [], device: true, source: 'inferred' });
   fx = new Fixture('shared', specShared);
+  earlier(fx, []);
   m = buildRun(fx, D);
   fx.ev('RUN_END', t(m + 2), null, { outcome: 'ok' });
   fx.start('try', hm(D, '09:40:00'));
@@ -316,6 +341,7 @@ function main() {
 
   // declined: the person said "not yet" to the one question.
   fx = new Fixture('declined');
+  earlier(fx, ['ITEM-002']);
   m = buildRun(fx, D, ['ITEM-001']);
   fx.ev('RUN_END', t(m + 2), null, { outcome: 'ok' });
   fx.start('try', hm(D, '09:40:00'));
@@ -331,6 +357,7 @@ function main() {
 
   // untrusted: an unpriced model, a run that never ended, a run with no items, and one bad line.
   fx = new Fixture('untrusted');
+  earlier(fx, ['ITEM-002'], true, '2026-10-28');
   fx.start('build', '2026-10-29T09:00:00Z', '3f2a9c1e');
   fx.ev('PICK', '2026-10-29T09:01:00Z', 'ITEM-001', { branch: 'item/001-add', fork: '3f2a9c1e' });
   fx.ev('DISPATCH', '2026-10-29T09:01:10Z', 'ITEM-001', { agent: 'maker', model: 'claude-future-9' });

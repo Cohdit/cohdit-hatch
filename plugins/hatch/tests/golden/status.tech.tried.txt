@@ -4,4 +4,6 @@ Idea: Chore Chart (4 items)
   held       ITEM-003 Reset on Sunday — your decision needed
   queued     ITEM-004 Weekly scoreboard
 Not published yet — say "share it" to deploy.
-Tokens: 2.4M over 2 runs ≈ $1.90 at API list price. Prices of 2026-10-06.
+Tokens: 2.4M over 3 runs ≈ $1.90 at API list price. Prices of 2026-10-06.
+Held for you: 1 question.
+  Reset on Sunday — Reset on Sunday night, or Monday morning before school?

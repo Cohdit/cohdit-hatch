@@ -46,7 +46,6 @@
    ],
    "id": "ITEM-001",
    "source": "said",
-   "status": "queued",
    "title": "Letter grid"
   },
   {
@@ -55,7 +54,6 @@
    ],
    "id": "ITEM-002",
    "source": "said",
-   "status": "queued",
    "title": "Tap to hear"
   },
   {
@@ -64,7 +62,6 @@
    ],
    "id": "ITEM-003",
    "source": "said",
-   "status": "queued",
    "title": "Animal picture"
   },
   {
@@ -74,7 +71,6 @@
    "device": true,
    "id": "ITEM-004",
    "source": "inferred",
-   "status": "queued",
    "title": "On the iPad"
   }
  ],

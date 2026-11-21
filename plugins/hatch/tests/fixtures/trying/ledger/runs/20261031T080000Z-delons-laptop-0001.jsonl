@@ -1,0 +1,4 @@
+{"c":"RUN_START","f":{"base":"3f2a9c1e","host":"delons-laptop","os":"mac","plugin":"0.0.1","prices":"2026-10-06","skill":"build"},"id":"64c798bcb60c2886","r":"20261031T080000Z-delons-laptop-0001","ts":"2026-10-31T08:00:00Z","v":1}
+{"c":"PICK","f":{"branch":"item/003-reset-sunday","fork":"3f2a9c1e"},"i":"ITEM-003","id":"a2dde680077b70a6","r":"20261031T080000Z-delons-laptop-0001","ts":"2026-10-31T08:01:00Z","v":1}
+{"c":"HELD","f":{"blob":"d69b5f8332470b4d","reason":"decision"},"i":"ITEM-003","id":"b34e7b1e7771b60a","r":"20261031T080000Z-delons-laptop-0001","ts":"2026-10-31T08:02:00Z","v":1}
+{"c":"RUN_END","f":{"outcome":"ok"},"id":"7458010dd60f52fc","r":"20261031T080000Z-delons-laptop-0001","ts":"2026-10-31T08:03:00Z","v":1}

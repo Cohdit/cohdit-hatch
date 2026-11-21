@@ -1,3 +1,4 @@
-Over this period: 1 building session, 0 things finished, 0 set aside, 0 links shared.
-Nothing finished yet. Claude has used about 177 thousand tokens so far (roughly $0.19 at Claude's public API prices).
-These numbers are incomplete: nothing finished yet.
+Over this period: 2 building sessions, 2 things finished, 0 set aside, 0 links shared.
+Claude used about 177 thousand tokens, about 89 thousand per finished thing (roughly $0.19 at Claude's public API prices).
+Right first time: 2 of 2. Questions for you: 1.
+These numbers are incomplete: some steps weren't recorded.

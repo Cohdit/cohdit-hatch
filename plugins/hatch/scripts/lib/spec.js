@@ -7,7 +7,7 @@
  * `hatch.js idea` is its only writer. Shape (docs/CONTRACTS.md § Spec):
  *
  *   { v, name, slug, shape?, for?, anchor?, pitch?,
- *     items: [{ id, title, criteria[], source: said|inferred, device?, status }],
+ *     items: [{ id, title, criteria[], source: said|inferred, device? }   (no status: what happened to a thing is the ledger's, lib/ledger.js itemStatus)],
  *     out: [],                                  // not in the first version
  *     gates: { <rails.json rule>: { value, source } },
  *     decisions: [{ type, choice, who }], open_questions: [], memory?, people?: { region?, kinds?, field? },
@@ -133,7 +133,7 @@ function makeItem(it, i, id, maxCrit) {
   if (crit.length > maxCrit) throw new Invalid('items[' + i + '] has more than ' + maxCrit + ' checks');
   const source = it.source || 'said';
   if (!SOURCES.includes(source)) throw new Invalid('items[' + i + '].source must be said or inferred');
-  const out = { id, title: str(it.title, 'items[' + i + '].title'), criteria: crit, source, status: 'queued', lens: 'product' };
+  const out = { id, title: str(it.title, 'items[' + i + '].title'), criteria: crit, source, lens: 'product' };
   if (it.device) out.device = true;
   return out;
 }
@@ -227,8 +227,9 @@ const CHANGE_LOCKED_DECISIONS = ['hosting', 'terms'];   // these also write conf
 
 /** A small change to an agreed idea: new things added, queued things reworded, a decision, what is out.
  *  Anything that reshapes the whole idea (gates, shape, memory, people, a rewritten list) is refused with
- *  `reagree`: reopen the idea and agree again. Returns { added[], edited[] }. Throws Invalid. */
-function applyChange(spec, patch, interview) {
+ *  `reagree`: reopen the idea and agree again. `status` is the ledger's Map (lib/build.js itemStatus):
+ *  only a thing still queued can be reworded. Returns { added[], edited[] }. Throws Invalid. */
+function applyChange(spec, patch, interview, status = new Map()) {
   if (!spec.agreed) throw new Invalid('the idea is not agreed yet; keep going with idea set');
   if (spec.refused) throw new Invalid('refused: ' + spec.refused);
   if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Invalid('patch must be an object');
@@ -249,7 +250,7 @@ function applyChange(spec, patch, interview) {
     patch.edit.forEach((e, i) => {
       const it = e && trial.items.find((x) => x.id === e.id);
       if (!it) throw new Invalid('edit[' + i + '] names a thing that is not there');
-      if (it.status !== 'queued') throw new Invalid('edit[' + i + '] is already built; add a new thing instead');
+      if ((status.get(it.id) || 'queued') !== 'queued') throw new Invalid('edit[' + i + '] is already built; add a new thing instead');
       if (e.title === undefined && e.criteria === undefined && e.depends === undefined) throw new Invalid('edit[' + i + '] changes nothing');
       if (e.title !== undefined) it.title = str(e.title, 'edit[' + i + '].title');
       if (e.criteria !== undefined) {
@@ -377,7 +378,7 @@ function addBug(dir, bug, open) {
   if (!criteria.length) throw new Invalid('a bug needs one check: what must be true once it is fixed');
   const twin = spec.items.find((i) => i.kind === 'bug' && (!open || open.has(i.id)) && sameBug(i.title, title));
   if (twin) return Object.assign({ twin: true }, twin);
-  const it = { id: nextId(spec), title, criteria, source: bug.source, kind: 'bug', status: 'queued', lens: bug.source === 'report' ? 'product' : 'technical' };
+  const it = { id: nextId(spec), title, criteria, source: bug.source, kind: 'bug', lens: bug.source === 'report' ? 'product' : 'technical' };
   if (bug.by) it.by = str(bug.by, 'bug by');
   spec.items.push(it);
   save(dir, spec);

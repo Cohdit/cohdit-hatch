@@ -1,3 +1,4 @@
 Stopped unexpectedly 3 days ago right after finishing "Add a chore".
 Steps: started building → started "Add a chore" → building it → builder finished → done.
+Waiting on you: 1 question. Say "status" to see it.
 Say "show me the details" for the technical view.

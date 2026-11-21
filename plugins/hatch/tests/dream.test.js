@@ -144,7 +144,7 @@ test('change: an agreed idea takes small changes (add, edit queued, decisions, o
   assert.equal(spec.agreed, true);
   assert.equal(spec.items.length, 4);
   assert.equal(spec.items[0].title, 'Bigger letter grid');
-  assert.equal(spec.items[3].status, 'queued');
+  assert.ok(spec.items.every((i) => i.status === undefined), 'the list holds no status: the ledger says what happened');
   assert.deepEqual(spec.out, ['sign in']);
   assert.ok(spec.decisions.some((d) => d.type === 'design' && d.choice === 'large-print'));
   const events = fs.readdirSync(path.join(dir, '.cohdit', 'ledger', 'runs')).map((f) => fs.readFileSync(path.join(dir, '.cohdit', 'ledger', 'runs', f), 'utf8')).join('');
@@ -157,8 +157,8 @@ test('change: an agreed idea takes small changes (add, edit queued, decisions, o
   assert.match(idea(h, ['change', '--dir', dir, '--json', '{"gates":{"payments":true}}']).err, /^hint=invalid$/m);
   assert.deepEqual(read(), spec, 'a refused change writes nothing');
   // a built thing cannot be edited in place
-  spec.items[1].status = 'done';
-  fs.writeFileSync(specFile, JSON.stringify(spec));
+  const runs = path.join(dir, '.cohdit', 'ledger', 'runs');
+  fs.writeFileSync(path.join(runs, '20261101T090000Z-test-0099.jsonl'), JSON.stringify({ v: 1, c: 'DONE', r: '20261101T090000Z-test-0099', ts: '2026-11-01T09:10:00Z', i: 'ITEM-002', f: { head: 'a1b2c3d', touches: 'app/' } }) + '\n');
   assert.equal(idea(h, ['change', '--dir', dir, '--json', '{"edit":[{"id":"ITEM-002","title":"y"}]}']).code, 64);
   // the cap is eight
   const many = Array.from({ length: 5 }, (_, i) => ({ title: 'T' + i, criteria: ['c'] }));
@@ -265,4 +265,16 @@ test('depends: a change can add a thing that waits on one already there, and edi
   assert.deepEqual(spec.items[1].depends, ['ITEM-001']);
   assert.throws(() => sp.applyChange(spec, { edit: [{ id: 'ITEM-001', depends: ['Avatar'] }] }), sp.Invalid, 'a loop through an added thing is refused');
   assert.equal(spec.items[0].depends, undefined, 'a refused change writes nothing');
+});
+
+test('a change edits only what the ledger says is still queued', () => {
+  const spec = { agreed: true, items: [], gates: {}, decisions: [], out: [] };
+  sp.applyPatch(Object.assign(spec, { agreed: false }), { items: [{ title: 'Sign in', criteria: ['c'] }, { title: 'Profile', criteria: ['c'] }] });
+  spec.agreed = true;
+  const st = new Map([['ITEM-001', 'done'], ['ITEM-002', 'queued']]);
+  assert.throws(() => sp.applyChange(spec, { edit: [{ id: 'ITEM-001', title: 'Login' }] }, undefined, st), /already built/, 'a built thing is never reworded');
+  assert.equal(spec.items[0].title, 'Sign in');
+  sp.applyChange(spec, { edit: [{ id: 'ITEM-002', title: 'Your profile' }] }, undefined, st);
+  assert.equal(spec.items[1].title, 'Your profile');
+  assert.ok(spec.items.every((i) => i.status === undefined), 'no status is written into the list');
 });

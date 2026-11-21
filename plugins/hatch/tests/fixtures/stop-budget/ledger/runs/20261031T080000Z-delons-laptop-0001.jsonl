@@ -1,0 +1,6 @@
+{"c":"RUN_START","f":{"base":"3f2a9c1e","host":"delons-laptop","os":"mac","plugin":"0.0.1","prices":"2026-10-06","skill":"build"},"id":"64c798bcb60c2886","r":"20261031T080000Z-delons-laptop-0001","ts":"2026-10-31T08:00:00Z","v":1}
+{"c":"PICK","f":{"branch":"item/002-earlier","fork":"3f2a9c1e"},"i":"ITEM-002","id":"df9dcc3b037a100a","r":"20261031T080000Z-delons-laptop-0001","ts":"2026-10-31T08:01:00Z","v":1}
+{"c":"DONE","f":{"head":"e411e52","touches":["app/"]},"i":"ITEM-002","id":"1d1892e13f95d2b9","r":"20261031T080000Z-delons-laptop-0001","ts":"2026-10-31T08:02:00Z","v":1}
+{"c":"PICK","f":{"branch":"item/003-reset-sunday","fork":"3f2a9c1e"},"i":"ITEM-003","id":"5c1f8339a5a8293e","r":"20261031T080000Z-delons-laptop-0001","ts":"2026-10-31T08:03:00Z","v":1}
+{"c":"HELD","f":{"blob":"d69b5f8332470b4d","reason":"decision"},"i":"ITEM-003","id":"334ceaa7c32e05a0","r":"20261031T080000Z-delons-laptop-0001","ts":"2026-10-31T08:04:00Z","v":1}
+{"c":"RUN_END","f":{"outcome":"ok"},"id":"edde0e5557564599","r":"20261031T080000Z-delons-laptop-0001","ts":"2026-10-31T08:05:00Z","v":1}

@@ -1,3 +1,4 @@
 Stopped unexpectedly 2 hours ago while the builder was working on "Weekly scoreboard" and never reported back.
 Steps: started building → started "Weekly scoreboard" → building it.
+Waiting on you: 1 question. Say "status" to see it.
 Say "show me the details" for the technical view.

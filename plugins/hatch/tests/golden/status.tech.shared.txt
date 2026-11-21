@@ -5,4 +5,6 @@ Idea: Chore Chart (5 items)
   queued     ITEM-004 Weekly scoreboard
   on device  ITEM-005 On the iPad
 Live: https://chore-chart.vercel.app (shared 7 minutes ago)
-Tokens: 2.4M over 3 runs ≈ $1.90 at API list price. Prices of 2026-10-06.
+Tokens: 2.4M over 4 runs ≈ $1.90 at API list price. Prices of 2026-10-06.
+Held for you: 1 question.
+  Reset on Sunday — Reset on Sunday night, or Monday morning before school?

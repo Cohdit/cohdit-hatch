@@ -215,13 +215,13 @@ class Ctx {
       this.runs.get(r.r).push(r);
     }
     this._blobs = new Map();
-    // An item's status is what the ledger says happened to it (one rule, lib/ledger.js itemStatus),
-    // with spec.json's own status as the floor.
+    // An item's status is what the ledger says happened to it (one rule, lib/ledger.js itemStatus);
+    // spec.json holds none.
     this.derived = ml.itemStatus(this.recs, this.spec.items || [], this.now);
   }
 
   statusOf(it) {
-    return this.derived.get(it.id) || it.status || 'queued';
+    return this.derived.get(it.id) || 'queued';
   }
 
   /** The result of the last time this thing was tried, or null. */

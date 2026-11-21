@@ -4,5 +4,7 @@ Idea: Chore Chart (4 items)
   held       ITEM-003 Reset on Sunday — your decision needed
   queued     ITEM-004 Weekly scoreboard
 Not published yet — say "share it" to deploy.
-Tokens: 1k over 1 run no estimate (a model has no known price). Prices of 2026-10-06; unpriced: claude-future-9.
+Tokens: 1k over 2 runs no estimate (a model has no known price). Prices of 2026-10-06; unpriced: claude-future-9.
+Held for you: 1 question.
+  Reset on Sunday — Reset on Sunday night, or Monday morning before school?
 Waiting on you: 2 items to try. Say "let me try it".

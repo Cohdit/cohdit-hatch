@@ -1,0 +1,4 @@
+{"c":"RUN_START","f":{"host":"delons-laptop","os":"mac","plugin":"0.0.1","prices":"2026-10-06","skill":"try"},"id":"04a1ab331c254ed9","r":"20261101T094000Z-delons-laptop-0003","ts":"2026-11-01T09:40:00Z","v":1}
+{"c":"TRY_START","f":{"items":["ITEM-001"],"url":"http://localhost:3000"},"id":"cd3b7ce5eccff2d0","r":"20261101T094000Z-delons-laptop-0003","ts":"2026-11-01T09:40:20Z","v":1}
+{"c":"TRY_RESULT","f":{"result":"pass"},"i":"ITEM-001","id":"d51db7a96154da79","r":"20261101T094000Z-delons-laptop-0003","ts":"2026-11-01T09:44:00Z","v":1}
+{"c":"RUN_END","f":{"outcome":"ok"},"id":"cad3d10637c43d28","r":"20261101T094000Z-delons-laptop-0003","ts":"2026-11-01T09:44:20Z","v":1}
