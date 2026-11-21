@@ -43,6 +43,8 @@
  *   hatch.js report add --json <report|->
  *                                       a problem someone told you about: {did, expected, saw}; it joins the list as a bug
  *   hatch.js report pull                the live app's reports, onto the list
+ *   hatch.js status [--dir d | --name n]
+ *                                       where things stand: each thing's state from the ledger, what is waiting on you
  *   hatch.js try start [--dir d | --name n]
  *                                       start the app on this computer, open it, print the checklist
  *   hatch.js try result <which> pass|fail [--note <text|->]
@@ -1727,6 +1729,32 @@ function cmdReport(argv) {
   }
 }
 
+// --- status -------------------------------------------------------------------------------------
+
+/** Where things stand. The list's states come from the ledger (render.js status), never from the
+ *  `status` field spec.json was written with. */
+function cmdStatus(rest) {
+  try {
+    const dir = buildDir(rest);
+    const lvl = bd.level(dir);
+    hint('level', lvl);
+    hint('dir', dir);
+    render.main(['status', '--cohdit', sp.cohditDir(dir), '--level', lvl]);
+    const spec = sp.load(dir), st = bd.itemStatus(dir, spec);
+    const left = spec.items.filter((i) => !i.device && st.get(i.id) === 'queued').length;
+    const toTry = spec.items.some((i) => st.get(i.id) === 'done');
+    hint('next', left ? 'build' : toTry ? 'try' : 'none');
+    return 0;
+  } catch (e) {
+    if (e instanceof sp.Invalid || e instanceof bd.Invalid) {
+      process.stderr.write('hatch: ' + e.message + '\n');
+      hint('hint', 'invalid');
+      return 64;
+    }
+    throw e;
+  }
+}
+
 // --- the lesson bank -----------------------------------------------------------------------------
 
 /** `remember`: the owner's lessons, into the bank the briefs read. stdout is the lesson's line (or the
@@ -2008,6 +2036,7 @@ function dispatch(argv) {
     case 'level': return cmdLevel(argv.slice(1));
     case 'idea': return cmdIdea(argv.slice(1));
     case 'build': return cmdBuild(argv.slice(1));
+    case 'status': return cmdStatus(argv.slice(1));
     case 'try': return cmdTry(argv.slice(1));
     case 'share': return cmdShare(argv.slice(1));
     case 'fix': return cmdFix(argv.slice(1));

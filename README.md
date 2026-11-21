@@ -6,7 +6,7 @@ Hatch is for people who don't write software. You describe what you want in plai
 you the questions an experienced builder would, builds it, lets you try it on your own computer, and
 puts it at a free link you can send to anyone. It can always tell you what it is doing and why.
 
-> Today, **set me up**, **I have an idea**, **build it**, **let me try it**, **share it** and **fix the bugs** work. **Status** is coming. See `CHANGELOG.md`.
+> Today, **set me up**, **I have an idea**, **build it**, **let me try it**, **share it** and **fix the bugs** work. **Status** and adding to your idea now work too. See `CHANGELOG.md`.
 
 ## Before you start
 
@@ -65,6 +65,7 @@ Your Claude Code is older. Paste these two lines, one at a time, waiting for the
 | **let me try it** | Opens the app on your computer with a short checklist in your own words. Say *pass*, or say which one didn't work and what you saw; that goes straight into the next build. Always before sharing. |
 | **share it** | One question, then it goes live at a link anyone can open, on your own hosting account. Only after you've tried it, and only when you say yes. Says what to do if something at the link is wrong. |
 | **fix the bugs** | Pulls in what people reported from the "Something wrong?" link every app has, then four reviewers read the whole app for bugs, security holes, surprise costs and privacy leaks. What they find goes on the list, and "build it" fixes it. Say "fix the bugs every week" and Hatch tells you when a check is due. |
+| **add to my idea** / **can it also…** | A new feature or a change that is not a bug. Hatch asks what you want, adds it to the list with its own check, and "build it" builds it. A big change goes back through the interview. A bug is **fix**, not this. |
 | **status** / **why did it stop** | Where things stand, how much Claude it has used, what is waiting on you. |
 
 ## How it talks to you

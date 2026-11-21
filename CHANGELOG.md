@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.28 — "status" works, and new features have a clear home (2026-11-22)
+
+- `status` is a real command and a skill. Hatch's own messages told you to say "status", but nothing answered it, so Claude
+  guessed from the project's plan file, where every thing still reads "queued". It now prints where things stand from the
+  record of what was built, tried and set aside, and says what to say next. Also answers "where are we", "what is left",
+  "why did it stop".
+- "Add to my idea", "can it also…", "I want it to…" and "a new feature" go to the idea skill, which adds the change to the list.
+  The README says so: a change is the idea skill, a bug is fix.
+
 ## 0.0.27 — try again, and a push that fails once is tried again (2026-11-21)
 
 - `build retry`: a thing that was set aside goes back on the list when you ask to try it again, and the builder is told what

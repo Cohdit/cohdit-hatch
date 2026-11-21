@@ -166,6 +166,13 @@ test('a try from start to pass: the app, the list, a fail in their words, pass f
   const status = R(h, dir, 'status', 'plain');
   assert.match(status, /^  tested     Letter grid$/m);
   assert.match(status, /^  to do      Animal picture$/m, 'queued again');
+  // `hatch.js status` is that same view, from the ledger: spec.json still says "queued" for the tested thing
+  const said = run(h, ['status', '--dir', dir]);
+  assert.equal(said.code, 0);
+  assert.equal(said.out, status.trimEnd());
+  assert.equal(hintOf(said, 'next'), 'build');
+  const raw = JSON.parse(fs.readFileSync(path.join(dir, '.cohdit', 'spec.json'), 'utf8'));
+  assert.equal(raw.items[0].status, 'queued', 'the plan file is not the state');
   assert.match(status, /^  tested     On the iPad$/m);
   assert.doesNotMatch(status, /things to try/);
   const none = T(h, dir, ['start']);
