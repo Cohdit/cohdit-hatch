@@ -1,5 +1,6 @@
 Idea: ABC Friends
 Working now: i read the idea back to you: 4 things to build (started just now).
+Left to build: 3. To check on your device: 1.
   to do      Letter grid
   to do      Tap to hear
   to do      Animal picture

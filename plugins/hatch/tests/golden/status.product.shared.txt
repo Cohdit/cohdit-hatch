@@ -1,5 +1,5 @@
 Idea: Chore Chart (5 items)
-  tested     Add a chore
+Queued: 2 · held: 1 · device checks: 1 · tested: 1 (hidden; "status all" lists them).
   queued     Tick a chore done
   held       Reset on Sunday — your decision needed
   queued     Weekly scoreboard

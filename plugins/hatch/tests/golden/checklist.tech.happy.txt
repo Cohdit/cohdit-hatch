@@ -1,5 +1,7 @@
   1 Add a chore (ITEM-001)
     Type "Dishes", press Add: it appears in the list
+    Proof: +4 tests, 92% covered
   2 Tick a chore done (ITEM-002)
     Tick Dishes: it moves under Done
+    Proof: +2 tests, 78% covered
 Say "let me try it" to run it locally.

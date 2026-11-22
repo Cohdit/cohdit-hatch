@@ -7,7 +7,7 @@
  *             [--item ITEM-NNN] [--since ISO] [--until ISO] [--spool FILE] [--json]
  *
  *   views   spec     the idea read back from its draft (--partial: the one-line shape so far)
- *           status   where things stand: the idea's items, what's live, what it has used, what waits on you
+ *           status   where things stand: what is left first (--all lists the finished things too), what's live, what waits on you
  *           why      what the last (or named) run did, why it stopped, what it is waiting for
  *           digest   the end-of-run summary a skill prints
  *           checklist  what to try, numbered, in the person's own words (the live try's list, else what a try would cover)
@@ -61,6 +61,11 @@ const WORDS = {
     notOnline: 'Not saved online yet; say "set me up" to sign in to GitHub.',
     nextTry: (n) => 'Next: say "let me try it" and check ' + (n === 1 ? 'this one thing' : 'these ' + n + ' things') + ' yourself.',
     toTry: (n) => 'Waiting on you: ' + plural(n, 'thing') + ' to try. Say "let me try it".',
+    proof: (n, cov) => (n ? plural(n, 'new test') : 'no tests of its own') + (cov === null ? '' : ', ' + cov + '% of its code covered'),
+    counts: (k) => [k.left ? 'Left to build: ' + k.left + '.' : 'Nothing left to build.',
+      k.held ? 'Waiting on you: ' + k.held + '.' : '', k.setAside ? 'Set aside: ' + k.setAside + '.' : '',
+      k.device ? 'To check on your device: ' + k.device + '.' : '', k.toTry ? 'Built, to try: ' + k.toTry + '.' : '',
+      k.finished ? 'Finished and tested: ' + k.finished + (k.all ? '.' : ' (say "status all" to list them).') : ''].filter(Boolean).join(' '),
     deviceWord: 'to check',
     used: (tokens, est, n) => 'Claude has used about ' + tokens + ' tokens over ' + plural(n, 'session') + ' (' + est + ').',
     usedRun: (tokens, est) => 'This run used about ' + tokens + ' tokens (' + est + ').',
@@ -130,6 +135,10 @@ const WORDS = {
     notOnline: 'No GitHub remote yet; say "set me up" to sign in.',
     nextTry: (n) => 'Next: say "let me try it" to test ' + plural(n, 'item') + '.',
     toTry: (n) => 'Waiting on you: ' + plural(n, 'item') + ' to try. Say "let me try it".',
+    proof: (n, cov) => (n ? '+' + plural(n, 'test') : 'no new tests') + (cov === null ? '' : ', ' + cov + '% covered'),
+    counts: (k) => [k.left ? 'Queued: ' + k.left : 'Nothing queued', k.held ? 'held: ' + k.held : '', k.setAside ? 'blocked: ' + k.setAside : '',
+      k.device ? 'device checks: ' + k.device : '', k.toTry ? 'to try: ' + k.toTry : '',
+      k.finished ? 'tested: ' + k.finished + (k.all ? '' : ' (hidden; "status all" lists them)') : ''].filter(Boolean).join(' · ') + '.',
     deviceWord: 'on device',
     used: (tokens, est, n) => 'Tokens: ' + tokens + ' over ' + plural(n, 'run') + ' ' + est + '.',
     usedRun: (tokens, est) => 'This run: ' + tokens + ' tokens ' + est + '.',
@@ -218,6 +227,14 @@ class Ctx {
     // An item's status is what the ledger says happened to it (one rule, lib/ledger.js itemStatus);
     // spec.json holds none.
     this.derived = ml.itemStatus(this.recs, this.spec.items || [], this.now);
+  }
+
+  /** What proves a finished thing, from its DONE record: its own new tests and the coverage of what it touched.
+   *  '' for a thing built before Hatch recorded this. */
+  proof(id) {
+    const rec = [...this.recs].reverse().find((r) => r.c === 'DONE' && r.i === id);
+    if (!rec || rec.f.tests === undefined) return '';
+    return this.w.proof(rec.f.tests, rec.f.cov === undefined ? null : rec.f.cov);
   }
 
   statusOf(it) {
@@ -565,11 +582,22 @@ function viewStatus(c, a) {
     const rs = c.runs.get(live[live.length - 1]);
     out.push('Working now: ' + workingPhrase(c, rs) + ' (started ' + c.ago(rs[0].ts) + ')' + (tech ? ', run ' + live[live.length - 1] : '') + '.');
   }
+  const k = { left: 0, held: 0, setAside: 0, device: 0, toTry: 0, finished: 0, all: a.all };
   for (const i of items) {
     const st = c.statusOf(i);
+    if (st === 'queued' || st === 'building') k[i.device && st === 'queued' ? 'device' : 'left']++;
+    else if (st === 'held') k.held++;
+    else if (st === 'blocked' || st === 'refused') k.setAside++;
+    else if (st === 'done') k.toTry++;
+    else if (st === 'tried') k.finished++;
+  }
+  if (items.length) out.push(w.counts(k));
+  for (const i of items) {
+    const st = c.statusOf(i);
+    if (!a.all && st === 'tried') continue;                           // what is left is the point; a built thing still waits for your pass
     const word = i.device && st === 'queued' ? w.deviceWord : (w.status[st] || st || '?');
     const stuck = st === 'queued' ? (i.depends || []).map((d) => items.find((x) => x.id === d)).filter((d) => d && c.statusOf(d) === 'blocked') : [];
-    out.push('  ' + pad(word, 10) + ' ' + (tech ? i.id + ' ' : '') + i.title + (st === 'held' ? w.yourAnswer : '')
+    out.push('  ' + pad(word, 10) + ' ' + (tech ? i.id + ' ' : '') + i.title + (st === 'held' ? w.yourAnswer : '') + (st === 'done' && c.proof(i.id) ? ' (' + c.proof(i.id) + ')' : '')
       + (stuck.length ? ' — waits for "' + stuck.map((d) => d.title).join('", "') + '", which was set aside' : ''));
     if (st === 'blocked') {                                       // what the person can do about it, in the builder's own words
       const rec = [...c.recs].reverse().find((r) => r.c === 'BLOCKED' && r.i === i.id);
@@ -1121,6 +1149,8 @@ function viewChecklist(c, a) {
     out.push('  ' + n + ' ' + shortTitle(c.title(i)) + (tech ? ' (' + i + ')' : ''));
     const how = shortLine(note) || shortLine((it.criteria || [])[0]) || '?';
     out.push('    ' + (device ? device[0].toUpperCase() + device.slice(1) + how[0].toLowerCase() + how.slice(1) : how));
+    const proof = c.proof(i);
+    if (proof) out.push('    Proof: ' + proof);
     if (c.wroteWords(i)) wrote.push(n);
   }
   if (wrote.length) out.push(w.wroteWords(wrote));
@@ -1134,11 +1164,11 @@ const USAGE_TEXT = 'usage: render.js <view> [--level plain|product|tech] [--cohd
   + 'views: ' + Object.keys(VIEWS).join(' ') + '\n';
 
 function parseArgs(argv) {
-  const a = { view: null, level: null, cohdit: null, now: null, run: null, last: false, item: null, since: null, until: null, spool: null, json: false, partial: false };
+  const a = { view: null, level: null, cohdit: null, now: null, run: null, last: false, item: null, since: null, until: null, spool: null, json: false, partial: false, all: false };
   const valued = ['level', 'cohdit', 'now', 'run', 'item', 'since', 'until', 'spool'];
   for (let i = 0; i < argv.length; i++) {
     const x = argv[i];
-    if (x === '--last' || x === '--json' || x === '--partial') {
+    if (x === '--last' || x === '--json' || x === '--partial' || x === '--all') {
       a[x.slice(2)] = true;
     } else if (x.startsWith('--')) {
       const eq = x.indexOf('=');

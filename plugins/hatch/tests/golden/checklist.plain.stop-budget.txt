@@ -1,5 +1,6 @@
   1 Add a chore
     Type "Dishes", press Add: it appears in the list
+    Proof: 4 new tests, 92% of its code covered
   2 Tick a chore done
     Tick Dishes: it moves under Done
 Say "let me try it" to start it on this computer.

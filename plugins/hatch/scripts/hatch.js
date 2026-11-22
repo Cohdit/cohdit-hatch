@@ -21,7 +21,7 @@
  *                                       the person said yes: terms, hosting, scope, SPEC; ends the run
  *   hatch.js idea refuse <category> [--dir d]
  *   hatch.js idea terms                 the terms text, for "read me the terms"
- *   hatch.js build open [--dir d | --name n]
+ *   hatch.js build open [--dir d | --name n] [--items N|all] [--only bugs|things] [--for <minutes>] [--budget <dollars>]
  *                                       start (or resume) the unattended run: checks, skeleton, GitHub
  *   hatch.js build next                 pick the next thing; writes the maker's brief (item= brief= on stderr)
  *   hatch.js build verify               run the checks (the maker calls this)
@@ -43,8 +43,8 @@
  *   hatch.js report add --json <report|->
  *                                       a problem someone told you about: {did, expected, saw}; it joins the list as a bug
  *   hatch.js report pull                the live app's reports, onto the list
- *   hatch.js status [--dir d | --name n]
- *                                       where things stand: each thing's state from the ledger, what is waiting on you
+ *   hatch.js status [--dir d | --name n] [--all]
+ *                                       what is left to build and what is waiting on you, from the ledger; --all lists the finished too
  *   hatch.js try start [--dir d | --name n]
  *                                       start the app on this computer, open it, print the checklist
  *   hatch.js try result <which> pass|fail [--note <text|->]
@@ -599,7 +599,10 @@ function gate(dir, cur, spec, item, lvl, lead) {
   if (!landed) return blocked(dir, cur, item, lvl, 'other', 'the shared copy kept changing while this was finishing; it will be tried again', lead);
   const files = (bd.git(['diff', '--name-only', o.base + '..' + o.branch], dir, false) || '').split('\n').filter(Boolean);
   const touches = [...new Set(files.map((f) => (f.includes('/') ? f.split('/')[0] + '/' : f)))].sort();
-  const recs = (lead || []).concat([['GATE', { result: 'pass' }, item], ['DONE', { head: bd.headSha(dir, o.branch), touches: touches.join(',') || 'none' }, item]]);
+  const pf = bd.proof(dir, o.base, o.branch, files);           // what proves this thing: its own new tests, and the coverage of what it touched
+  const done = { head: bd.headSha(dir, o.branch), touches: touches.join(',') || 'none', tests: pf.tests };
+  if (pf.cov !== null) done.cov = pf.cov;
+  const recs = (lead || []).concat([['GATE', { result: 'pass' }, item], ['DONE', done, item]]);
   const written = bd.emit(dir, cur.run, recs);
   bd.releaseClaim(dir, o.branch);
   bd.git(['branch', '-q', '-D', o.branch], dir, false);
@@ -753,12 +756,23 @@ function stripOpt(argv, name) {
   return i < 0 ? argv : argv.slice(0, i).concat(argv.slice(i + 2));
 }
 
-/** How much this run takes on: `--items N|all` (a count, or the whole list) and `--only bugs|things`.
- *  Null when neither is given: the project's caps then bound the run as before. */
+/** How much this run takes on: `--items N|all` (a count, or the whole list), `--only bugs|things`, and
+ *  how long and how much it may spend: `--for <minutes>` (stop picking new things after that long; what is
+ *  in hand finishes) and `--budget <dollars>` (the same, by the run's own spend). With a limit and no count
+ *  the run is the whole list: the limit is what ends it. Null when none is given: the project's caps then
+ *  bound the run as before. */
 function runWant(argv) {
-  const raw = opt(argv, '--items'), only = opt(argv, '--only');
-  if (raw === undefined && only === undefined) return null;
-  const out = { items: bd.DEFAULT_ITEMS, only: null };
+  const raw = opt(argv, '--items'), only = opt(argv, '--only'), mins = opt(argv, '--for'), usd = opt(argv, '--budget');
+  if (raw === undefined && only === undefined && mins === undefined && usd === undefined) return null;
+  const out = { items: mins !== undefined || usd !== undefined ? null : bd.DEFAULT_ITEMS, only: null, minutes: null, usd: null };
+  if (mins !== undefined) {
+    if (!/^[1-9]\d{0,3}$/.test(String(mins)) || Number(mins) > 2880) throw new bd.Invalid('--for takes minutes, from 1 to 2880');
+    out.minutes = parseInt(mins, 10);
+  }
+  if (usd !== undefined) {
+    if (!/^[1-9]\d{0,3}$/.test(String(usd))) throw new bd.Invalid('--budget takes whole dollars, from 1');
+    out.usd = parseInt(usd, 10);
+  }
   if (raw !== undefined) {
     if (raw === 'all') out.items = null;
     else if (/^[1-9]\d{0,2}$/.test(String(raw))) out.items = parseInt(raw, 10);
@@ -776,7 +790,7 @@ function cmdBuild(argv) {
   const args = stripOpt(argv, '--session');
   const sub = args[0];
   const rest = args.slice(1);
-  const VALUED = ['--dir', '--name', '--return', '--agent', '-m', '--items', '--only'];
+  const VALUED = ['--dir', '--name', '--return', '--agent', '-m', '--items', '--only', '--for', '--budget'];
   try {
     let dir = buildDir(rest);
     let lvl = bd.level(dir);
@@ -849,6 +863,8 @@ function cmdBuild(argv) {
       if (want && !cur.lead) {                                   // the latest ask wins; a count counts from now
         const done = bd.laneGroup(dir, cur).reduce((n, g) => n + (g.cur.picked || []).length, 0);
         cur.want = { items: want.items === null ? null : done + want.items, only: want.only };
+        if (want.minutes) cur.want.until = ml.fmtTs(new Date(ml.parseTs(ml.utcNow()).getTime() + want.minutes * 60000));
+        if (want.usd) cur.want.usd = want.usd;
         bd.saveActive(dir, cur);
       }
       bd.setPointer(dir, cur.run, session);
@@ -908,6 +924,12 @@ function cmdBuild(argv) {
       const want = lead.cur.want || null;                        // what the person asked for: a count, or the whole list
       if (want) {
         if (want.items !== null && picks >= want.items) return ease('cap');
+        if (want.until && ml.utcNow() >= want.until) return ease('time');
+        if (want.usd) {
+          const c = new render.Ctx({ level: lvl, cohdit: sp.cohditDir(home), spool: bd.spoolFile(dir) });
+          const u = c.usage(c.runs.get(cur.run) || []);
+          if (u.usd !== null && u.usd >= want.usd) return ease('budget');
+        }
       } else {                                                   // asked for nothing: the project's caps, as before
         if (picks >= cfg.caps.items_per_run) return ease('cap');
         const c = new render.Ctx({ level: lvl, cohdit: sp.cohditDir(home), spool: bd.spoolFile(dir) });
@@ -1739,7 +1761,7 @@ function cmdStatus(rest) {
     const lvl = bd.level(dir);
     hint('level', lvl);
     hint('dir', dir);
-    render.main(['status', '--cohdit', sp.cohditDir(dir), '--level', lvl]);
+    render.main(['status', '--cohdit', sp.cohditDir(dir), '--level', lvl].concat(rest.includes('--all') ? ['--all'] : []));
     const spec = sp.load(dir), st = bd.itemStatus(dir, spec);
     const left = spec.items.filter((i) => !i.device && st.get(i.id) === 'queued').length;
     const toTry = spec.items.some((i) => st.get(i.id) === 'done');

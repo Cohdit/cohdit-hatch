@@ -1,5 +1,5 @@
 Idea: Chore Chart (4 items)
-  tested     ITEM-001 Add a chore
+Queued: 2 · held: 1 · tested: 1 (hidden; "status all" lists them).
   queued     ITEM-002 Tick a chore done
   held       ITEM-003 Reset on Sunday — your decision needed
   queued     ITEM-004 Weekly scoreboard

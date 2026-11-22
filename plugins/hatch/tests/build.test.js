@@ -450,8 +450,8 @@ test('two sessions on one computer share the work: a side copy, claims, and comb
   assert.equal(closeA.code, 0, closeA.err);
   assert.match(closeA.out, /^Built 1 of 1 thing\.$/m);
   const statusA = R(h, dir, 'status', 'plain');
-  assert.match(statusA, /^  done       Letter grid$/m);
-  assert.match(statusA, /^  done       Tap to hear$/m, 'A\'s ledger holds B\'s outcome too, through the shared copy');
+  assert.match(statusA, /^  done       Letter grid \(no tests of its own\)$/m);
+  assert.match(statusA, /^  done       Tap to hear \(no tests of its own\)$/m, 'A\'s ledger holds B\'s outcome too, through the shared copy');
   assert.match(statusA, /^  building   Animal picture$/m);
   fs.writeFileSync(path.join(dirB, 'app', 'animal.tsx'), 'animal\n');
   Bb(['commit', '-m', 'animal']);
@@ -823,7 +823,7 @@ test('an idea this computer never saw is found in the GitHub account by name and
   assert.equal(reg.projects[0].repo, 'priya-k/abc-friends');
   const n = run(h2, ['build', 'next', '--dir', dir2]);
   assert.equal(hintOf(n, 'item'), 'ITEM-002', 'the first thing is already done on the shared copy');
-  assert.match(R(h2, dir2, 'status', 'plain'), /^  done       Letter grid$/m);
+  assert.match(R(h2, dir2, 'status', 'plain'), /^  done       Letter grid \(no tests of its own\)$/m);
 });
 
 test('the permission hook approves exactly two shapes, and tells a build call which session made it', () => {
@@ -894,6 +894,36 @@ test('build 1 stops after one thing; a bad count is refused before anything star
   const n = B(h, dir, ['next']);
   assert.match(n.err, /^next=close$/m, 'the count reached ends picking');
   assert.equal(bdl.active(dir).stop, 'cap');
+});
+
+test('build for N minutes, or up to a spend: bad limits refused; a limit is the whole list; time up ends picking, and says so', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Limits', ITEMS.slice(0, 3));
+  oneLane(dir);
+  for (const bad of [['--for', 'soon'], ['--for', '0'], ['--for', '5000'], ['--budget', '0'], ['--budget', 'lots']]) {
+    assert.equal(B(h, dir, ['open'].concat(bad)).code, 64, bad.join(' '));
+  }
+  const o = B(h, dir, ['open', '--for', '90']);
+  assert.equal(o.code, 0, o.err);
+  const cur = bdl.active(dir);
+  assert.equal(cur.want.items, null, 'a time limit with no count is the whole list: the limit ends it');
+  assert.match(cur.want.until, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
+  const later = { dir: h.dir, env: Object.assign({}, h.env, { COHDIT_NOW: '2099-01-01T00:00:00Z' }) };
+  const stopped = B(later, dir, ['next']);
+  assert.equal(hintOf(stopped, 'next'), 'close', 'past the time, it takes nothing new');
+  assert.equal(bdl.active(dir).stop, 'time');
+  assert.match(stopped.out, /time you (gave|set)/);
+});
+
+test('build up to a spend: the budget ends picking even on build all', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Spend', ITEMS.slice(0, 3));
+  oneLane(dir);
+  assert.equal(B(h, dir, ['open', '--budget', '5', '--items', 'all']).code, 0);
+  const cur = bdl.active(dir);
+  assert.equal(cur.want.usd, 5);
+  assert.equal(cur.want.items, null);
+  assert.equal(hintOf(B(h, dir, ['next']), 'next'), 'maker', 'nothing spent yet');
 });
 
 test('build all sets no count; fix all picks only bugs', () => {

@@ -193,7 +193,7 @@ test('the one question, a no, the yes, one deploy, the link; a later share asks 
   assert.match(events, /DEPLOY vercel production state=building url=https:\/\/abc-friends-priya-k\.vercel\.app dep=dpl_8f3k2/);
   assert.match(events, /URL_SHARED vercel production https:\/\/abc-friends\.vercel\.app/);
   assert.doesNotMatch(go.out, /priya-k/, 'the deployment\'s own address is never handed back');
-  const status = R(h, dir, 'status', 'plain');
+  const status = R(h, dir, 'status', 'plain', '--all');
   assert.match(status, /^Live: https:\/\/abc-friends\.vercel\.app \(shared just now\)$/m);
   assert.match(status, /^  tested     Letter grid$/m);
   assert.match(status, /^  to check   On the iPad$/m);

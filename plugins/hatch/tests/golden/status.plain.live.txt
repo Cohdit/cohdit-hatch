@@ -1,5 +1,6 @@
 Idea: Chore Chart
 Working now: building "Weekly scoreboard" (started 10 minutes ago).
+Left to build: 1. Waiting on you: 1. Built, to try: 2.
   done       Add a chore
   done       Tick a chore done
   waiting    Reset on Sunday — your answer needed

@@ -11,7 +11,7 @@
 {"c":"REVIEW","f":{"must_fix":0,"nits":2},"i":"ITEM-001","id":"11e6c849c88ed541","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:10:00Z","v":1}
 {"c":"RETURN","f":{"agent":"checker","verdict":"pass"},"i":"ITEM-001","id":"eef4ef40423e128d","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:10:01Z","v":1}
 {"c":"GATE","f":{"result":"pass"},"i":"ITEM-001","id":"7b59ec39bb0f8703","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:11:00Z","v":1}
-{"c":"DONE","f":{"head":"a1b2c3d1","touches":["app/","tests/"]},"i":"ITEM-001","id":"fa9f5845bff92675","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:11:30Z","v":1}
+{"c":"DONE","f":{"cov":92,"head":"a1b2c3d1","tests":4,"touches":["app/","tests/"]},"i":"ITEM-001","id":"5fe1162c3af75c28","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:11:30Z","v":1}
 {"c":"PUSH","f":{"branch":"item/001-add-a-chore","result":"ok"},"id":"5b931bbc7971398c","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:11:40Z","v":1}
 {"c":"PICK","f":{"branch":"item/002-tick-done","fork":"3f2a9c1e"},"i":"ITEM-002","id":"a712f529bc5c5319","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:13:00Z","v":1}
 {"c":"DISPATCH","f":{"agent":"maker","model":"claude-sonnet-5-5"},"i":"ITEM-002","id":"af9688cd2e2bda68","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:13:10Z","v":1}
@@ -29,7 +29,7 @@
 {"c":"VERIFY","f":{"dur_s":51,"rc":0},"i":"ITEM-002","id":"0dc0f2b8c4185ce9","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:25:30Z","v":1}
 {"c":"RETURN","f":{"agent":"maker","verdict":"done"},"i":"ITEM-002","id":"a67701b25ecb59e9","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:26:00Z","v":1}
 {"c":"GATE","f":{"result":"pass"},"i":"ITEM-002","id":"ead3f13da190a32d","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:27:00Z","v":1}
-{"c":"DONE","f":{"head":"a1b2c3d2","touches":["app/","tests/"]},"i":"ITEM-002","id":"5ea290fede8db220","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:27:30Z","v":1}
+{"c":"DONE","f":{"cov":78,"head":"a1b2c3d2","tests":2,"touches":["app/","tests/"]},"i":"ITEM-002","id":"ba9b7944bc0dbce2","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:27:30Z","v":1}
 {"c":"PUSH","f":{"branch":"item/002-tick-done","result":"ok"},"id":"949f4f7136cbc234","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:27:40Z","v":1}
 {"c":"PICK","f":{"branch":"item/003-reset-sunday","fork":"3f2a9c1e"},"i":"ITEM-003","id":"31459485a81e84b2","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:29:00Z","v":1}
 {"c":"DISPATCH","f":{"agent":"maker","model":"claude-sonnet-5-5"},"i":"ITEM-003","id":"ba64f1bada1ec7a0","r":"20261031T090000Z-delons-laptop-0001","ts":"2026-10-31T09:29:10Z","v":1}

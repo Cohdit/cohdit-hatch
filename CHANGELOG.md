@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.31 — see what is left, with the proof; control how long a build runs (2026-11-22)
+
+- `status` leads with what is left to build and what is waiting on you: a count line, then the things still to do, the
+  ones held for you and the ones built and waiting for your pass. What is finished and tested is a count; say "status all"
+  to list it.
+- Each built thing waiting for your pass shows its proof, in `status` and on the try list: how many new tests its change
+  added, and how much of the code it touched those tests cover ("4 new tests, 92% of its code covered", or "no tests of its
+  own"). Things built before this show nothing.
+- Say how long or how much a build may take: "build for 2 hours", "build 5 for an hour", "build all, up to $10". Hatch stops
+  picking new things when the time or the spend is up, finishes what it has in hand, and says which limit it reached. Before,
+  "build all" had no limit of either kind.
+
 ## 0.0.30 — add as many changes as you like (2026-11-22)
 
 - "Add to my idea" no longer has a limit on how many things a project can hold. The limit of eight was meant for the first

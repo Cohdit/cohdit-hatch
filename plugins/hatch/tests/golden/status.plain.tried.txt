@@ -1,5 +1,5 @@
 Idea: Chore Chart
-  tested     Add a chore
+Left to build: 2. Waiting on you: 1. Finished and tested: 1 (say "status all" to list them).
   to do      Tick a chore done
   waiting    Reset on Sunday — your answer needed
   to do      Weekly scoreboard

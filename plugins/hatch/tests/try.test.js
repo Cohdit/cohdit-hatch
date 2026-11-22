@@ -120,10 +120,13 @@ test('a try from start to pass: the app, the list, a fail in their words, pass f
     'Open ' + url + ' to try it.',
     '  1 Letter grid',
     '    Open it; you see all 26 letters, big',
+    '    Proof: no tests of its own',
     '  2 Tap to hear',
     '    Tap a letter; you hear it',
+    '    Proof: no tests of its own',
     '  3 Animal picture',
     '    Read the animal names; change any.',
+    '    Proof: no tests of its own',
     '  4 On the iPad',
     '    ' + (lan ? 'On the same wifi, open ' + lan + ' on it (if this computer asks whether to allow connections, say yes); open it on the iPad' : 'Open it on the iPad'),
     'Say "pass", or say which one didn\'t work and what you saw.',
@@ -163,13 +166,15 @@ test('a try from start to pass: the app, the list, a fail in their words, pass f
   assert.equal(local(dir).try, undefined);
   assert.ok(!fs.existsSync(path.join(h.dir, '.cohdit', 'active.json')), 'pointer cleared');
   assert.equal(H.git(['status', '--porcelain'], dir), '', 'the ledger is committed');
-  const status = R(h, dir, 'status', 'plain');
+  const status = R(h, dir, 'status', 'plain', '--all');
   assert.match(status, /^  tested     Letter grid$/m);
+  assert.doesNotMatch(R(h, dir, 'status', 'plain'), /Letter grid/, 'what is finished and tested is a count, not a row');
   assert.match(status, /^  to do      Animal picture$/m, 'queued again');
   // `hatch.js status` is that same view, from the ledger: spec.json still says "queued" for the tested thing
-  const said = run(h, ['status', '--dir', dir]);
+  const said = run(h, ['status', '--dir', dir, '--all']);
   assert.equal(said.code, 0);
   assert.equal(said.out, status.trimEnd());
+  assert.doesNotMatch(run(h, ['status', '--dir', dir]).out, /Letter grid/, 'by default, what is tested is a count');
   assert.equal(hintOf(said, 'next'), 'build');
   const raw = JSON.parse(fs.readFileSync(path.join(dir, '.cohdit', 'spec.json'), 'utf8'));
   assert.equal(raw.items[0].status, undefined, 'the plan file holds no state');

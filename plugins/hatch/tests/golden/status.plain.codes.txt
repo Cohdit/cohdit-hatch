@@ -1,4 +1,5 @@
 Idea: Chore Chart
+Left to build: 1. Waiting on you: 1. Set aside: 1. Built, to try: 1.
   done       Add a chore
   to do      Tick a chore done
   waiting    Reset on Sunday — your answer needed

@@ -11,7 +11,7 @@
 {"c":"REVIEW","f":{"must_fix":0,"nits":2},"i":"ITEM-001","id":"030b0529cad938f9","r":"20261101T090000Z-delons-laptop-0002","ts":"2026-11-01T09:10:00Z","v":1}
 {"c":"RETURN","f":{"agent":"checker","verdict":"pass"},"i":"ITEM-001","id":"7f959da7ae9d6498","r":"20261101T090000Z-delons-laptop-0002","ts":"2026-11-01T09:10:01Z","v":1}
 {"c":"GATE","f":{"result":"pass"},"i":"ITEM-001","id":"d862d3ce8dff5385","r":"20261101T090000Z-delons-laptop-0002","ts":"2026-11-01T09:11:00Z","v":1}
-{"c":"DONE","f":{"head":"a1b2c3d1","touches":["app/","tests/"]},"i":"ITEM-001","id":"c89c8039d64388c2","r":"20261101T090000Z-delons-laptop-0002","ts":"2026-11-01T09:11:30Z","v":1}
+{"c":"DONE","f":{"cov":92,"head":"a1b2c3d1","tests":4,"touches":["app/","tests/"]},"i":"ITEM-001","id":"7b96a4879b1df210","r":"20261101T090000Z-delons-laptop-0002","ts":"2026-11-01T09:11:30Z","v":1}
 {"c":"PUSH","f":{"branch":"item/001-add-a-chore","result":"ok"},"id":"745aa6ba7cce2a5c","r":"20261101T090000Z-delons-laptop-0002","ts":"2026-11-01T09:11:40Z","v":1}
 {"c":"USAGE","f":{"agent":"orchestrator","attrib":"orchestrator","models":{"claude-sonnet-5-5":{"cold1":0,"cold5":0,"cr":300000,"ctx_max":90000,"cw1":0,"cw5":50000,"in":20000,"msgs":12,"out":4000,"said":900}}},"id":"ac2986c1ed0f6240","r":"20261101T090000Z-delons-laptop-0002","ts":"2026-11-01T09:14:00Z","v":1}
 {"c":"RUN_END","f":{"outcome":"ok"},"id":"9bf6015d973f34c5","r":"20261101T090000Z-delons-laptop-0002","ts":"2026-11-01T09:15:00Z","v":1}

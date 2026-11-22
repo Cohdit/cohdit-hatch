@@ -182,7 +182,7 @@ test('bad arguments → 64, no --cohdit outside a repo → 2', () => {
   assert.equal(H.run('render.js', ['why'], { cwd: H.tmpdir() }).code, 2);
 });
 
-test('the try standard: at every level, a short title and one short line; drafted wording named once at the end', () => {
+test('the try standard: at every level, a short title, one short line and one fixed proof line; drafted wording named once at the end', () => {
   const { shortLine } = require('../scripts/render');
   assert.equal(shortLine("open any run and click 'How this was decided'. A judged check shows its score."), "Open any run and click 'How this was decided'.");
   assert.equal(shortLine('I wrote the wording for the panel myself. Please read it. Open the front page.'), 'Open the front page.');
@@ -201,8 +201,8 @@ test('the try standard: at every level, a short title and one short line; drafte
   fs.writeFileSync(path.join(dir, 'notes', ids[1] + '.words'), '');
   const run = (lvl) => H.run('render.js', ['checklist', '--level', lvl, '--cohdit', dir, '--now', H.NOW], { env: { COHDIT_HOME: HOME } }).out;
   const plain = run('plain').split('\n');
-  assert.deepEqual(plain.slice(0, 4), ['  1 Add a chore', '    Type Dishes and press Add.', '  2 Tick a chore done', '    Tick Dishes: it moves under Done']);
-  assert.equal(plain[4], "I wrote some of the words in 1 and 2 myself. Change anything that doesn't sound right.");
+  assert.deepEqual(plain.slice(0, 6), ['  1 Add a chore', '    Type Dishes and press Add.', '    Proof: 4 new tests, 92% of its code covered', '  2 Tick a chore done', '    Tick Dishes: it moves under Done', '    Proof: 2 new tests, 78% of its code covered']);
+  assert.equal(plain[6], "I wrote some of the words in 1 and 2 myself. Change anything that doesn't sound right.");
   const tech = run('tech').split('\n');
   assert.deepEqual(tech.slice(0, 2), ['  1 Add a chore (' + ids[0] + ')', '    Type Dishes and press Add.'], 'a developer gets the short list too, with ids');
 });

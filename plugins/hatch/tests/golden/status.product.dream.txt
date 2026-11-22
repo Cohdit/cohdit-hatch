@@ -1,5 +1,6 @@
 Idea: ABC Friends (4 items)
 Working now: read-back: 4 items, 7 assumptions inferred, 0 open questions (started just now).
+Queued: 3 · device checks: 1.
   queued     Letter grid
   queued     Tap to hear
   queued     Animal picture

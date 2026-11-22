@@ -1,6 +1,7 @@
 Idea: Chore Chart (4 items)
-  done       ITEM-001 Add a chore
-  done       ITEM-002 Tick a chore done
+Queued: 1 · blocked: 1 · to try: 2.
+  done       ITEM-001 Add a chore (+4 tests, 92% covered)
+  done       ITEM-002 Tick a chore done (+2 tests, 78% covered)
   blocked    ITEM-003 Reset on Sunday
   queued     ITEM-004 Weekly scoreboard
 Not published yet — say "share it" to deploy.

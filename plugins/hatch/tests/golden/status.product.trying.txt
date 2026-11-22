@@ -1,7 +1,7 @@
 Idea: Chore Chart (5 items)
 Working now: waiting for your test results (started 5 minutes ago).
-  tested     Add a chore
-  done       Tick a chore done
+Queued: 1 · held: 1 · device checks: 1 · to try: 1 · tested: 1 (hidden; "status all" lists them).
+  done       Tick a chore done (+2 tests, 78% covered)
   held       Reset on Sunday — your decision needed
   queued     Weekly scoreboard
   on device  On the iPad

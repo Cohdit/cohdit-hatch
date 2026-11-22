@@ -1,5 +1,6 @@
 Idea: Chore Chart (4 items)
-  done       Add a chore
+Queued: 1 · held: 1 · to try: 2.
+  done       Add a chore (+4 tests, 92% covered)
   done       Tick a chore done
   held       Reset on Sunday — your decision needed
   queued     Weekly scoreboard

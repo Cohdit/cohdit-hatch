@@ -1,5 +1,6 @@
 Idea: Chore Chart (4 items)
 Working now: builder started on "Weekly scoreboard" (started 10 minutes ago), run 20261101T095000Z-delons-laptop-0002.
+Queued: 1 · held: 1 · to try: 2.
   done       ITEM-001 Add a chore
   done       ITEM-002 Tick a chore done
   held       ITEM-003 Reset on Sunday — your decision needed

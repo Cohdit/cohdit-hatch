@@ -1,4 +1,5 @@
 Idea: Chore Chart (4 items)
+Queued: 1 · held: 1 · to try: 2.
   done       Add a chore
   done       Tick a chore done
   held       Reset on Sunday — your decision needed

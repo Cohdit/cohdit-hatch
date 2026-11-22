@@ -1083,8 +1083,35 @@ function coverage(dir) {
   return pcts.length ? Math.floor(Math.min(...pcts)) : null;
 }
 
+const TEST_FILE = /(^|\/)(__tests__|tests?)\/|\.(test|spec)\.[cm]?[jt]sx?$/;
+const TEST_CASE = /^\+\s*(it|test)(\.(only|concurrent|each))?\s*[(`]/;
+
+/** What proves one finished thing, from its own change and the coverage the last test run wrote:
+ *  `tests` is the test cases the change added (a test file's new `it(`/`test(` lines); `cov` is the lines
+ *  covered across the source files the change touched, as a whole percent. Either is null when it cannot be
+ *  told (no coverage summary, or the change touched no source file the summary lists). */
+function proof(dir, base, branch, files) {
+  const tests = (files || []).filter((f) => TEST_FILE.test(f));
+  let n = 0;
+  for (const f of tests) {
+    const d = git(['diff', '-U0', base + '..' + branch, '--', f], dir, false) || '';
+    n += d.split('\n').filter((l) => TEST_CASE.test(l)).length;
+  }
+  let cov = null;
+  const sum = ml.readJson(path.join(dir, 'coverage', 'coverage-summary.json'), null);
+  if (sum) {
+    let total = 0, covered = 0;
+    for (const f of (files || []).filter((x) => !TEST_FILE.test(x))) {
+      const e = sum[path.resolve(dir, f)];
+      if (e && e.lines && typeof e.lines.total === 'number') { total += e.lines.total; covered += e.lines.covered; }
+    }
+    if (total > 0) cov = Math.floor((covered / total) * 100);
+  }
+  return { tests: n, cov };
+}
+
 module.exports = {
-  noteSetAside, learned,
+  proof, noteSetAside, learned,
   Invalid, DEFAULT_ITEMS, DEFAULT_CAPS, wanted, DEFAULT_VERIFY, LONG_MS, NET_MS, LIVE_MIN, STALE_CLAIM_H, TOPIC, AGENTS, TERMINAL,
   cohditDir, notesDir, readCfg, saveCfg, level, blob, emit, spoolFile, flush,
   git, gitNet, hasRemote, headSha, fullSha, currentBranch, isPrimary, mainBranch, resetTree, dirtyPaths, fetch, remoteMain, toMain, rebaseOnto, fastForward, baseSha, startBase, keepWork, pushMain, commitLedger, landMain, land, agentModel,
