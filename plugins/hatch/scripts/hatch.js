@@ -869,6 +869,7 @@ function cmdBuild(argv) {
       }
       bd.setPointer(dir, cur.run, session);
       if (bd.scaffold(dir, spec, cfg)) hint('hint', 'scaffolded');
+      else if (!Object.keys(cur.open || {}).length) bd.ensureLineCoverage(dir);
       if (bd.isPrimary(dir)) bd.sweepSideCopies(dir, spec);
       if (!cur.remote) {                                         // tried again on every open until the shared copy exists
         const result = bd.ensureRepo(dir, spec, cfg, doc.runner());

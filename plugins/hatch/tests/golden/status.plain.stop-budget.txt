@@ -1,6 +1,6 @@
 Idea: Chore Chart
 Left to build: 1. Waiting on you: 1. Built, to try: 2.
-  done       Add a chore (4 new tests, 92% of its code covered)
+  done       Add a chore (4 new tests; all tests together run 92% of its lines)
   done       Tick a chore done
   waiting    Reset on Sunday — your answer needed
   to do      Weekly scoreboard

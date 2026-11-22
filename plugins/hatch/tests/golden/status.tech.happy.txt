@@ -1,7 +1,7 @@
 Idea: Chore Chart (4 items)
 Queued: 1 · held: 1 · to try: 2.
-  done       ITEM-001 Add a chore (+4 tests, 92% covered)
-  done       ITEM-002 Tick a chore done (+2 tests, 78% covered)
+  done       ITEM-001 Add a chore (+4 tests; 92% of its lines run by all tests)
+  done       ITEM-002 Tick a chore done (+2 tests; 78% of its lines run by all tests)
   held       ITEM-003 Reset on Sunday — your decision needed
   queued     ITEM-004 Weekly scoreboard
 Live: https://chore-chart.vercel.app (shared 7 minutes ago)

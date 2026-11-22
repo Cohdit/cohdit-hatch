@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.32 — the coverage is of the lines a thing wrote, counting every test (2026-11-22)
+
+- The number beside a built thing is now the share of the lines that thing wrote which the whole test suite runs, old tests
+  and new together ("2 new tests; all tests together run 100% of its lines"). Before, it was the coverage of whole files,
+  which a few old, untested lines in the same file could drag down.
+- It needs a line report from the test run. New projects get it, and the next build in an older project adds it once and
+  commits it ("Hatch: record which lines the tests run"). Things built before then show the new-test count only.
+
 ## 0.0.31 — see what is left, with the proof; control how long a build runs (2026-11-22)
 
 - `status` leads with what is left to build and what is waiting on you: a count line, then the things still to do, the

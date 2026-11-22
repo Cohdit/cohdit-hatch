@@ -1086,10 +1086,11 @@ function coverage(dir) {
 const TEST_FILE = /(^|\/)(__tests__|tests?)\/|\.(test|spec)\.[cm]?[jt]sx?$/;
 const TEST_CASE = /^\+\s*(it|test)(\.(only|concurrent|each))?\s*[(`]/;
 
-/** What proves one finished thing, from its own change and the coverage the last test run wrote:
- *  `tests` is the test cases the change added (a test file's new `it(`/`test(` lines); `cov` is the lines
- *  covered across the source files the change touched, as a whole percent. Either is null when it cannot be
- *  told (no coverage summary, or the change touched no source file the summary lists). */
+/** What proves one finished thing, from its own change and the coverage the last full test run wrote (every
+ *  test, old and new, counts toward it): `tests` is the test cases the change added (a test file's new
+ *  `it(`/`test(` lines); `cov` is the share of the lines the change wrote that the tests ran, as a whole
+ *  percent: each added line of a source file that holds a statement, hit or not, from coverage-final.json.
+ *  `cov` is null when it cannot be told (no line report, or the change wrote no statement a report lists). */
 function proof(dir, base, branch, files) {
   const tests = (files || []).filter((f) => TEST_FILE.test(f));
   let n = 0;
@@ -1098,20 +1099,46 @@ function proof(dir, base, branch, files) {
     n += d.split('\n').filter((l) => TEST_CASE.test(l)).length;
   }
   let cov = null;
-  const sum = ml.readJson(path.join(dir, 'coverage', 'coverage-summary.json'), null);
-  if (sum) {
-    let total = 0, covered = 0;
+  const rep = ml.readJson(path.join(dir, 'coverage', 'coverage-final.json'), null);
+  if (rep) {
+    let total = 0, hit = 0;
     for (const f of (files || []).filter((x) => !TEST_FILE.test(x))) {
-      const e = sum[path.resolve(dir, f)];
-      if (e && e.lines && typeof e.lines.total === 'number') { total += e.lines.total; covered += e.lines.covered; }
+      const e = rep[path.resolve(dir, f)];
+      if (!e || !e.statementMap || !e.s) continue;
+      const best = new Map();                                    // line → the most any statement starting there was run
+      for (const id of Object.keys(e.statementMap)) {
+        const ln = e.statementMap[id].start.line;
+        best.set(ln, Math.max(best.get(ln) || 0, e.s[id] || 0));
+      }
+      const d = git(['diff', '-U0', base + '..' + branch, '--', f], dir, false) || '';
+      for (const m of d.matchAll(/^@@ -\S+ \+(\d+)(?:,(\d+))? @@/gm)) {
+        const from = Number(m[1]), len = m[2] === undefined ? 1 : Number(m[2]);
+        for (let ln = from; ln < from + len; ln++) if (best.has(ln)) { total++; if (best.get(ln) > 0) hit++; }
+      }
     }
-    if (total > 0) cov = Math.floor((covered / total) * 100);
+    if (total > 0) cov = Math.floor((hit / total) * 100);
   }
   return { tests: n, cov };
 }
 
+/** A project made before Hatch read which lines the tests run: its coverage report lists only per-file totals.
+ *  Add the line report to the scaffold's own reporter list, once, and commit it (on main, with nothing else
+ *  waiting). Returns true when it changed the file. */
+function ensureLineCoverage(dir) {
+  const f = path.join(dir, 'vitest.config.ts');
+  if (!fs.existsSync(f)) return false;
+  const text = fs.readFileSync(f, 'utf8');
+  const old = 'reporter: ["text-summary", "json-summary"]';
+  if (!text.includes(old) || currentBranch(dir) !== mainBranch(dir)) return false;
+  if ((git(['status', '--porcelain', '--untracked-files=no'], dir, false) || '').trim()) return false;
+  fs.writeFileSync(f, text.replace(old, 'reporter: ["text-summary", "json-summary", "json"]'));
+  git(['add', 'vitest.config.ts'], dir);
+  git(['commit', '-q', '-m', 'Hatch: record which lines the tests run'], dir);
+  return true;
+}
+
 module.exports = {
-  proof, noteSetAside, learned,
+  ensureLineCoverage, proof, noteSetAside, learned,
   Invalid, DEFAULT_ITEMS, DEFAULT_CAPS, wanted, DEFAULT_VERIFY, LONG_MS, NET_MS, LIVE_MIN, STALE_CLAIM_H, TOPIC, AGENTS, TERMINAL,
   cohditDir, notesDir, readCfg, saveCfg, level, blob, emit, spoolFile, flush,
   git, gitNet, hasRemote, headSha, fullSha, currentBranch, isPrimary, mainBranch, resetTree, dirtyPaths, fetch, remoteMain, toMain, rebaseOnto, fastForward, baseSha, startBase, keepWork, pushMain, commitLedger, landMain, land, agentModel,

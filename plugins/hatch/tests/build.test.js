@@ -450,8 +450,8 @@ test('two sessions on one computer share the work: a side copy, claims, and comb
   assert.equal(closeA.code, 0, closeA.err);
   assert.match(closeA.out, /^Built 1 of 1 thing\.$/m);
   const statusA = R(h, dir, 'status', 'plain');
-  assert.match(statusA, /^  done       Letter grid \(no tests of its own\)$/m);
-  assert.match(statusA, /^  done       Tap to hear \(no tests of its own\)$/m, 'A\'s ledger holds B\'s outcome too, through the shared copy');
+  assert.match(statusA, /^  done       Letter grid \(no new tests\)$/m);
+  assert.match(statusA, /^  done       Tap to hear \(no new tests\)$/m, 'A\'s ledger holds B\'s outcome too, through the shared copy');
   assert.match(statusA, /^  building   Animal picture$/m);
   fs.writeFileSync(path.join(dirB, 'app', 'animal.tsx'), 'animal\n');
   Bb(['commit', '-m', 'animal']);
@@ -823,7 +823,7 @@ test('an idea this computer never saw is found in the GitHub account by name and
   assert.equal(reg.projects[0].repo, 'priya-k/abc-friends');
   const n = run(h2, ['build', 'next', '--dir', dir2]);
   assert.equal(hintOf(n, 'item'), 'ITEM-002', 'the first thing is already done on the shared copy');
-  assert.match(R(h2, dir2, 'status', 'plain'), /^  done       Letter grid \(no tests of its own\)$/m);
+  assert.match(R(h2, dir2, 'status', 'plain'), /^  done       Letter grid \(no new tests\)$/m);
 });
 
 test('the permission hook approves exactly two shapes, and tells a build call which session made it', () => {

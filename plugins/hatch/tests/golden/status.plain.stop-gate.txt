@@ -1,7 +1,7 @@
 Idea: Chore Chart
 Left to build: 1. Set aside: 1. Built, to try: 2.
-  done       Add a chore (4 new tests, 92% of its code covered)
-  done       Tick a chore done (2 new tests, 78% of its code covered)
+  done       Add a chore (4 new tests; all tests together run 92% of its lines)
+  done       Tick a chore done (2 new tests; all tests together run 78% of its lines)
   set aside  Reset on Sunday
   to do      Weekly scoreboard
 Not shared yet — say "share it" when you want friends to see it.

@@ -1,7 +1,7 @@
 Idea: Chore Chart
 Working now: waiting for you to try it (started 5 minutes ago).
 Left to build: 1. Waiting on you: 1. To check on your device: 1. Built, to try: 1. Finished and tested: 1 (say "status all" to list them).
-  done       Tick a chore done (2 new tests, 78% of its code covered)
+  done       Tick a chore done (2 new tests; all tests together run 78% of its lines)
   waiting    Reset on Sunday — your answer needed
   to do      Weekly scoreboard
   to check   On the iPad
