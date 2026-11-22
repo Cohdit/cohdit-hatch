@@ -160,9 +160,11 @@ test('change: an agreed idea takes small changes (add, edit queued, decisions, o
   const runs = path.join(dir, '.cohdit', 'ledger', 'runs');
   fs.writeFileSync(path.join(runs, '20261101T090000Z-test-0099.jsonl'), JSON.stringify({ v: 1, c: 'DONE', r: '20261101T090000Z-test-0099', ts: '2026-11-01T09:10:00Z', i: 'ITEM-002', f: { head: 'a1b2c3d', touches: 'app/' } }) + '\n');
   assert.equal(idea(h, ['change', '--dir', dir, '--json', '{"edit":[{"id":"ITEM-002","title":"y"}]}']).code, 64);
-  // the cap is eight
-  const many = Array.from({ length: 5 }, (_, i) => ({ title: 'T' + i, criteria: ['c'] }));
-  assert.match(idea(h, ['change', '--dir', dir, '--json', JSON.stringify({ add: many })]).err, /^hint=two_ideas$/m);
+  // no cap on a changed idea: the eight is the first interview's
+  const many = Array.from({ length: 12 }, (_, i) => ({ title: 'T' + i, criteria: ['c'] }));
+  const piled = idea(h, ['change', '--dir', dir, '--json', JSON.stringify({ add: many })]);
+  assert.equal(piled.code, 0, piled.err);
+  assert.equal(read().items.length, 4 + 12);
   // reopen: back to the interview, set works again, agree closes it
   assert.equal(idea(h, ['reopen', '--dir', dir]).code, 0);
   assert.equal(read().agreed, false);

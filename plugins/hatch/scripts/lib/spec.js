@@ -241,7 +241,7 @@ function applyChange(spec, patch, interview, status = new Map()) {
     throw new Invalid('reagree: hosting and terms are settled when you agree; reopen the idea to change them');
   }
   const rb = (interview && interview.readback) || {};
-  const maxItems = rb.max_items || 8, maxCrit = rb.max_criteria_per_item || 3;
+  const maxCrit = rb.max_criteria_per_item || 3;   // no cap on how many things: the cap of eight is the first interview's (applyPatch)
   const trial = JSON.parse(JSON.stringify(spec));
   const res = { added: [], edited: [] };
   const deps = [];
@@ -264,8 +264,6 @@ function applyChange(spec, patch, interview, status = new Map()) {
   }
   if (patch.add !== undefined) {
     if (!Array.isArray(patch.add)) throw new Invalid('add must be a list');
-    const own = trial.items.filter((x) => x.kind !== 'bug').length;
-    if (own + patch.add.length > maxItems) throw new Invalid('two_ideas: ' + (own + patch.add.length) + ' things is more than ' + maxItems + '; that is two ideas');
     patch.add.forEach((it, i) => {
       const made = makeItem(it, i, nextId(trial), maxCrit);
       if (!made.criteria.length) throw new Invalid('add[' + i + '] needs one check: where you go, what you do, what you see');

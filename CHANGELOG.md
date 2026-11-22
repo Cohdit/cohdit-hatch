@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.30 — add as many changes as you like (2026-11-22)
+
+- "Add to my idea" no longer has a limit on how many things a project can hold. The limit of eight was meant for the first
+  interview, but it counted every thing ever added, built or not, so a project with a few things built answered every
+  small addition with "That's two ideas. Which first?". It now applies to the first interview only.
+- Adding to an idea is quick capture. A small change (a button, a field, a line of text) goes on the list at once with no
+  questions; a bigger one gets one or two questions; where a request could mean two things, Hatch takes the smaller and says so.
+
 ## 0.0.29 — a thing's state lives in one place (2026-11-22)
 
 - The list no longer stores a state. Every thing used to be saved as "queued" and never changed, so anything that read the
