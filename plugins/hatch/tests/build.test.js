@@ -153,8 +153,9 @@ test('the gate: commit refuses failing checks; a logic change goes to the checke
   assert.equal(c.code, 0, c.err);
   assert.match(c.out, /^The checks passed\.$/m);
   assert.ok(bareLs(bare, 'item/002-tap-to-hear').includes('app/sound.tsx'), 'the claim branch on the shared copy carries the work');
-  const built = B(h, dir, ['built', 'ITEM-002', '--return', DONE('logic', { findings: [{ scope: 'out', sev: 'low', text: 'Safari needs a tap before sound plays' }], decisions: [{ type: 'design', choice: 'speech_synthesis' }] })]);
+  const built = B(h, dir, ['built', 'ITEM-002', '--return', DONE('logic', { findings: [{ scope: 'out', sev: 'low', text: 'Safari needs a tap before sound plays' }], decisions: [{ type: 'design', choice: 'speech_synthesis' }], cases: { tested: ['normal', 'empty', 'failure', 'wrong'], na: ['speed'] } })]);
   assert.equal(built.code, 0, built.err);
+  assert.match(built.err, /cases\.tested "wrong"/, 'a kind that is not one of the six is left out and said');
   assert.equal(built.out, 'Checking "Tap to hear".', 'one line for the whole review, however many lenses');
   assert.equal(hintOf(built, 'next'), 'review');
   assert.equal(hintOf(built, 'agents'), 'checker,lens-security,lens-privacy', 'a logic change under a personal rule: the bugs, security and privacy lenses');
@@ -165,7 +166,7 @@ test('the gate: commit refuses failing checks; a logic change goes to the checke
     const body = H.playbook('agent', a);
     if (body) assert.ok(role.startsWith(body.trim()), a + ' carries its instructions from the content, not the plugin stub');
   }
-  const first = B(h, dir, ['checked', 'ITEM-002', '--return', '```json\n{"verdict":"pass","must_fix":[],"nits":2}\n```']);
+  const first = B(h, dir, ['checked', 'ITEM-002', '--return', '```json\n{"verdict":"pass","must_fix":[],"nits":2,"cases_unproved":["failure"]}\n```']);
   assert.equal(first.code, 0, first.err);
   assert.equal(first.out, '', 'nothing is said until every lens has reported');
   assert.equal(hintOf(first, 'agents'), 'lens-security,lens-privacy');
@@ -174,6 +175,8 @@ test('the gate: commit refuses failing checks; a logic change goes to the checke
   const chk = review(h, dir, 'ITEM-002', 'lens-security,lens-privacy');
   assert.equal(chk.code, 0, chk.err);
   assert.equal(chk.out, 'Done: "Tap to hear".');
+  const proved = R(h, dir, 'status', 'plain');
+  assert.match(proved, /Tap to hear \(no new tests; cases tested 2 of 5, missing: smallest and largest, wrong input, something failing\)/, 'speed does not apply; the checker took "failure" off; the reviewer checked it');
   assert.equal(H.git(['rev-parse', '--abbrev-ref', 'HEAD'], dir), 'main');
   assert.ok(bareLs(bare).includes('app/sound.tsx'), 'merged and pushed to the shared main');
   assert.ok(!spawnSync('git', ['show-ref', 'refs/heads/item/002-tap-to-hear'], { cwd: bare }).stdout.toString().trim(), 'the claim is released');

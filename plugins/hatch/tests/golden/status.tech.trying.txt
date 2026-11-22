@@ -1,7 +1,7 @@
 Idea: Chore Chart (5 items)
 Working now: waiting for your test results (started 5 minutes ago), run 20261101T095500Z-delons-laptop-0003.
 Queued: 1 · held: 1 · device checks: 1 · to try: 1 · tested: 1 (hidden; "status all" lists them).
-  done       ITEM-002 Tick a chore done (+2 tests; 78% of its lines run by all tests)
+  done       ITEM-002 Tick a chore done (+2 tests; 78% of its lines run by all tests; cases 2/5, missing: limits, invalid, failure (unreviewed))
   held       ITEM-003 Reset on Sunday — your decision needed
   queued     ITEM-004 Weekly scoreboard
   on device  ITEM-005 On the iPad

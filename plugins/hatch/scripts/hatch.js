@@ -602,6 +602,11 @@ function gate(dir, cur, spec, item, lvl, lead) {
   const pf = bd.proof(dir, o.base, o.branch, files);           // what proves this thing: its own new tests, and the coverage of what it touched
   const done = { head: bd.headSha(dir, o.branch), touches: touches.join(',') || 'none', tests: pf.tests };
   if (pf.cov !== null) done.cov = pf.cov;
+  if (o.cases) {                                                 // which kinds of case its tests cover; rev 1 = the reviewer checked it
+    if (o.cases.tested.length) done.cases = o.cases.tested.join(',');
+    if (o.cases.na.length) done.na = o.cases.na.join(',');
+    done.rev = o.cases.reviewed ? 1 : 0;
+  }
   const recs = (lead || []).concat([['GATE', { result: 'pass' }, item], ['DONE', done, item]]);
   const written = bd.emit(dir, cur.run, recs);
   bd.releaseClaim(dir, o.branch);
@@ -1056,6 +1061,7 @@ function cmdBuild(argv) {
           awaitAdvisor(dir, item);
           return 0;
         }
+        o.cases = r.cases ? { tested: r.cases.tested, na: r.cases.na, reviewed: false } : null;   // read at DONE; the checker may take kinds off
         const unmet = (r.criteria || []).filter((c) => !c.met).map((c) => c.n);
         if (unmet.length) return blocked(dir, cur, item, lvl, 'other', 'the maker reported done but check ' + unmet.join(', ') + ' is not met', lead);
         const n = Number(bd.git(['rev-list', '--count', (o.start || o.base) + '..' + o.branch], dir, false) || 0);
@@ -1085,11 +1091,15 @@ function cmdBuild(argv) {
         dispatchMaker(dir, cur, spec, cfg, item, lvl, o.notes);
         return 0;
       }
-      o.review.got[agent] = { verdict: r.verdict, must_fix: r.must_fix, nits: r.nits };
+      o.review.got[agent] = { verdict: r.verdict, must_fix: r.must_fix, nits: r.nits, unproved: r.unproved || [] };
       bd.saveActive(dir, cur);
       bd.emit(dir, cur.run, [['REVIEW', { must_fix: r.must_fix.length, nits: r.nits, agent }, item], ['RETURN', { agent, verdict: r.verdict }, item]]);
       if (o.review.expected.some((a) => !o.review.got[a])) { awaitReview(dir, item, o); return 0; }
       const got = o.review.got;
+      if (o.cases && got.checker) {                              // the reviewer's word over the builder's own tags
+        o.cases.tested = o.cases.tested.filter((k) => !got.checker.unproved.includes(k));
+        o.cases.reviewed = true;
+      }
       const notes = o.review.expected.flatMap((a) => got[a].must_fix.map((m) => (a === 'checker' ? '' : '[' + a.replace('lens-', '') + '] ') + (m.ref ? m.ref + ': ' : '') + m.text));
       delete o.review;
       if (!notes.length) return gate(dir, cur, spec, item, lvl, []);

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.33 — which kinds of case a thing's tests cover (2026-11-22)
+
+- Each built thing now says how many kinds of case its tests cover, out of the ones that apply to it: normal use, nothing
+  there, smallest and largest, wrong input, something failing, and speed. "Cases tested 2 of 5, missing: wrong input,
+  something failing." A kind that cannot apply (no list, so no speed) is left out of the count, so a small change is not
+  marked down.
+- The builder tags what its tests cover and the reviewer takes off any it cannot find a test for. Where no review ran, the
+  line says "builder's own count". It is a judgement, so it is shown and never blocks a thing.
+
 ## 0.0.32 — the coverage is of the lines a thing wrote, counting every test (2026-11-22)
 
 - The number beside a built thing is now the share of the lines that thing wrote which the whole test suite runs, old tests

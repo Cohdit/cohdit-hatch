@@ -848,8 +848,8 @@ function brief(dir, spec, item, cfg, notes, status, advice) {
     '```json', '{"verdict":"done|blocked|refused|consult","change":"copy|style|docs|test-only|logic|config|mixed",',
     ' "criteria":[{"n":1,"met":true,"ref":"app/page.tsx:41","test":"app/page.test.tsx:9"}],', ' "blocked":null,', ' "refused":null,', ' "consult":null,',
     ' "decisions":[{"type":"design","choice":"fox_for_x"}],', ' "try_note":null,', ' "measured":[{"what":"the list the screen loads","rows":200,"kb":42}],',
-    ' "findings":[{"scope":"in|out","sev":"low|medium|high|critical","text":"…"}]}', '```',
-    'Limits the script enforces: `decisions[].choice` is a short slug of letters, digits and `. _ / : @ -`, at most 96 characters, no spaces or punctuation (the detail goes in `findings` or `try_note`). `criteria[].test` is exactly one test file path, optionally `:line`; other files go in `ref`. `measured` is for a thing with a list screen: what its test measured (the size in KB of what the list sends, at that many rows); leave it empty otherwise.');
+    ' "cases":{"tested":["normal","empty"],"na":["speed"]},', ' "findings":[{"scope":"in|out","sev":"low|medium|high|critical","text":"…"}]}', '```',
+    'Limits the script enforces: `decisions[].choice` is a short slug of letters, digits and `. _ / : @ -`, at most 96 characters, no spaces or punctuation (the detail goes in `findings` or `try_note`). `criteria[].test` is exactly one test file path, optionally `:line`; other files go in `ref`. `measured` is for a thing with a list screen: what its test measured (the size in KB of what the list sends, at that many rows); leave it empty otherwise. `cases` is which kinds of case your tests cover (' + CASE_KINDS.join(', ') + '): `tested` only the ones a test you wrote or one already there really runs, `na` the ones that cannot apply to this thing (no list: no `speed`). Be exact: the reviewer checks it.');
   return out.join('\n') + '\n';
 }
 
@@ -1016,6 +1016,13 @@ function makerReturn(text) {
     return false;
   });
   if (r.words !== undefined && r.words !== null && typeof r.words !== 'boolean') { r.dropped.push('words (true or false)'); delete r.words; }
+  if (r.cases && typeof r.cases === 'object' && !Array.isArray(r.cases)) {
+    const na = caseKinds(r.cases.na, 'cases.na', r.dropped);
+    r.cases = { tested: caseKinds(r.cases.tested, 'cases.tested', r.dropped).filter((k) => !na.includes(k)), na };
+  } else {
+    if (r.cases !== undefined && r.cases !== null) r.dropped.push('cases (an object with tested and na)');
+    r.cases = null;
+  }
   return r;
 }
 
@@ -1029,6 +1036,7 @@ function checkerReturn(text) {
     if (m.ref !== undefined && m.ref !== null && typeof m.ref !== 'string') throw new Invalid('must_fix ref is text');
   }
   if (!Number.isInteger(r.nits) || r.nits < 0) throw new Invalid('nits must be a count');
+  r.unproved = caseKinds(r.cases_unproved, 'cases_unproved', []);       // kinds the maker tagged that its tests do not prove
   if (r.verdict === 'fail' && !r.must_fix.length) throw new Invalid('a fail needs at least one must_fix');
   return r;
 }
@@ -1081,6 +1089,19 @@ function coverage(dir) {
   if (!t || !t.lines) return null;
   const pcts = [t.lines, t.branches].filter((k) => k && typeof k.pct === 'number').map((k) => k.pct);
   return pcts.length ? Math.floor(Math.min(...pcts)) : null;
+}
+
+/** The kinds of case a finished thing is asked about (the maker tags what its tests cover; the checker takes
+ *  off what they do not prove). `na` is what does not apply to this thing, so a small change is not marked down. */
+const CASE_KINDS = ['normal', 'empty', 'limits', 'invalid', 'failure', 'speed'];
+function caseKinds(list, what, dropped) {
+  const out = [];
+  for (const k of Array.isArray(list) ? list : []) {
+    const kind = k && typeof k === 'object' ? k.kind : k;
+    if (CASE_KINDS.includes(kind)) { if (!out.includes(kind)) out.push(kind); }
+    else dropped.push(what + ' ' + JSON.stringify(kind) + ' (one of ' + CASE_KINDS.join(', ') + ')');
+  }
+  return out;
 }
 
 const TEST_FILE = /(^|\/)(__tests__|tests?)\/|\.(test|spec)\.[cm]?[jt]sx?$/;
@@ -1138,7 +1159,7 @@ function ensureLineCoverage(dir) {
 }
 
 module.exports = {
-  ensureLineCoverage, proof, noteSetAside, learned,
+  CASE_KINDS, ensureLineCoverage, proof, noteSetAside, learned,
   Invalid, DEFAULT_ITEMS, DEFAULT_CAPS, wanted, DEFAULT_VERIFY, LONG_MS, NET_MS, LIVE_MIN, STALE_CLAIM_H, TOPIC, AGENTS, TERMINAL,
   cohditDir, notesDir, readCfg, saveCfg, level, blob, emit, spoolFile, flush,
   git, gitNet, hasRemote, headSha, fullSha, currentBranch, isPrimary, mainBranch, resetTree, dirtyPaths, fetch, remoteMain, toMain, rebaseOnto, fastForward, baseSha, startBase, keepWork, pushMain, commitLedger, landMain, land, agentModel,

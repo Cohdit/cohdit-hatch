@@ -42,6 +42,9 @@ const TRUST_UNATTRIBUTED = 0.10;
 const DRY_MIN_DISPATCHES = 8;
 const CHARS_PER_WORD = 6;       // how `said` characters become the words-per-run figure
 const BOOKKEEPING = ['USAGE'];
+const CASE_ORDER = ['normal', 'empty', 'limits', 'invalid', 'failure', 'speed'];   // build.js CASE_KINDS
+
+const CASE_WORDS = { plain: { normal: 'normal use', empty: 'nothing there', limits: 'smallest and largest', invalid: 'wrong input', failure: 'something failing', speed: 'speed' } };
 
 /** Every fixed string that differs between plain and product. Tech has its own branches. */
 const WORDS = {
@@ -61,7 +64,8 @@ const WORDS = {
     notOnline: 'Not saved online yet; say "set me up" to sign in to GitHub.',
     nextTry: (n) => 'Next: say "let me try it" and check ' + (n === 1 ? 'this one thing' : 'these ' + n + ' things') + ' yourself.',
     toTry: (n) => 'Waiting on you: ' + plural(n, 'thing') + ' to try. Say "let me try it".',
-    proof: (n, cov) => (n ? plural(n, 'new test') : 'no new tests') + (cov === null ? '' : '; all tests together run ' + cov + '% of its lines'),
+    proof: (n, cov, cs) => (n ? plural(n, 'new test') : 'no new tests') + (cov === null ? '' : '; all tests together run ' + cov + '% of its lines')
+      + (cs && cs.of ? '; cases tested ' + cs.n + ' of ' + cs.of + (cs.missing.length ? ', missing: ' + cs.missing.map((k) => CASE_WORDS.plain[k]).join(', ') : '') + (cs.reviewed ? '' : ' (builder\'s own count)') : ''),
     counts: (k) => [k.left ? 'Left to build: ' + k.left + '.' : 'Nothing left to build.',
       k.held ? 'Waiting on you: ' + k.held + '.' : '', k.setAside ? 'Set aside: ' + k.setAside + '.' : '',
       k.device ? 'To check on your device: ' + k.device + '.' : '', k.toTry ? 'Built, to try: ' + k.toTry + '.' : '',
@@ -135,7 +139,8 @@ const WORDS = {
     notOnline: 'No GitHub remote yet; say "set me up" to sign in.',
     nextTry: (n) => 'Next: say "let me try it" to test ' + plural(n, 'item') + '.',
     toTry: (n) => 'Waiting on you: ' + plural(n, 'item') + ' to try. Say "let me try it".',
-    proof: (n, cov) => (n ? '+' + plural(n, 'test') : 'no new tests') + (cov === null ? '' : '; ' + cov + '% of its lines run by all tests'),
+    proof: (n, cov, cs) => (n ? '+' + plural(n, 'test') : 'no new tests') + (cov === null ? '' : '; ' + cov + '% of its lines run by all tests')
+      + (cs && cs.of ? '; cases ' + cs.n + '/' + cs.of + (cs.missing.length ? ', missing: ' + cs.missing.join(', ') : '') + (cs.reviewed ? '' : ' (unreviewed)') : ''),
     counts: (k) => [k.left ? 'Queued: ' + k.left : 'Nothing queued', k.held ? 'held: ' + k.held : '', k.setAside ? 'blocked: ' + k.setAside : '',
       k.device ? 'device checks: ' + k.device : '', k.toTry ? 'to try: ' + k.toTry : '',
       k.finished ? 'tested: ' + k.finished + (k.all ? '' : ' (hidden; "status all" lists them)') : ''].filter(Boolean).join(' · ') + '.',
@@ -234,7 +239,14 @@ class Ctx {
   proof(id) {
     const rec = [...this.recs].reverse().find((r) => r.c === 'DONE' && r.i === id);
     if (!rec || rec.f.tests === undefined) return '';
-    return this.w.proof(rec.f.tests, rec.f.cov === undefined ? null : rec.f.cov);
+    const list = (v) => (Array.isArray(v) ? v : String(v || '').split(',')).filter(Boolean);
+    let cases = null;
+    if (rec.f.rev !== undefined) {
+      const na = list(rec.f.na), tested = list(rec.f.cases);
+      const applicable = CASE_ORDER.filter((k) => !na.includes(k));
+      cases = { n: applicable.filter((k) => tested.includes(k)).length, of: applicable.length, missing: applicable.filter((k) => !tested.includes(k)), reviewed: Number(rec.f.rev) === 1 };
+    }
+    return this.w.proof(rec.f.tests, rec.f.cov === undefined ? null : rec.f.cov, cases);
   }
 
   statusOf(it) {

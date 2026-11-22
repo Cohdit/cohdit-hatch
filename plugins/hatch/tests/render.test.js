@@ -201,7 +201,7 @@ test('the try standard: at every level, a short title, one short line and one fi
   fs.writeFileSync(path.join(dir, 'notes', ids[1] + '.words'), '');
   const run = (lvl) => H.run('render.js', ['checklist', '--level', lvl, '--cohdit', dir, '--now', H.NOW], { env: { COHDIT_HOME: HOME } }).out;
   const plain = run('plain').split('\n');
-  assert.deepEqual(plain.slice(0, 6), ['  1 Add a chore', '    Type Dishes and press Add.', '    Proof: 4 new tests; all tests together run 92% of its lines', '  2 Tick a chore done', '    Tick Dishes: it moves under Done', '    Proof: 2 new tests; all tests together run 78% of its lines']);
+  assert.deepEqual(plain.slice(0, 6), ['  1 Add a chore', '    Type Dishes and press Add.', '    Proof: 4 new tests; all tests together run 92% of its lines; cases tested 4 of 5, missing: something failing', '  2 Tick a chore done', '    Tick Dishes: it moves under Done', '    Proof: 2 new tests; all tests together run 78% of its lines; cases tested 2 of 5, missing: smallest and largest, wrong input, something failing (builder\'s own count)']);
   assert.equal(plain[6], "I wrote some of the words in 1 and 2 myself. Change anything that doesn't sound right.");
   const tech = run('tech').split('\n');
   assert.deepEqual(tech.slice(0, 2), ['  1 Add a chore (' + ids[0] + ')', '    Type Dishes and press Add.'], 'a developer gets the short list too, with ids');

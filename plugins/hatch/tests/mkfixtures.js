@@ -134,7 +134,7 @@ function buildRun(fx, day, itemsDone = ['ITEM-001', 'ITEM-002'], held = null, ba
       minute += 4;
     }
     fx.ev('GATE', t(minute + 10), i, { result: 'pass' });
-    fx.ev('DONE', t(minute + 10, '30'), i, { head: 'a1b2c3d' + n, touches: 'app/,tests/', tests: n === 1 ? 4 : 2, cov: n === 1 ? 92 : 78 });
+    fx.ev('DONE', t(minute + 10, '30'), i, { head: 'a1b2c3d' + n, touches: 'app/,tests/', tests: n === 1 ? 4 : 2, cov: n === 1 ? 92 : 78, cases: n === 1 ? 'normal,empty,limits,invalid' : 'normal,empty', na: 'speed', rev: n === 1 ? 1 : 0 });
     fx.ev('PUSH', t(minute + 10, '40'), null, { branch: br, result: 'ok' });
     minute += 12;
   });
