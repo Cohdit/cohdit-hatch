@@ -125,13 +125,13 @@ function machineId() {
 }
 
 /** One GET (or, with a body, a JSON POST). Resolves {status, body}; rejects on a network error or timeout. */
-function get(url, key, ms, body) {
+function get(url, key, ms, body, anon) {
   const lib = url.startsWith('http:') ? require('http') : require('https');
   const headers = { Authorization: 'Bearer ' + key };
   const payload = body === undefined ? null : Buffer.from(JSON.stringify(body));
   if (payload) { headers['Content-Type'] = 'application/json'; headers['Content-Length'] = payload.length; }
   const machine = machineId();
-  if (machine) headers['X-Hatch-Machine'] = machine;
+  if (machine && !anon) headers['X-Hatch-Machine'] = machine;   // anonymous calls (metrics) carry the key and nothing else
   const version = pluginVersion();
   if (version) headers['X-Hatch-Plugin'] = version;
   return new Promise((resolve, reject) => {
@@ -291,6 +291,16 @@ async function call(pathname, body) {
   throw new HatchError('unavailable');
 }
 
+/** One anonymous POST that never throws: true when Cohdit took it. No machine header, a short wait. */
+async function send(pathname, body, ms) {
+  const key = readKey();
+  if (!key || devDir()) return false;
+  try {
+    const res = await get(base() + pathname, key, ms || 4000, body, true);
+    return res.status === 200 || res.status === 202 || res.status === 204;
+  } catch (e) { return false; }
+}
+
 /** What this key owns and could add: {experts:[{slug,name,field}], available:[{slug,name,field,pitch,price,free_left}]}. */
 function me(opts) { return call('/me' + (opts && opts.fresh ? '?fresh=1' : '')); }
 /** One free question to an agent this key does not own: {answer, left}. */
@@ -343,6 +353,6 @@ function dataJson(name) { return JSON.parse(dataText(name)); }
 
 module.exports = {
   BASE, FRESH_MS, STALE_MS, DOWN_MS, KEY_RE, SLUG_RE, limits, NAMES, READ_ONLY, MESSAGES, HatchError, message,
-  me, askFree, buyLink, manage, preloadExperts, expertJson,
+  me, send, askFree, buyLink, manage, preloadExperts, expertJson,
   home, keyFile, cacheFile, downFile, machineFile, machineId, readKey, fetchContent, setKey, keyStatus, preloadData, dataText, dataJson, agentText,
 };

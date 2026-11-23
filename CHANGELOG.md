@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.0.34 — anonymous build numbers, only if you say yes (2026-11-23)
+
+- After a build finishes, Hatch asks once whether it may share anonymous numbers about it (how long, how many things finished,
+  tokens and cost, first-pass rate, tests and cases covered) so Hatch can be improved from real builds. It is off until you say
+  "share my build numbers", and "don't share" turns it off again.
+- "What do you send" prints exactly what would go for your last build. It is numbers and fixed labels only: never your idea,
+  titles, words, code, file names or errors. A check refuses to send anything that is not on the list.
+- The numbers carry a random id made for this alone, not your key or your computer's id. A failed send is kept and retried
+  and never slows or stops a build.
+- "Scorecard" or "how did the build go" shows the build scorecard in plain words.
+
 ## 0.0.33 — which kinds of case a thing's tests cover (2026-11-22)
 
 - Each built thing now says how many kinds of case its tests cover, out of the ones that apply to it: normal use, nothing

@@ -67,6 +67,7 @@ Your Claude Code is older. Paste these two lines, one at a time, waiting for the
 | **fix the bugs** | Pulls in what people reported from the "Something wrong?" link every app has, then four reviewers read the whole app for bugs, security holes, surprise costs and privacy leaks. What they find goes on the list, and "build it" fixes it. Say "fix the bugs every week" and Hatch tells you when a check is due. |
 | **add to my idea** / **can it also…** | A new feature or a change that is not a bug. Hatch asks what you want, adds it to the list with its own check, and "build it" builds it. A big change goes back through the interview. A bug is **fix**, not this. |
 | **status** / **why did it stop** | Where things stand, how much Claude it has used, what is waiting on you. |
+| **scorecard** / **share my build numbers** | How the builds went; opt in to anonymous build numbers (never your idea or files), or turn it off. |
 
 ## How it talks to you
 

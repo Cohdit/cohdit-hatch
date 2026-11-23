@@ -110,6 +110,7 @@ const sh = require('./lib/share');
 const ls = require('./lib/lessons');
 const ld = require('./lib/leader');
 const api = require('./lib/api');
+const mt = require('./lib/metrics');
 const render = require('./render');
 
 const USAGE = fs.readFileSync(__filename, 'utf8').split('/**')[1].split('*/')[0].replace(/^ \* ?/gm, '');
@@ -1148,6 +1149,7 @@ function cmdBuild(argv) {
       bd.clearPointer(dir, session || cur.session);
       render.main(['digest', '--cohdit', sp.cohditDir(dir), '--run', cur.run, '--level', lvl]);
       const done = ml.readLedger(sp.cohditDir(dir)).recs.some((r) => r.r === cur.run && r.c === 'DONE');
+      shareNumbers(dir, cur.run);
       if (!bd.isPrimary(dir) && landed) bd.removeSideCopy(dir);  // a copy that could not land is kept and landed by the next open
       hint('next', done ? 'try' : 'none');
       return cur.stop ? 1 : 0;
@@ -1777,6 +1779,7 @@ function cmdStatus(rest) {
     const left = spec.items.filter((i) => !i.device && st.get(i.id) === 'queued').length;
     const toTry = spec.items.some((i) => st.get(i.id) === 'done');
     hint('next', left ? 'build' : toTry ? 'try' : 'none');
+    if (mt.status() === 'on') mt.flush().catch(() => {});   // numbers left from an offline run
     return 0;
   } catch (e) {
     if (e instanceof sp.Invalid || e instanceof bd.Invalid) {
@@ -1786,6 +1789,72 @@ function cmdStatus(rest) {
     }
     throw e;
   }
+}
+
+// --- anonymous build numbers (lib/metrics.js) ----------------------------------------------------
+
+const METRICS_ASK = 'Hatch can share anonymous numbers about each build (how long it took, how many things finished, '
+  + 'how much it cost) so Cohdit can make Hatch better. Never your idea, words, code or files. '
+  + 'Say "share my build numbers" to turn it on or "don\'t share" to leave it off. "what do you send" shows exactly what would go.';
+
+/** After a build run closes: send its numbers if the person said yes (in the background, never blocking),
+ *  or ask once if they have not been asked. */
+function shareNumbers(dir, run) {
+  try {
+    const st = mt.status();
+    if (st === 'ask') { if (mt.askedOnce()) process.stdout.write(METRICS_ASK + '\n'); return; }
+    if (st !== 'on') return;
+    const c = new render.Ctx({ level: 'tech', cohdit: sp.cohditDir(dir) });
+    mt.record(c, run, render).catch(() => {});
+  } catch (e) { /* numbers never get in the way of a build */ }
+}
+
+/** `scorecard`: how the builds have gone, at the person's level. */
+function cmdScorecard(rest) {
+  try {
+    const dir = buildDir(rest);
+    const lvl = bd.level(dir);
+    hint('level', lvl);
+    render.main(['score', '--cohdit', sp.cohditDir(dir), '--level', lvl]);
+    return 0;
+  } catch (e) {
+    if (e instanceof sp.Invalid || e instanceof bd.Invalid) { process.stderr.write('hatch: ' + e.message + '\n'); return 64; }
+    throw e;
+  }
+}
+
+/** `metrics [on|off|show]`: the person's choice about sharing anonymous build numbers. */
+function cmdMetrics(argv) {
+  const sub = argv[0];
+  if (sub === 'on' || sub === 'off') {
+    mt.set(sub);
+    process.stdout.write(sub === 'on'
+      ? 'Sharing anonymous build numbers is on. Say "don\'t share" to turn it off, "what do you send" to see exactly what goes.\n'
+      : 'Sharing build numbers is off. Nothing is sent.\n');
+    return 0;
+  }
+  if (sub === 'show') {
+    try {
+      const dir = buildDir(argv.slice(1));
+      const c = new render.Ctx({ level: 'tech', cohdit: sp.cohditDir(dir) });
+      const ended = c.recs.filter((r) => r.c === 'RUN_END').map((r) => r.r).filter((r) => c.recs.some((x) => x.r === r && x.c === 'RUN_START' && x.f.skill === 'build'));
+      const p = ended.length ? mt.build(c, ended[ended.length - 1], render) : null;
+      if (!p) { process.stdout.write('No finished build yet, so nothing would be sent.\n'); return 0; }
+      process.stdout.write('This is everything Hatch would send for your last build. Numbers and fixed labels only:\n' + JSON.stringify(p, null, 2) + '\n');
+      process.stdout.write('Status: ' + (mt.status() === 'on' ? 'on, this is sent after each build.' : 'not on, so none of it is sent.') + '\n');
+      return 0;
+    } catch (e) {
+      if (e instanceof sp.Invalid || e instanceof bd.Invalid) { process.stderr.write('hatch: ' + e.message + '\n'); return 64; }
+      throw e;
+    }
+  }
+  if (sub === 'send') {
+    return mt.flush().then((n) => { process.stdout.write(n + ' sent.\n'); return 0; });
+  }
+  const st = mt.status();
+  process.stdout.write(st === 'on' ? 'Sharing anonymous build numbers: on. "what do you send" shows it; "don\'t share" turns it off.\n'
+    : st === 'off' ? 'Sharing anonymous build numbers: off. Nothing is sent.\n' : METRICS_ASK + '\n');
+  return 0;
 }
 
 // --- the lesson bank -----------------------------------------------------------------------------
@@ -2070,6 +2139,8 @@ function dispatch(argv) {
     case 'idea': return cmdIdea(argv.slice(1));
     case 'build': return cmdBuild(argv.slice(1));
     case 'status': return cmdStatus(argv.slice(1));
+    case 'metrics': return cmdMetrics(argv.slice(1));
+    case 'scorecard': return cmdScorecard(argv.slice(1));
     case 'try': return cmdTry(argv.slice(1));
     case 'share': return cmdShare(argv.slice(1));
     case 'fix': return cmdFix(argv.slice(1));

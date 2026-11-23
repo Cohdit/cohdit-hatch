@@ -189,7 +189,8 @@ test('the gate: commit refuses failing checks; a logic change goes to the checke
   assert.equal(hintOf(n4, 'next'), 'close');
   const close = B(h, dir, ['close']);
   assert.equal(close.code, 0, close.err);
-  assert.equal(close.out, [
+  assert.match(close.out, /\nHatch can share anonymous numbers about each build[^\n]*"share my build numbers"/, 'asked once, after the first build');
+  assert.equal(close.out.replace(/\nHatch can share anonymous numbers[^\n]*$/, ''), [
     'Built 2 of 3 things.',
     "  set aside Letter grid — couldn't finish it",
     '  done      Tap to hear — tap a letter; you hear it',

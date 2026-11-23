@@ -798,10 +798,10 @@ function runOf(rs, i) {
   return null;
 }
 
-function score(c, since, until) {
+function score(c, since, until, only) {
   const starts = new Map();
   for (const r of c.recs) if (r.c === 'RUN_START') starts.set(r.r, ml.parseTs(r.ts));
-  const runs = new Set([...starts.keys()].filter((run) => starts.get(run) >= since && starts.get(run) < until));
+  const runs = new Set([...starts.keys()].filter((run) => starts.get(run) >= since && starts.get(run) < until && (!only || run === only)));
   const rs = c.recs.filter((r) => runs.has(r.r));
   const ended = new Set(rs.filter((r) => r.c === 'RUN_END').map((r) => r.r));
 
