@@ -10,4 +10,4 @@ Decisions I took: undefined: undefined.
 Open questions: What happens to unticked chores on Sunday?.
 Called Chore Chart, in a folder called chore-chart; change either by saying so.
 It'll live on a free plan meant for personal use; say "it's a business" if that changes.
-Say yes to agree that what you build is yours to answer for (terms, version 1; say "read me the terms").
+Say yes to agree that what you build is yours to answer for (terms, version 2; say "read me the terms").
