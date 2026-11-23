@@ -144,3 +144,21 @@ test('the commands: metrics asks first, then holds the answer; scorecard needs n
   assert.match(run('metrics', 'off').stdout, /Nothing is sent/);
   assert.equal(mt.status(), 'off');
 });
+
+test('a number the server refuses for good is dropped, not retried; one it cannot store stays queued', async () => {
+  let status = 400;
+  const server = http.createServer((req, res) => { req.resume(); req.on('end', () => { res.writeHead(status); res.end('{}'); }); });
+  await new Promise((ok) => server.listen(0, '127.0.0.1', ok));
+  const c = ctx(), run = lastBuildRun(c);
+  process.env.HATCH_API = 'http://127.0.0.1:' + server.address().port; process.env.HATCH_KEY = KEY; delete process.env.HATCH_DEV_DIR;
+  try {
+    mt.set('on');
+    fs.rmSync(path.join(api.home(), 'metrics-queue.jsonl'), { force: true });
+    await mt.record(c, run, render);
+    assert.deepEqual(mt.queued(), [], '400: gone');
+    status = 503;
+    fs.rmSync(path.join(api.home(), 'metrics-queue.jsonl'), { force: true });
+    await mt.record(c, run, render);
+    assert.equal(mt.queued().length, 1, '503: kept');
+  } finally { delete process.env.HATCH_API; delete process.env.HATCH_KEY; if (DEV) process.env.HATCH_DEV_DIR = DEV; server.close(); }
+});

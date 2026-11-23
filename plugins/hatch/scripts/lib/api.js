@@ -291,13 +291,13 @@ async function call(pathname, body) {
   throw new HatchError('unavailable');
 }
 
-/** One anonymous POST that never throws: true when Cohdit took it. No machine header, a short wait. */
+/** One anonymous POST that never throws: true when Cohdit took it (or refused it for good). No machine header, a short wait. */
 async function send(pathname, body, ms) {
   const key = readKey();
   if (!key || devDir()) return false;
   try {
     const res = await get(base() + pathname, key, ms || 4000, body, true);
-    return res.status === 200 || res.status === 202 || res.status === 204;
+    return res.status === 200 || res.status === 202 || res.status === 204 || res.status === 400 || res.status === 413;   // 400/413: refused for good, so it is dropped, not retried
   } catch (e) { return false; }
 }
 

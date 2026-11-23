@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.35 — build numbers the server refuses are dropped (2026-11-23)
+
+- A build-numbers line that Cohdit refuses for good is dropped instead of retried on every later build. One it could not store
+  yet is kept and tried again.
+
 ## 0.0.34 — anonymous build numbers, only if you say yes (2026-11-23)
 
 - After a build finishes, Hatch asks once whether it may share anonymous numbers about it (how long, how many things finished,
