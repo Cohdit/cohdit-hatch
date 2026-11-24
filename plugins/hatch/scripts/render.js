@@ -1084,11 +1084,6 @@ function viewSpec(c, a) {
   const hd = (spec.decisions || []).find((d) => d.type === 'hosting');
   if (!hd || hd.who !== 'you') out.push(hosting.stated || '');
   else out.push('Where it lives: ' + (((hosting.options || {})[hd.choice] || {}).plain || hd.choice) + '.');
-  const tv = sp.terms().version;
-  const agreedV = ml.userSettings().terms_v;
-  out.push(agreedV === tv
-    ? '"Yes, that\'s it" also agrees that what you build is yours to answer for (terms, version ' + tv + ').'
-    : 'Say yes to agree that what you build is yours to answer for (terms, version ' + tv + '; say "read me the terms").');
   return out.filter((l) => l !== '');
 }
 

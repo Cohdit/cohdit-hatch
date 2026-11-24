@@ -18,7 +18,7 @@
  *   hatch.js idea show [--dir d] [--full]
  *                                       the shape so far, or the full read-back (--full)
  *   hatch.js idea agree [--dir d] [--hosting <key>] [--stack a,b]
- *                                       the person said yes: terms, hosting, scope, SPEC; ends the run
+ *                                       the person said yes: hosting, scope, SPEC; ends the run
  *   hatch.js idea refuse <category> [--dir d]
  *   hatch.js idea terms                 the terms text, for "read me the terms"
  *   hatch.js build open [--dir d | --name n] [--items N|all] [--only bugs|things] [--for <minutes>] [--budget <dollars>]
@@ -423,10 +423,7 @@ function cmdIdea(argv) {
         hint('hint', 'not_ready');
         return 1;
       }
-      const t = sp.terms();
-      const settings = sp.registry();
       const events = [];
-      events.push(['DECIDE', { type: 'terms', choice: 'accepted', who: 'you', v: t.version }]);
       const hKey = hostingKey || hosting.recommended || 'own_free';
       events.push(['DECIDE', { type: 'hosting', choice: hKey, who: hostingKey ? 'you' : 'hatch' }]);
       spec.decisions = spec.decisions.filter((d) => d.type !== 'hosting' && d.type !== 'terms');
@@ -437,7 +434,6 @@ function cmdIdea(argv) {
       }
       events.push(['DECIDE', { type: 'scope', choice: 'agreed', who: 'you' }]);
       spec.rails = sp.railsFor(spec);
-      spec.terms_v = t.version;
       spec.agreed = true;
       events.push(['SPEC', { items: spec.items.length, gates_yes: spec.rails.length, held: spec.open_questions.length }]);
       events.push(['RUN_END', { outcome: 'ok' }]);
@@ -445,31 +441,13 @@ function cmdIdea(argv) {
       const cfg = ml.readJson(path.join(cd, 'config.json'), { v: 1 });
       cfg.hosting = Object.assign({}, (hosting.options[hKey] || {}).config || {}, team ? { scope: team } : {});
       fs.writeFileSync(path.join(cd, 'config.json'), JSON.stringify(cfg, null, 2) + '\n');
-      settings.terms_v = t.version;
-      sp.saveRegistry(settings);
       const local = sp.readLocal(dir);
       if (local.dream_run) appendEvents(cd, local.dream_run, events);
       render.main(['digest', '--cohdit', cd, '--run', local.dream_run, '--level', doc.ensureSettings()]);
       hint('next', 'build');
       return 0;
     }
-    if (sub === 'terms-agree') {                                // the terms moved on after this idea was agreed: say yes again, in place
-      const spec = sp.load(dir);
-      if (!spec.agreed) throw new sp.Invalid('the idea is not agreed yet; keep going with idea set');
-      if (spec.refused) throw new sp.Invalid('refused: ' + spec.refused);
-      const t = sp.terms();
-      const run = newRunId(path.join(cd, 'ledger', 'runs'), ml.utcNow());
-      spec.terms_v = t.version;
-      sp.save(dir, spec);
-      const settings = sp.registry();
-      settings.terms_v = t.version;
-      sp.saveRegistry(settings);
-      appendEvents(cd, run, [['RUN_START', runStart('dream')], ['DECIDE', { type: 'terms', choice: 'accepted', who: 'you', v: t.version }], ['RUN_END', { outcome: 'ok' }]]);
-      process.stdout.write('Agreed to the terms (version ' + t.version + '). Say "build it" to carry on.\n');
-      hint('next', 'build');
-      return 0;
-    }
-    return fail('idea needs one of new, set, change, reopen, show, agree, refuse, terms, terms-agree');
+    return fail('idea needs one of new, set, change, reopen, show, agree, refuse, terms');
   } catch (e) {
     if (e instanceof sp.Invalid) {
       process.stderr.write('hatch: ' + e.message + '\n');
@@ -827,12 +805,6 @@ function cmdBuild(argv) {
         return 5;
       }
       if (!spec.agreed) { hint('dir', dir); hint('hint', 'not_agreed'); return 1; }
-      if (!(spec.terms_v >= sp.terms().version)) {   // older than the current terms; a newer one never locks anyone out
-        hint('dir', dir);
-        say(dir, [bd.stopBefore(dir, 'no_terms').stop], lvl);
-        hint('hint', 'no_terms');
-        return 1;
-      }
       const trying = tr.current(dir);
       if (trying) tr.end(dir, trying, 'ok');                     // a try still open here ends first: its app stops, its run closes
       let cur = bd.active(dir);

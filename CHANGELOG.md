@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.39 — no terms to agree to inside Hatch (2026-11-25)
+
+- The terms are accepted once, on the Hatch site, before your key is issued. Inside Hatch there is nothing to agree to:
+  "I have an idea" no longer asks, the read-back no longer carries a terms line, and "build it" never stops over terms.
+  "Read me the terms" still prints them.
+- Removed `idea terms-agree` (added in 0.0.38) and the stop for changed terms.
+
 ## 0.0.38 — when the terms change, you agree in place (2026-11-24)
 
 - If the terms move on after you agreed to them, "build it" now says so ("The terms have changed since you agreed to them"),

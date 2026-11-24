@@ -65,7 +65,7 @@ test('idea set: the shape line after each chunk, then only what was added', () =
   assert.match(unknown.err, /unknown gate teapot/);
 });
 
-test('read-back: items in their words, the assumptions block, the rule line, the stated hosting, the explicit terms line first time', () => {
+test('read-back: items in their words, the assumptions block, the rule line, the stated hosting, no terms line (terms are accepted on the site)', () => {
   const h = home();
   const dir = newIdea(h, 'ABC Friends');
   idea(h, ['set', '--dir', dir, '--json', JSON.stringify({ for: 'Maya, 4', anchor: 'she asks to play it again', items: ITEMS, out: ['scores'], gates: GATES, decisions: [{ type: 'design', choice: 'name_then_sound', who: 'hatch' }] })]);
@@ -82,12 +82,12 @@ test('read-back: items in their words, the assumptions block, the rule line, the
   assert.equal(lines[9], 'Open questions: none.');
   assert.equal(lines[10], 'Called ABC Friends, in a folder called abc-friends; change either by saying so.');
   assert.match(lines[11], /free plan meant for personal use/);
-  assert.match(lines[12], /^Say yes to agree that what you build is yours to answer for \(terms, version \d+; say "read me the terms"\)\.$/);
-  assert.equal(lines.length, 13);
+  assert.equal(lines.length, 12, 'nothing about terms: they were accepted on the site');
+  assert.doesNotMatch(r.out, /terms/i);
   assert.doesNotMatch(r.out, /requirement|criteria|empty state|spec\b/i);
 });
 
-test('agree: terms, hosting as Hatch\'s choice, scope, SPEC; the second idea on the computer folds the terms line', () => {
+test('agree: hosting as Hatch\'s choice, scope, SPEC; nothing about terms is asked or recorded', () => {
   const h = home();
   const dir = newIdea(h, 'ABC Friends');
   const early = idea(h, ['agree', '--dir', dir]);
@@ -97,23 +97,21 @@ test('agree: terms, hosting as Hatch\'s choice, scope, SPEC; the second idea on 
   idea(h, ['set', '--dir', dir, '--json', JSON.stringify({ items: ITEMS, gates: GATES })]);
   const r = idea(h, ['agree', '--dir', dir]);
   assert.equal(r.code, 0, r.err);
-  assert.equal(r.out, ['You agreed that what you build is yours to answer for.',
+  assert.equal(r.out, [
     'I picked the free place for the app to live. Say "change where it lives" to choose differently.',
     'You settled what is in and what is out.', 'Saved your idea with 3 things to build.'].join('\n'));
   assert.match(r.err, /^next=build$/m);
   const spec = JSON.parse(fs.readFileSync(path.join(dir, '.cohdit', 'spec.json'), 'utf8'));
   assert.equal(spec.agreed, true);
   assert.deepEqual(spec.rails, ['children']);
-  assert.equal(spec.terms_v, sp.terms().version);
+  assert.equal(spec.terms_v, undefined, 'the site holds the agreement, not the idea');
+  assert.equal(spec.decisions.some((d) => d.type === 'terms'), false);
   const cfg = JSON.parse(fs.readFileSync(path.join(dir, '.cohdit', 'config.json'), 'utf8'));
   assert.equal(cfg.hosting.provider, 'vercel');
   const locked = idea(h, ['set', '--dir', dir, '--json', '{"out":["x"]}']);
   assert.equal(locked.code, 64, 'an agreed idea is not edited in place');
-  // second idea on the same computer: terms already agreed at this version
   const dir2 = newIdea(h, 'Sound Steps');
   idea(h, ['set', '--dir', dir2, '--json', JSON.stringify({ items: ITEMS.slice(0, 1), gates: GATES })]);
-  const rb = idea(h, ['show', '--dir', dir2, '--full']);
-  assert.match(rb.out.split('\n').pop(), /^"Yes, that's it" also agrees that what you build is yours to answer for \(terms, version \d+\)\.$/);
   const yours = idea(h, ['agree', '--dir', dir2, '--hosting', 'own_paid', '--stack', 'nextjs,vercel']);
   assert.equal(yours.code, 0, yours.err);
   assert.match(yours.out, /^You chose where the app will live\.$/m);

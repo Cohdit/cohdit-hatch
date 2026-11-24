@@ -1039,27 +1039,18 @@ test('retry: a set-aside thing goes back on the list and its brief says what sto
   assert.equal(hintOf(again, 'hint'), 'nothing_set_aside', 'nothing else is set aside');
 });
 
-test('terms: an idea agreed to older terms must agree again; one agreed to the current or a newer version builds', () => {
+test('terms: never stop a build, whatever version an idea carries; the plugin no longer asks to agree again', () => {
   const h = home();
   const dir = agreedIdea(h, 'Terms Check', ITEMS.slice(0, 1));
   const file = path.join(dir, '.cohdit', 'spec.json');
   const spec = JSON.parse(fs.readFileSync(file, 'utf8'));
-  const set = (v) => fs.writeFileSync(file, JSON.stringify(Object.assign(spec, { terms_v: v }), null, 2) + '\n');
-  set(0);
-  const old = B(h, dir, ['open']);
-  assert.equal(old.code, 1);
-  assert.equal(hintOf(old, 'hint'), 'no_terms', 'older terms: asked again');
-  assert.match(old.out, /The terms have changed since you agreed/, 'and told why, in words that fit an idea already set up');
-  assert.doesNotMatch(old.out, /I have an idea/, 'not sent back to start a new idea');
-  assert.equal(hintOf(old, 'dir'), dir, 'the folder is named so "I agree" knows where');
-  const ag = run(h, ['idea', 'terms-agree', '--dir', dir]);
-  assert.equal(ag.code, 0, ag.err);
-  assert.match(ag.out, /^Agreed to the terms \(version \d+\)\. Say "build it" to carry on\./);
-  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).terms_v, require('../scripts/lib/spec').terms().version, 'the idea carries the current version');
-  assert.notEqual(hintOf(B(h, dir, ['open']), 'hint'), 'no_terms', 'and builds');
-  Object.assign(spec, { terms_v: 0 }); fs.writeFileSync(file, JSON.stringify(spec, null, 2) + '\n');
-  B(h, dir, ['close']);
-  set(spec.terms_v + 1000);
-  const newer = B(h, dir, ['open']);
-  assert.notEqual(hintOf(newer, 'hint'), 'no_terms', 'agreed to a newer version: never locked out');
+  for (const v of [undefined, 0, 1, 1000]) {   // an idea made before 0.0.39 carries its version; a new one carries none
+    if (v === undefined) delete spec.terms_v; else spec.terms_v = v;
+    fs.writeFileSync(file, JSON.stringify(spec, null, 2) + '\n');
+    const o = B(h, dir, ['open']);
+    assert.notEqual(hintOf(o, 'hint'), 'no_terms', 'terms_v ' + v + ': builds');
+    B(h, dir, ['close']);
+  }
+  const gone = run(h, ['idea', 'terms-agree', '--dir', dir]);
+  assert.notEqual(gone.code, 0, 'there is nothing to agree to in the plugin');
 });
