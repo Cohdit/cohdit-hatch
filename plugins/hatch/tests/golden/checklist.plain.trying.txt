@@ -1,7 +1,10 @@
 Open http://localhost:3000 to try it.
-  2 Tick a chore done
-    Tick Dishes: it moves under Done
-    Proof: 2 new tests; all tests together run 78% of its lines; cases tested 2 of 5, missing: smallest and largest, wrong input, something failing (builder's own count)
-  3 On the iPad
-    On the same wifi, open http://192.168.1.12:3000 on it (if this computer asks whether to allow connections, say yes); the list fills the screen
+
+2. Tick a chore done
+   Try: Tick Dishes: it moves under Done
+   Tests: 2 new tests; all tests together run 78% of its lines; cases tested 2 of 5, missing: smallest and largest, wrong input, something failing (builder's own count)
+
+3. On the iPad
+   Try: On the same wifi, open http://192.168.1.12:3000 on it (if this computer asks whether to allow connections, say yes); the list fills the screen
+
 Say "pass", or say which one didn't work and what you saw.

@@ -186,13 +186,16 @@ test('the try standard: at every level, a short title, one short line and one fi
   const { shortLine } = require('../scripts/render');
   assert.equal(shortLine("open any run and click 'How this was decided'. A judged check shows its score."), "Open any run and click 'How this was decided'.");
   assert.equal(shortLine('I wrote the wording for the panel myself. Please read it. Open the front page.'), 'Open the front page.');
-  const long = shortLine('Open a failed run on a laptop: each line of the conversation now has the checks that judged it on its right, with a green edge.');
-  assert.ok(long.length <= 100 && long.endsWith('…'), long);
+  const long = shortLine('Open a failed run on a laptop: each line of the conversation now has the checks that judged it on its right, with a green edge, and a red one when it failed, and a grey one when it was skipped because an earlier check stopped the run.');
+  assert.ok(long.length <= 170 && long.endsWith('…'), long);
+  assert.equal(shortLine('Open /runs/<id> for the chef.'), 'Open /runs/[id] for the chef.', 'angle brackets would be read as markup');
+  const mid = 'Open a failed run on a laptop: each line of the conversation now has the checks that judged it on its right, with a green edge.';
+  assert.equal(shortLine(mid), mid, 'a sentence of ordinary length is shown whole');
   assert.equal(shortLine(''), '');
   const { shortTitle } = require('../scripts/render');
   assert.equal(shortTitle('The verdict, explained'), 'The verdict, explained');
   const t = shortTitle('Next.js 15.5.4 (outdated) Webpack Build Error Module build failed: UnhandledSche');
-  assert.ok(t.length <= 48 && t.endsWith('…'), t);
+  assert.ok(t.length <= 64 && t.endsWith('…'), t);
   const dir = H.tmpdir();
   fs.cpSync(fx('happy'), dir, { recursive: true });
   fs.mkdirSync(path.join(dir, 'notes'), { recursive: true });
@@ -201,10 +204,10 @@ test('the try standard: at every level, a short title, one short line and one fi
   fs.writeFileSync(path.join(dir, 'notes', ids[1] + '.words'), '');
   const run = (lvl) => H.run('render.js', ['checklist', '--level', lvl, '--cohdit', dir, '--now', H.NOW], { env: { COHDIT_HOME: HOME } }).out;
   const plain = run('plain').split('\n');
-  assert.deepEqual(plain.slice(0, 6), ['  1 Add a chore', '    Type Dishes and press Add.', '    Proof: 4 new tests; all tests together run 92% of its lines; cases tested 4 of 5, missing: something failing', '  2 Tick a chore done', '    Tick Dishes: it moves under Done', '    Proof: 2 new tests; all tests together run 78% of its lines; cases tested 2 of 5, missing: smallest and largest, wrong input, something failing (builder\'s own count)']);
-  assert.equal(plain[6], "I wrote some of the words in 1 and 2 myself. Change anything that doesn't sound right.");
+  assert.deepEqual(plain.slice(0, 5), ['', '1. Add a chore', '   Try: Type Dishes and press Add.', '   Tests: 4 new tests; all tests together run 92% of its lines; cases tested 4 of 5, missing: something failing', '', '2. Tick a chore done'].slice(1));
+  assert.ok(plain.includes("I wrote some of the words in 1 and 2 myself. Change anything that doesn't sound right."), 'the drafted wording is named once, at the end');
   const tech = run('tech').split('\n');
-  assert.deepEqual(tech.slice(0, 2), ['  1 Add a chore (' + ids[0] + ')', '    Type Dishes and press Add.'], 'a developer gets the short list too, with ids');
+  assert.deepEqual(tech.slice(0, 2), ['1. Add a chore (' + ids[0] + ')', '   Try: Type Dishes and press Add.'], 'a developer gets the short list too, with ids');
 });
 
 test('the runner only carries messages, so its cost is coordination; the maker is build, a lens is check', () => {

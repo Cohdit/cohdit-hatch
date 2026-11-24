@@ -1097,8 +1097,8 @@ function viewSpec(c, a) {
 // The try standard: below the tech level, a thing on the list is its title and one line of how to try
 // it, never longer than TRY_LINE_MAX. The line is the first sentence of the maker's note that is not
 // about wording it wrote; that wording is named once, at the end, by item number.
-const TRY_LINE_MAX = 100;
-const TRY_TITLE_MAX = 48;
+const TRY_LINE_MAX = 170;
+const TRY_TITLE_MAX = 64;
 const ABOUT_WORDING = /\bI (wrote|drafted)\b|\bmyself\b|\bwording\b|\bplease read\b/i;
 
 function sentences(text) {
@@ -1116,7 +1116,8 @@ function cutAt(s, max) {
 function shortLine(text) {
   const s = sentences(text).find((x) => !ABOUT_WORDING.test(x));
   if (!s) return '';
-  return cutAt(s[0].toUpperCase() + s.slice(1), TRY_LINE_MAX);
+  // <id> in a note would be read as markup and vanish or be escaped on the way to the screen
+  return cutAt((s[0].toUpperCase() + s.slice(1)).replace(/<([A-Za-z][^<>]{0,30})>/g, '[$1]'), TRY_LINE_MAX);
 }
 
 /** A title short enough to read at a glance (a bug's title can be a whole error message). */
@@ -1157,14 +1158,16 @@ function viewChecklist(c, a) {
     const n = order.indexOf(i) + 1;
     const device = it.device && start && start.f.lan ? w.onDevice(start.f.lan) : '';
     const note = c.note(i);
-    // every level: the title, then one short line of how to try it (the standard: TRY_TITLE_MAX, TRY_LINE_MAX)
-    out.push('  ' + n + ' ' + shortTitle(c.title(i)) + (tech ? ' (' + i + ')' : ''));
+    // every level: the title, then how to try it, then the tests; a blank line between things so each reads on its own
+    if (out.length && out[out.length - 1] !== '') out.push('');
+    out.push(n + '. ' + shortTitle(c.title(i)) + (tech ? ' (' + i + ')' : ''));
     const how = shortLine(note) || shortLine((it.criteria || [])[0]) || '?';
-    out.push('    ' + (device ? device[0].toUpperCase() + device.slice(1) + how[0].toLowerCase() + how.slice(1) : how));
+    out.push('   Try: ' + (device ? device[0].toUpperCase() + device.slice(1) + how[0].toLowerCase() + how.slice(1) : how));
     const proof = c.proof(i);
-    if (proof) out.push('    Proof: ' + proof);
+    if (proof) out.push('   Tests: ' + proof);
     if (c.wroteWords(i)) wrote.push(n);
   }
+  if (out.length) out.push('');
   if (wrote.length) out.push(w.wroteWords(wrote));
   if (!ids.length) out.push(tech ? 'every item has a result' : w.tryAnswer);
   else out.push(start ? w.tryAnswer : w.trySay);

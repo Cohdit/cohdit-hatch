@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.36 — the try list is easier to read (2026-11-24)
+
+- Each thing on the list is now a numbered block with a blank line between: the title, "Try:" (what to do and what you should
+  see) and "Tests:" (what was added and how much of its code the tests run).
+- Lines are no longer cut off after about 100 characters; they run to about 170 and are cut at a word only past that. Titles
+  run to 64.
+- A `<name>` in a note shows as `[name]`, so it is not mistaken for markup and lost on the way to the screen.
+
 ## 0.0.35 — build numbers the server refuses are dropped (2026-11-23)
 
 - A build-numbers line that Cohdit refuses for good is dropped instead of retried on every later build. One it could not store

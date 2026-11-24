@@ -1,3 +1,4 @@
-  1 Tick a chore done
-    Tick Dishes: it moves under Done
+1. Tick a chore done
+   Try: Tick Dishes: it moves under Done
+
 Say "let me try it" to start it on this computer.

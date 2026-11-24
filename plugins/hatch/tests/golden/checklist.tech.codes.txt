@@ -1,3 +1,4 @@
-  1 Add a chore (ITEM-001)
-    Type "Dishes", press Add: it appears in the list
+1. Add a chore (ITEM-001)
+   Try: Type "Dishes", press Add: it appears in the list
+
 Say "let me try it" to run it locally.

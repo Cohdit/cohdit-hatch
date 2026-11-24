@@ -1,7 +1,9 @@
-  1 Add a chore
-    Type "Dishes", press Add: it appears in the list
-    Proof: 4 new tests; all tests together run 92% of its lines; cases tested 4 of 5, missing: something failing
-  2 Tick a chore done
-    Tick Dishes: it moves under Done
-    Proof: 2 new tests; all tests together run 78% of its lines; cases tested 2 of 5, missing: smallest and largest, wrong input, something failing (builder's own count)
+1. Add a chore
+   Try: Type "Dishes", press Add: it appears in the list
+   Tests: 4 new tests; all tests together run 92% of its lines; cases tested 4 of 5, missing: something failing
+
+2. Tick a chore done
+   Try: Tick Dishes: it moves under Done
+   Tests: 2 new tests; all tests together run 78% of its lines; cases tested 2 of 5, missing: smallest and largest, wrong input, something failing (builder's own count)
+
 Say "let me try it" to start it on this computer.

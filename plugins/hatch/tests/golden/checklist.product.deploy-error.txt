@@ -1,5 +1,7 @@
-  1 Add a chore
-    Type "Dishes", press Add: it appears in the list
-  2 Tick a chore done
-    Tick Dishes: it moves under Done
+1. Add a chore
+   Try: Type "Dishes", press Add: it appears in the list
+
+2. Tick a chore done
+   Try: Tick Dishes: it moves under Done
+
 Say "let me try it" to run it locally.

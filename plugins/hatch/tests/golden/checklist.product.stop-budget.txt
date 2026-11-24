@@ -1,6 +1,8 @@
-  1 Add a chore
-    Type "Dishes", press Add: it appears in the list
-    Proof: +4 tests; 92% of its lines run by all tests; cases 4/5, missing: failure
-  2 Tick a chore done
-    Tick Dishes: it moves under Done
+1. Add a chore
+   Try: Type "Dishes", press Add: it appears in the list
+   Tests: +4 tests; 92% of its lines run by all tests; cases 4/5, missing: failure
+
+2. Tick a chore done
+   Try: Tick Dishes: it moves under Done
+
 Say "let me try it" to run it locally.

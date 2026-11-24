@@ -118,17 +118,22 @@ test('a try from start to pass: the app, the list, a fail in their words, pass f
   const lan = hintOf(s, 'lan');                                            // null on a computer with no network
   assert.equal(s.out, [
     'Open ' + url + ' to try it.',
-    '  1 Letter grid',
-    '    Open it; you see all 26 letters, big',
-    '    Proof: no new tests',
-    '  2 Tap to hear',
-    '    Tap a letter; you hear it',
-    '    Proof: no new tests',
-    '  3 Animal picture',
-    '    Read the animal names; change any.',
-    '    Proof: no new tests',
-    '  4 On the iPad',
-    '    ' + (lan ? 'On the same wifi, open ' + lan + ' on it (if this computer asks whether to allow connections, say yes); open it on the iPad' : 'Open it on the iPad'),
+    '',
+    '1. Letter grid',
+    '   Try: Open it; you see all 26 letters, big',
+    '   Tests: no new tests',
+    '',
+    '2. Tap to hear',
+    '   Try: Tap a letter; you hear it',
+    '   Tests: no new tests',
+    '',
+    '3. Animal picture',
+    '   Try: Read the animal names; change any.',
+    '   Tests: no new tests',
+    '',
+    '4. On the iPad',
+    '   Try: ' + (lan ? 'On the same wifi, open ' + lan + ' on it (if this computer asks whether to allow connections, say yes); open it on the iPad' : 'Open it on the iPad'),
+    '',
     'Say "pass", or say which one didn\'t work and what you saw.',
   ].join('\n'));
   const t0 = local(dir).try;
@@ -224,8 +229,8 @@ test('a try that died with the lid is picked up: same run, same numbers, only wh
   assert.equal(again.code, 0, again.err + again.out);
   assert.equal(hintOf(again, 'run'), hintOf(s, 'run'));
   assert.doesNotMatch(again.out, /1 Letter grid/, 'what has an answer is not asked again');
-  assert.match(again.out, /^  2 Tap to hear/m);
-  assert.match(again.out, /^  3 Animal picture/m);
+  assert.match(again.out, /^2\. Tap to hear/m);
+  assert.match(again.out, /^3\. Animal picture/m);
   assert.equal(await answers(hintOf(again, 'url')), 200, 'the app is back');
   const st = T(h, dir, ['stop']);
   assert.equal(st.code, 0, st.err);
@@ -283,8 +288,8 @@ test('a build ends a live try first; a try refuses while a build is live; the ap
   assert.equal(local(dir).try, undefined);
   const ok = T(h, dir, ['start']);
   assert.equal(ok.code, 0, ok.err);
-  assert.match(ok.out, /^  1 Letter grid/m, 'never answered, so still on the list');
-  assert.match(ok.out, /^  2 Tap to hear/m, 'the rebuilt thing is back on the list');
+  assert.match(ok.out, /^1\. Letter grid/m, 'never answered, so still on the list');
+  assert.match(ok.out, /^2\. Tap to hear/m, 'the rebuilt thing is back on the list');
   T(h, dir, ['stop']);
 });
 
