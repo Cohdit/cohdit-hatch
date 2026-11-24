@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.38 — when the terms change, you agree in place (2026-11-24)
+
+- If the terms move on after you agreed to them, "build it" now says so ("The terms have changed since you agreed to them"),
+  and "read me the terms" then "I agree" carries on with the same idea. It no longer sends you back to "I have an idea".
+
 ## 0.0.37 — a newer set of terms never stops a build (2026-11-24)
 
 - "Build it" on an idea you had already agreed to refused with "I can't start building until you've agreed to the terms"

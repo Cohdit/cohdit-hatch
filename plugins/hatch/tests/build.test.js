@@ -1049,6 +1049,16 @@ test('terms: an idea agreed to older terms must agree again; one agreed to the c
   const old = B(h, dir, ['open']);
   assert.equal(old.code, 1);
   assert.equal(hintOf(old, 'hint'), 'no_terms', 'older terms: asked again');
+  assert.match(old.out, /The terms have changed since you agreed/, 'and told why, in words that fit an idea already set up');
+  assert.doesNotMatch(old.out, /I have an idea/, 'not sent back to start a new idea');
+  assert.equal(hintOf(old, 'dir'), dir, 'the folder is named so "I agree" knows where');
+  const ag = run(h, ['idea', 'terms-agree', '--dir', dir]);
+  assert.equal(ag.code, 0, ag.err);
+  assert.match(ag.out, /^Agreed to the terms \(version \d+\)\. Say "build it" to carry on\./);
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).terms_v, require('../scripts/lib/spec').terms().version, 'the idea carries the current version');
+  assert.notEqual(hintOf(B(h, dir, ['open']), 'hint'), 'no_terms', 'and builds');
+  Object.assign(spec, { terms_v: 0 }); fs.writeFileSync(file, JSON.stringify(spec, null, 2) + '\n');
+  B(h, dir, ['close']);
   set(spec.terms_v + 1000);
   const newer = B(h, dir, ['open']);
   assert.notEqual(hintOf(newer, 'hint'), 'no_terms', 'agreed to a newer version: never locked out');

@@ -453,7 +453,23 @@ function cmdIdea(argv) {
       hint('next', 'build');
       return 0;
     }
-    return fail('idea needs one of new, set, change, reopen, show, agree, refuse, terms');
+    if (sub === 'terms-agree') {                                // the terms moved on after this idea was agreed: say yes again, in place
+      const spec = sp.load(dir);
+      if (!spec.agreed) throw new sp.Invalid('the idea is not agreed yet; keep going with idea set');
+      if (spec.refused) throw new sp.Invalid('refused: ' + spec.refused);
+      const t = sp.terms();
+      const run = newRunId(path.join(cd, 'ledger', 'runs'), ml.utcNow());
+      spec.terms_v = t.version;
+      sp.save(dir, spec);
+      const settings = sp.registry();
+      settings.terms_v = t.version;
+      sp.saveRegistry(settings);
+      appendEvents(cd, run, [['RUN_START', runStart('dream')], ['DECIDE', { type: 'terms', choice: 'accepted', who: 'you', v: t.version }], ['RUN_END', { outcome: 'ok' }]]);
+      process.stdout.write('Agreed to the terms (version ' + t.version + '). Say "build it" to carry on.\n');
+      hint('next', 'build');
+      return 0;
+    }
+    return fail('idea needs one of new, set, change, reopen, show, agree, refuse, terms, terms-agree');
   } catch (e) {
     if (e instanceof sp.Invalid) {
       process.stderr.write('hatch: ' + e.message + '\n');
