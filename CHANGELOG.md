@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.37 — a newer set of terms never stops a build (2026-11-24)
+
+- "Build it" on an idea you had already agreed to refused with "I can't start building until you've agreed to the terms"
+  whenever the terms text had moved on. Now only an idea agreed to an *older* version is asked again; one agreed to the
+  current or a newer version builds.
+
 ## 0.0.36 — the try list is easier to read (2026-11-24)
 
 - Each thing on the list is now a numbered block with a blank line between: the title, "Try:" (what to do and what you should

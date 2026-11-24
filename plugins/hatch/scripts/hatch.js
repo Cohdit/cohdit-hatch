@@ -811,7 +811,7 @@ function cmdBuild(argv) {
         return 5;
       }
       if (!spec.agreed) { hint('dir', dir); hint('hint', 'not_agreed'); return 1; }
-      if (spec.terms_v !== sp.terms().version) {
+      if (!(spec.terms_v >= sp.terms().version)) {   // older than the current terms; a newer one never locks anyone out
         hint('dir', dir);
         say(dir, [bd.stopBefore(dir, 'no_terms').stop], lvl);
         hint('hint', 'no_terms');

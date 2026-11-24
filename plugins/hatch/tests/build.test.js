@@ -1038,3 +1038,18 @@ test('retry: a set-aside thing goes back on the list and its brief says what sto
   const again = B(h, dir, ['retry']);
   assert.equal(hintOf(again, 'hint'), 'nothing_set_aside', 'nothing else is set aside');
 });
+
+test('terms: an idea agreed to older terms must agree again; one agreed to the current or a newer version builds', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Terms Check', ITEMS.slice(0, 1));
+  const file = path.join(dir, '.cohdit', 'spec.json');
+  const spec = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const set = (v) => fs.writeFileSync(file, JSON.stringify(Object.assign(spec, { terms_v: v }), null, 2) + '\n');
+  set(0);
+  const old = B(h, dir, ['open']);
+  assert.equal(old.code, 1);
+  assert.equal(hintOf(old, 'hint'), 'no_terms', 'older terms: asked again');
+  set(spec.terms_v + 1000);
+  const newer = B(h, dir, ['open']);
+  assert.notEqual(hintOf(newer, 'hint'), 'no_terms', 'agreed to a newer version: never locked out');
+});
