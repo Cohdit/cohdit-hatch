@@ -82,9 +82,10 @@ const WORDS = {
     blockWhy: { dependency: 'needs something else built first', ambiguous: 'needs your decision', access: 'no access to something it needs', env: 'something on this computer is in the way', budget: 'it reached the cost limit for one thing' },
     failedTimes: (n) => 'the checks failed ' + times(n),
     couldntFinish: "couldn't finish it",
+    carryOn: 'Say "build all" to carry on from there.',
     crash: {
       builder: 'the builder', checker: 'the checker',
-      neverBack: (who, title) => 'while ' + who + ' was working on "' + title + '" and never reported back.',
+      neverBack: (who, title) => 'while ' + who + ' was working on "' + title + '".',
       deployError: 'because publishing failed. The details are saved.', deploying: 'while publishing.',
       pushRejected: "because I couldn't save to the shared copy. Your work is safe here.",
       verifyFail: (title) => title ? 'after the checks failed on "' + title + '".' : 'after the checks failed.',
@@ -159,9 +160,10 @@ const WORDS = {
     blockWhy: { dependency: 'depends on something not built yet', ambiguous: 'needs your decision', access: 'missing access', env: 'environment problem on this machine', budget: 'per-item cost limit reached' },
     failedTimes: (n) => 'failed tests ' + times(n),
     couldntFinish: 'builder could not finish',
+    carryOn: '"build all" resumes it.',
     crash: {
       builder: 'the builder', checker: 'the reviewer',
-      neverBack: (who, title) => 'while ' + who + ' was working on "' + title + '" and never reported back.',
+      neverBack: (who, title) => 'while ' + who + ' was working on "' + title + '".',
       deployError: 'because the deploy failed. The log is saved.', deploying: 'while deploying.',
       pushRejected: 'because the push was rejected. Your work is safe locally.',
       verifyFail: (title) => title ? 'after tests failed on "' + title + '".' : 'after tests failed.',
@@ -576,7 +578,9 @@ function viewWhy(c, a) {
   } else if (state === 'finished') {
     out.push(skill === 'build' ? c.w.finished(c.ago(last.ts), done, blocked, held) : 'Finished ' + c.ago(last.ts) + '.');
   } else if (state === 'crashed') {
-    out.push('Stopped unexpectedly ' + c.ago(last.ts) + ' ' + crashPhrase(c, rs, last));
+    // No end recorded: the session went away, often because the person stopped it themselves (to change model, say).
+    // Said plainly, without blame, with the way back; a build resumes the same thing where it was.
+    out.push('Stopped ' + c.ago(last.ts) + ' ' + crashPhrase(c, rs, last) + (skill === 'build' ? ' ' + c.w.carryOn : ''));
   } else {
     out.push('Working now: ' + workingPhrase(c, rs) + ' (started ' + c.ago(rs[0].ts) + ').');
   }

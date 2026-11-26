@@ -1,4 +1,4 @@
-Stopped unexpectedly 2 hours ago while the builder was working on "Weekly scoreboard" and never reported back.
+Stopped 2 hours ago while the builder was working on "Weekly scoreboard". "build all" resumes it.
 Steps: started building → started "Weekly scoreboard" → building it.
 Held for you: 1 question. Say "status" to see it. (ITEM-003)
 Run 20261101T075000Z-delons-laptop-0002, skill build, last event 2026-11-01T07:51:10Z. Say "show me the events" for the full list.

@@ -6,6 +6,8 @@
   so a builder quietly working for a long time still shows as working, and a build whose session was closed shows as
   stopped within about twelve minutes instead of saying "Working now" for twenty. Nothing about how things are built
   or checked changes.
+- A build that stopped part-way, often because you stopped it yourself, is no longer called "stopped unexpectedly".
+  Status says where it was and that "build all" carries on from there.
 
 ## 0.0.41 — every check you agreed has its own browser test (2026-11-26)
 

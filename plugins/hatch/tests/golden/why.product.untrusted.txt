@@ -1,4 +1,4 @@
-Stopped unexpectedly 3 days ago right after "Add a chore" was done.
+Stopped 3 days ago right after "Add a chore" was done. "build all" resumes it.
 Steps: started building → started "Add a chore" → building it → builder finished → done.
 Held for you: 1 question. Say "status" to see it.
 Say "technical" for the full event list.

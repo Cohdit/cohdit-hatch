@@ -79,7 +79,7 @@ test('the heartbeat decides whether a quiet build is working or gone', () => {
   at('2026-11-01T08:55:00Z');
   assert.match(why('2026-11-01T09:00:00Z'), /Working now/, 'a maker quiet in the ledger for an hour, but its agents still at work');
   at('2026-11-01T07:58:30Z');
-  assert.match(why('2026-11-01T08:11:00Z'), /never reported back/, 'the agents went quiet with the ledger 13 minutes ago: gone, where the ledger alone would wait 20');
+  assert.match(why('2026-11-01T08:11:00Z'), /Stopped/, 'the agents went quiet with the ledger 13 minutes ago: gone, where the ledger alone would wait 20');
   at('2026-10-30T07:00:00Z');
   assert.match(why('2026-11-01T08:05:00Z'), /Working now/, 'a beat from before the run started is not this run\'s: the ledger rule holds');
   assert.match(R('why', 'crashed', 'plain', '--last', '--now', '2026-11-01T08:05:00Z', '--beat', beat + '.none').out, /Working now/, 'no beat file: the ledger rule');
@@ -96,7 +96,7 @@ test('why: the algorithm picks the right branch per fixture', () => {
   assert.match(why('stop-budget', 'product'), /reached its cap \([\d.]+[kM] tokens ≈ \$[\d.]+ at API list price\)/, 'product stop-budget does the same, in symbols');
   assert.match(why('deploy-error'), /Publishing failed/, 'deploy-error says publishing');
   assert.match(why('deploy-error', 'product'), /deploy to vercel failed/, 'product names the deploy target');
-  assert.match(why('crashed'), /never reported back/, 'crashed says never reported');
+  assert.match(why('crashed'), /Stopped 2 hours ago while the builder was working on "Weekly scoreboard"\. Say "build all" to carry on/, 'a stop says where, without blame, and the way back');
   assert.match(why('crashed'), /2 hours ago/, 'crashed says when');
   assert.match(why('live'), /Working now: building "Weekly scoreboard"/, 'live says what it is doing');
   assert.match(why('live', 'product'), /Working now: builder started on "Weekly scoreboard"/, 'product live phrase');
