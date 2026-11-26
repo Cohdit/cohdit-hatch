@@ -765,7 +765,7 @@ function viewDigest(c, a) {
  *  sign-in are one row (the sign-in row once the tool is there), and Hatch's own two installs appear
  *  only when nothing else is left and they still failed. A re-run shows only what changed since the
  *  previous setup run and what is still not ready. Tech shows every check, every time. */
-const ADVISORY = ['guard', 'hook_path'];
+const ADVISORY = ['guard', 'hook_path', 'design'];   // lib/doctor.js ADVISORY
 const TOOL_OF = { gh_auth: 'gh', vercel_auth: 'vercel', aws_auth: 'aws' };
 
 function setupDigest(c, run, rs) {

@@ -63,6 +63,7 @@ function builtIdea(h, name = 'ABC Friends', items = ITEMS) {
   const dir = hintOf(n, 'dir');
   assert.equal(run(h, ['idea', 'set', '--dir', dir, '--json', JSON.stringify({ items, gates: GATES })]).code, 0);
   assert.equal(run(h, ['idea', 'agree', '--dir', dir]).code, 0);
+  H.mockSignedOff(dir);
   assert.equal(B(h, dir, ['open']).code, 0);
   for (;;) {
     const nx = B(h, dir, ['next']);
@@ -125,6 +126,7 @@ test('the gate: nothing built, something untried, a build live, changes Hatch di
   const dir = hintOf(n, 'dir');
   run(h, ['idea', 'set', '--dir', dir, '--json', JSON.stringify({ items: ITEMS, gates: GATES })]);
   run(h, ['idea', 'agree', '--dir', dir]);
+  H.mockSignedOff(dir);
   const none = S(h, dir, ['open']);
   assert.equal(none.code, 1);
   assert.equal(none.out, 'Nothing to share yet. Say "build it".');
@@ -231,6 +233,7 @@ test('a taken name gets -2 on the publishing side only; a team scope is passed a
   const a = run(h, ['idea', 'agree', '--dir', dir, '--hosting', 'team', '--team', 'other-team']);
   assert.equal(a.code, 0, a.err);
   assert.equal(cfgOf(dir).hosting.scope, 'other-team', 'the slug the person was found on, never a placeholder');
+  H.mockSignedOff(dir);
   B(h, dir, ['open']); B(h, dir, ['next']);
   fs.writeFileSync(path.join(dir, 'app', 'ITEM-001.txt'), 'grid\n');
   B(h, dir, ['commit', '-m', 'grid']); B(h, dir, ['built', 'ITEM-001', '--return', DONE()]); B(h, dir, ['close']);

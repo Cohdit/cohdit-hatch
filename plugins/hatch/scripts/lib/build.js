@@ -48,6 +48,7 @@ const ls = require('./lessons');
 const ld = require('./leader');
 const api = require('./api');
 const e2 = require('./e2e');
+const mk = require('./mock');
 
 // "build it" takes the next DEFAULT_ITEMS things; "build all" the whole list (hatch.js runWant).
 const DEFAULT_ITEMS = 10;
@@ -891,6 +892,8 @@ function brief(dir, spec, item, cfg, notes, status, advice, check) {
   } else if (check && check.none) {
     out.push('', '## The browser check', 'No browser test was written for this thing (' + check.none + '). Your own tests are its only proof; the person is told to try it by hand.');
   }
+  const mockPart = mk.makerSection(dir, item);
+  if (mockPart) out.push('', mockPart);
   out.push('', '## Deciding', 'A choice where every option passes the check is yours: take the simplest, record it in `decisions`. Words the person must write: draft them, and say so in `try_note` so they read them when they try it. Block only on a fact about the idea you cannot know, or something you cannot reach.');
   out.push('', '## Asking a colleague', 'Once per thing, when a design question would otherwise be a guess, return `verdict: consult` with `consult: {role, question}`; the role is one of ' + ROLES.join(', ') + '. The answer comes back in this brief and you carry on where you were. Never for a fact only the person knows: that is `blocked`.');
   if (advice) out.push('', '## The ' + advice.role + "'s answer", 'You asked: ' + advice.question, '', advice.answer);
@@ -931,6 +934,8 @@ function testerBrief(dir, spec, item, status, retest) {
       '- If it asks for exactly what they checked, change nothing and return `{"verdict":"stands","reason":"one sentence the builder will read: why the test is right"}`.',
       'If the builder questions it again after this, the person decides.');
   }
+  const mockPart = mk.testerSection(dir, item);
+  if (mockPart) out.push('', mockPart);
   out.push('', '## The whole first version (for context; test only the thing above)');
   for (const o of spec.items) out.push('- ' + o.id + ' ' + o.title + (st.get(o.id) !== 'queued' ? ' (' + st.get(o.id) + ')' : '') + (o.device ? ' (a device check, not built)' : ''));
   out.push('', '## What you write', 'Exactly one file: `' + file + '`. Any other change in the folder is thrown away and you are asked again. You run nothing.',

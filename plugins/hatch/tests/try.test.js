@@ -44,6 +44,7 @@ function builtIdea(h, name, items = ITEMS, notes = {}) {
   const dir = hintOf(n, 'dir');
   assert.equal(run(h, ['idea', 'set', '--dir', dir, '--json', JSON.stringify({ items, gates: GATES })]).code, 0);
   assert.equal(run(h, ['idea', 'agree', '--dir', dir]).code, 0);
+  H.mockSignedOff(dir);
   assert.equal(B(h, dir, ['open']).code, 0);
   for (;;) {
     const nx = B(h, dir, ['next']);

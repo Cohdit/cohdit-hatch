@@ -106,6 +106,14 @@ function playbook(kind, name) {
 }
 
 /** Content for in-process loaders: a no-op with HATCH_DEV_DIR, else fetched with the key (HATCH_KEY). */
+/** The mock-up signed off, as `mock agree` leaves it, for tests of what comes after it. */
+function mockSignedOff(dir) {
+  const f = path.join(dir, '.cohdit', 'spec.json');
+  const spec = JSON.parse(fs.readFileSync(f, 'utf8'));
+  spec.mock = { agreed: '2026-11-01T09:00:00Z', screens: 1, look: 'plain' };
+  fs.writeFileSync(f, JSON.stringify(spec, null, 1) + '\n');
+}
+
 function ready() { return require('../scripts/lib/api').preloadData(); }
 
-module.exports = { ready, playbook, T, P, S, NOW, ENV, tmpdir, run, git, mkrepo, spool, lines, records, lastLine, readJson, ls };
+module.exports = { ready, playbook, mockSignedOff, T, P, S, NOW, ENV, tmpdir, run, git, mkrepo, spool, lines, records, lastLine, readJson, ls };

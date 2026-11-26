@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Before anything is built, you see it. Once you agree your idea, Hatch draws a mock-up of every screen, using your own
+  words and examples, and opens it in your browser. Tell it what to change until it's right, then sign it off. Nothing is
+  built before you do, and every builder then builds to what you signed off.
+- The mock-up is drawn with Anthropic's design guidance, which setup now adds for you.
+- When you add something big to an idea later (a new screen, a new area, a new way of doing something), Hatch draws just
+  that first; you can skip it. A small change, like a button or a label, is built straight away with no mock-up.
+
 ## 0.0.42 — the loop holds its cost limit mid-thing, a questioned test goes back to the tester, a whole idea is agreed at once (2026-11-26)
 
 - Status knows whether a build is really still working. Hatch's own agents leave a heartbeat on every step they take,

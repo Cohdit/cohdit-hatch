@@ -5,6 +5,7 @@ Default taken: data = neon_free. Say "change that" to revisit.
 Question 1: walk.
 Read-back: 4 items, 6 assumptions inferred, 1 open questions.
 Spec saved: 4 items to build, 1 gates answered yes, 1 open questions.
+Mock-up drawn: 5 screens, round 1.
 Cohdit doesn't build apps that are designed to physically hurt, threaten, stalk or harass people. This isn't something I can change or make an exception for.
 Decision: design = sunday_night.
 Picked "Add a chore".

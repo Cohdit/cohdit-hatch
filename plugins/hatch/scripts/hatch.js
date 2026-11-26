@@ -21,6 +21,12 @@
  *                                       the person said yes: hosting, scope, SPEC; ends the run
  *   hatch.js idea refuse <category> [--dir d]
  *   hatch.js idea terms                 the terms text, for "read me the terms"
+ *   hatch.js mock open|show [--dir d]   the mock-up: start (or resume) it, writes the designer's brief (next=designer); show reopens it
+ *   hatch.js mock drawn --return <json|->
+ *                                       the designer's report: the mock is checked against the list, then opened (next=person)
+ *   hatch.js mock change --note <text|->
+ *                                       the person's change, in their words; the designer draws again
+ *   hatch.js mock agree                 the person signed it off: committed, recorded; build may start
  *   hatch.js build open [--dir d | --name n] [--items N|all] [--only bugs|things] [--for <minutes>] [--budget <dollars>]
  *                                       start (or resume) the unattended run: checks, skeleton, GitHub
  *   hatch.js build next                 pick the next thing; writes the maker's brief (item= brief= on stderr)
@@ -86,7 +92,8 @@
  * for the model: next=<capability> · hint=<word> · level=<level>. The model never writes a sentence
  * about state that did not come from stdout.
  *
- * Setup fixes what it can before it looks: it fetches the GitHub tool into ~/.cohdit/bin when the
+ * Setup fixes what it can before it looks: it adds Anthropic's design plugin (the mock-up's designer preloads its
+ * skill), fetches the GitHub tool into ~/.cohdit/bin when the
  * computer has none (lib/tools.js), fetches the publishing tool through npx, installs the secret
  * guard, and sets a git identity from GitHub once signed in. Its run goes to the machine ledger,
  * ~/.cohdit/ledger/runs/, through the same validation as every other event (docs/CONTRACTS.md
@@ -99,6 +106,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
+const mk = require('./lib/mock');
 const ml = require('./lib/ledger');
 const cz = require('./lib/codes');
 const doc = require('./lib/doctor');
@@ -182,6 +190,9 @@ async function cmdSetup() {
   if (!process.env.COHDIT_PROBES && doc.probe('gh', run) !== 'ok') await tools.fetchGh();
   run(doc.VERCEL[0], doc.VERCEL.slice(1).concat(['--version']));
   if (!doc.guardInstalled() && doc.installGuard() === 'taken') hint('hint', 'hookspath_taken');
+  // Anthropic's design plugin, for the mock-up's designer: added through Claude Code's own command; it is ready from the
+  // next Claude session on. Never blocks setup when it cannot be added.
+  if (!process.env.COHDIT_PROBES && !doc.designInstalled() && doc.installDesign()) hint('hint', 'design_added');
   const results = doc.checks(run);
   if (results.some((x) => x.name === 'gh_auth' && x.state === 'ok')) doc.ensureIdentity(run);
   if (results.some((x) => x.name === 'vercel_auth' && x.state === 'ok')) {
@@ -374,7 +385,7 @@ function cmdIdea(argv) {
         events.push(['SPEC', { items: spec.items.length, gates_yes: (spec.rails || []).length, held: spec.open_questions.length }]);
         for (const id of res.added) hint('added', id);
         for (const id of res.edited) hint('edited', id);
-        hint('next', 'build');
+        hint('next', spec.items.some((i) => i.mock === 'needed') ? 'mock' : 'build');
       } else {
         if (!spec.agreed) throw new sp.Invalid('the idea is not agreed yet; keep going with idea set');
         if (spec.refused) throw new sp.Invalid('refused: ' + spec.refused);
@@ -458,6 +469,181 @@ function cmdIdea(argv) {
     }
     throw e;
   }
+}
+
+// --- the mock-up ----------------------------------------------------------------------------------
+
+/** Has this idea been built from before? An idea that was, before mock-ups existed, is never stopped for one. */
+function builtBefore(dir) {
+  return bd.allRecords(dir).some((r) => r.c === 'PICK' || r.c === 'DONE');
+}
+
+/** A mock-up is owed: before the first build of an idea, and for the things a later, bigger change sent to be drawn. */
+function mockNeeded(dir, spec) {
+  if ((spec.items || []).some((i) => i.mock === 'needed')) return true;
+  return !(spec.mock && spec.mock.agreed) && !builtBefore(dir);
+}
+
+function mockUrl(dir) {
+  return 'file://' + path.join(mk.root(dir), mk.INDEX).split(path.sep).join('/');
+}
+
+/** Hand the drawing to the designer: its brief and its instructions beside the spool. */
+function toDesigner(dir, spec, local) {
+  // What was already loose in the folder before the designer ran (before the first build, Hatch's own files are not
+  // committed yet): only what changes after this, outside mock/, is the designer's and thrown away.
+  local.mock_before = bd.dirtyPaths(dir).filter((f) => !f.startsWith(mk.DIR + '/'))
+    .map((f) => [f, fs.existsSync(path.join(dir, f)) && fs.statSync(path.join(dir, f)).isFile() ? fs.statSync(path.join(dir, f)).mtimeMs : 0]);
+  sp.writeLocal(dir, local);
+  fs.writeFileSync(path.join(ml.spoolDir(dir), 'mock-brief.md'), mk.brief(dir, spec, local.mock_notes || [], local.mock_look || null));
+  bd.writeRole(dir, 'designer');
+  hint('brief', path.join(ml.spoolDir(dir), 'mock-brief.md'));
+  hint('roles', ml.spoolDir(dir));
+  hint('next', 'designer');
+}
+
+function cmdMock(argv) {
+  const sub = argv[0];
+  const rest = argv.slice(1);
+  const VALUED = ['--dir', '--return', '--note'];
+  try {
+    const dir = sp.findProject(opt(rest, '--dir'), process.cwd());
+    const cd = sp.cohditDir(dir);
+    const spec = sp.load(dir);
+    const local = sp.readLocal(dir);
+    hint('dir', dir);
+    if (!spec.agreed) { hint('hint', 'not_agreed'); return 1; }
+    if (sub === 'open') {
+      if (!mockNeeded(dir, spec)) {
+        process.stdout.write('The mock-up is signed off. Say "build it" when you\'re ready.\n');
+        hint('next', 'build');
+        return 0;
+      }
+      if (!local.mock_run || local.mock_done) {                  // a fresh run; an open one resumes where it was
+        const run = newRunId(path.join(cd, 'ledger', 'runs'), ml.utcNow());
+        appendEvents(cd, run, [['RUN_START', runStart('mock')], ['MOCK', { state: 'drawing' }]]);
+        Object.assign(local, { mock_run: run, mock_done: false, mock_contract: 0, mock_round: 0, mock_drawn: false, mock_notes: [] });
+        sp.writeLocal(dir, local);
+      }
+      if (local.mock_drawn && mk.exists(dir)) {                  // drawn already, waiting on the person
+        process.stdout.write('The mock-up is at ' + mockUrl(dir) + '\n');
+        hint('next', 'person');
+        return 0;
+      }
+      toDesigner(dir, spec, local);
+      return 0;
+    }
+    if (sub === 'skip' && (!local.mock_run || local.mock_done)) {   // skipped before any drawing began
+      local.mock_run = newRunId(path.join(cd, 'ledger', 'runs'), ml.utcNow());
+      appendEvents(cd, local.mock_run, [['RUN_START', runStart('mock')]]);
+      local.mock_done = false;
+      sp.writeLocal(dir, local);
+    }
+    if (!local.mock_run) return fail('no mock-up started here; call mock open first');
+    const run = local.mock_run;
+    if (sub === 'drawn') {
+      let r;
+      try { r = mk.designerReturn(readReturn(rest)); } catch (e) {
+        if (!(e instanceof mk.Invalid)) throw e;
+        return mockAgain(dir, spec, local, e.message);
+      }
+      const before = new Map(local.mock_before || []);
+      const mtime = (f) => (fs.existsSync(path.join(dir, f)) && fs.statSync(path.join(dir, f)).isFile() ? fs.statSync(path.join(dir, f)).mtimeMs : 0);
+      const stray = bd.dirtyPaths(dir).filter((f) => !f.startsWith(mk.DIR + '/') && (!before.has(f) || before.get(f) !== mtime(f)));
+      if (stray.length) {                                        // the designer writes only the mock: anything else goes
+        for (const f of stray) {                                 // a new file goes; a changed one goes back to what it was
+          if (before.has(f) || bd.git(['ls-files', '--error-unmatch', '--', f], dir, false) !== null) bd.git(['checkout', '-q', 'HEAD', '--', f], dir, false);
+          else fs.rmSync(path.join(dir, f), { force: true, recursive: true });
+        }
+        return mockAgain(dir, spec, local, 'write only under ' + mk.DIR + '/; these were thrown away: ' + stray.slice(0, 8).join(', '));
+      }
+      const problems = mk.problems(dir, spec);
+      if (problems.length) return mockAgain(dir, spec, local, problems.join('; '));
+      local.mock_look = r.look;
+      local.mock_drawn = true;
+      local.mock_contract = 0;
+      local.mock_round = (local.mock_round || 0) + 1;
+      sp.writeLocal(dir, local);
+      appendEvents(cd, run, [['MOCK', { state: 'drawn', screens: mk.screens(dir).length, round: local.mock_round }]]);
+      if (!process.env.COHDIT_PROBES) tools.openUrl(mockUrl(dir));
+      process.stdout.write(r.look + '\n\nThe mock-up is open in your browser: ' + mockUrl(dir) + '\n'
+        + 'Click through every screen. This is what you will get. Tell me anything to change, or say "that\'s it" to sign it off.\n');
+      hint('next', 'person');
+      return 0;
+    }
+    if (sub === 'show') {
+      if (!mk.exists(dir)) { hint('next', 'designer'); return fail('nothing drawn yet'); }
+      if (!process.env.COHDIT_PROBES) tools.openUrl(mockUrl(dir));
+      process.stdout.write('The mock-up is at ' + mockUrl(dir) + '\n');
+      hint('next', 'person');
+      return 0;
+    }
+    if (sub === 'change') {
+      const n = opt(rest, '--note');
+      const note = (n === '-' ? fs.readFileSync(0, 'utf8') : String(n || '')).replace(/\s+/g, ' ').trim();
+      if (!note) return fail('change needs --note <what to change, in their words>');
+      local.mock_notes = (local.mock_notes || []).concat([note.slice(0, 1500)]);
+      local.mock_drawn = false;
+      sp.writeLocal(dir, local);
+      appendEvents(cd, run, [['MOCK', { state: 'changed' }]]);
+      toDesigner(dir, spec, local);
+      return 0;
+    }
+    if (sub === 'agree') {
+      if (!local.mock_drawn || !mk.exists(dir)) { hint('hint', 'not_drawn'); return fail('there is no drawn mock-up to sign off'); }
+      const problems = mk.problems(dir, spec);
+      if (problems.length) { hint('hint', 'not_drawn'); return fail(problems.join('; ')); }
+      // Before the first build the folder has no commit yet: the skeleton's first commit takes the mock-up with everything
+      // else. After it, the mock-up is committed on its own, so the build's check for a clean folder still passes.
+      if (bd.fullSha(dir, 'HEAD') !== null) {
+        bd.git(['add', '--', mk.DIR], dir);
+        if ((bd.git(['diff', '--cached', '--name-only'], dir, false) || '').trim()) bd.git(['commit', '-q', '-m', 'Hatch: the signed-off mock-up'], dir);
+      }
+      for (const i of spec.items) if (i.mock === 'needed') i.mock = 'agreed';
+      spec.mock = { agreed: ml.utcNow(), screens: mk.screens(dir).length, look: local.mock_look || (spec.mock && spec.mock.look) || '' };
+      sp.save(dir, spec);
+      appendEvents(cd, run, [['MOCK', { state: 'agreed', screens: spec.mock.screens }], ['DECIDE', { type: 'design', choice: 'mock', who: 'you' }], ['RUN_END', { outcome: 'ok' }]]);
+      local.mock_done = true;
+      sp.writeLocal(dir, local);
+      hint('next', 'build');
+      return 0;
+    }
+    if (sub === 'skip') {                                        // a later change only: the first mock-up of an idea is never skipped
+      const owed = (spec.items || []).filter((i) => i.mock === 'needed');
+      if (!owed.length || !((spec.mock && spec.mock.agreed) || builtBefore(dir))) { hint('hint', 'no_skip'); return fail('only the mock-up of a later change can be skipped'); }
+      for (const i of owed) i.mock = 'skipped';
+      sp.save(dir, spec);
+      bd.git(['checkout', '-q', '--', mk.DIR], dir, false);        // a half-drawn change to a signed-off mock goes back
+      bd.git(['clean', '-qfd', '--', mk.DIR], dir, false);
+      appendEvents(cd, run, [['DECIDE', { type: 'design', choice: 'mock_skipped', who: 'you' }], ['RUN_END', { outcome: 'ok' }]]);
+      local.mock_done = true;
+      sp.writeLocal(dir, local);
+      hint('next', 'build');
+      return 0;
+    }
+    return fail('mock needs one of open, drawn, show, change, agree, skip');
+  } catch (e) {
+    if (e instanceof sp.Invalid) {
+      process.stderr.write('hatch: ' + e.message + '\n');
+      hint('hint', 'invalid');
+      return 64;
+    }
+    throw e;
+  }
+}
+
+/** A mock the script will not show: the designer is asked once more with why; a second time the person is told. */
+function mockAgain(dir, spec, local, why) {
+  local.mock_contract = (local.mock_contract || 0) + 1;
+  sp.writeLocal(dir, local);
+  process.stderr.write('hatch: ' + why + '\n');
+  if (local.mock_contract < 2) { hint('hint', 'reask'); return 64; }
+  local.mock_contract = 0;
+  sp.writeLocal(dir, local);
+  process.stdout.write('I couldn\'t get the mock-up right this time. Say "show me the mock-up" to have another go.\n');
+  hint('hint', 'mock_failed');
+  hint('next', 'none');
+  return 1;
 }
 
 // --- the build ----------------------------------------------------------------------------------
@@ -985,6 +1171,12 @@ function cmdBuild(argv) {
         return 5;
       }
       if (!spec.agreed) { hint('dir', dir); hint('hint', 'not_agreed'); return 1; }
+      if (mockNeeded(dir, spec)) {                               // nothing is built until the person signed off what they will see
+        hint('dir', dir);
+        process.stdout.write('Before I build anything, you see a mock-up of it. Say "show me the mock-up".\n');
+        hint('hint', 'mock_needed');
+        return 1;
+      }
       const trying = tr.current(dir);
       if (trying) tr.end(dir, trying, 'ok');                     // a try still open here ends first: its app stops, its run closes
       let cur = bd.active(dir);
@@ -1312,7 +1504,7 @@ function cmdBuild(argv) {
         lead.push(['RISK', { tier: risk.tier, signals: risk.signals.join(',') }, item]);
         const lenses = bd.lensesFor(risk);
         if (!lenses.length) return gate(dir, cur, spec, item, lvl, lead);
-        fs.writeFileSync(bd.diffPath(dir, item), diff + heldTestText(dir, item, o));
+        fs.writeFileSync(bd.diffPath(dir, item), diff + heldTestText(dir, item, o) + mk.reviewSection(dir, item));
         for (const a of lenses) lead.push(['DISPATCH', { agent: a, model: bd.agentModel(a) }, item]);
         o.phase = 'review';
         o.review = { expected: lenses, got: {} };
@@ -1825,7 +2017,7 @@ function denyDecision(h, projects, home, hatchPath) {
   // Inside one of Hatch's own agents the hook is told which (`agent_type`, e.g. hatch:maker), and holds it to its job:
   // the maker and the runner run this script and nothing else; the maker writes no browser test; the tester writes
   // only its one. The script checks all of this again on the files themselves, whatever the hook was told.
-  const role = /(?:^|:)(maker|runner|tester)$/.exec(String(h.agent_type || ''));
+  const role = /(?:^|:)(maker|runner|tester|designer)$/.exec(String(h.agent_type || ''));
   if (role) {
     const who = role[1];
     if (tool === 'Bash' && (who === 'maker' || who === 'runner') && hatchPath && !allowDecision(h, projects, hatchPath)) return 'Hatch: the ' + who + ' runs Hatch\'s own script, one call at a time, and nothing else';
@@ -1836,6 +2028,7 @@ function denyDecision(h, projects, home, hatchPath) {
       if (who === 'maker' && test) return 'Hatch: the browser tests are not the maker\'s to write or change';
       if (who === 'tester' && !/\/e2e\/item-\d+\.spec\.ts$/.test(rel)) return 'Hatch: the tester writes one file, e2e/item-NNN.spec.ts, and nothing else';
       if (who === 'runner') return 'Hatch: the runner edits nothing';
+      if (who === 'designer' && !/\/mock\/[^/][^]*$/.test(rel)) return 'Hatch: the designer writes the mock-up, under mock/, and nothing else';
     }
   }
   if (!EDIT_TOOLS.includes(tool) && !READ_TOOLS.includes(tool)) return null;
@@ -2415,7 +2608,7 @@ function preloadAgents(argv) {
 
 function main(argv) {
   if (NO_DATA.has(argv[0]) || process.env.HATCH_DEV_DIR) return dispatch(argv);
-  const agents = argv[0] === 'build' || argv[0] === 'fix';   // they write the read-only agents' files
+  const agents = argv[0] === 'build' || argv[0] === 'fix' || argv[0] === 'mock';   // they write the agents' files
   return api.preloadData(agents).then(() => preloadAgents(argv)).then(() => dispatch(argv), contentError);
 }
 
@@ -2432,6 +2625,7 @@ function dispatch(argv) {
     case 'level': return cmdLevel(argv.slice(1));
     case 'idea': return cmdIdea(argv.slice(1));
     case 'build': return cmdBuild(argv.slice(1));
+    case 'mock': return cmdMock(argv.slice(1));
     case 'status': return cmdStatus(argv.slice(1));
     case 'metrics': return cmdMetrics(argv.slice(1));
     case 'scorecard': return cmdScorecard(argv.slice(1));

@@ -223,7 +223,7 @@ function applyDecisions(spec, v) {
   }
 }
 
-const CHANGE_KEYS = ['add', 'edit', 'decisions', 'out', 'open_questions'];
+const CHANGE_KEYS = ['add', 'edit', 'decisions', 'out', 'open_questions', 'mock'];
 const CHANGE_LOCKED_DECISIONS = ['hosting', 'terms'];   // these also write config.json and the registry: only agree does that
 
 /** A small change to an agreed idea: new things added, queued things reworded, a decision, what is out.
@@ -274,6 +274,13 @@ function applyChange(spec, patch, interview, status = new Map()) {
     });
   }
   if (deps.length) resolveDepends(trial.items, deps, 'depends');
+  // A change big enough to see first (a new screen, a new area, a new way of doing something): its new things wait for
+  // a mock-up. A small tweak passes no `mock` and is built straight away. The interviewer judges which.
+  if (patch.mock !== undefined) {
+    if (typeof patch.mock !== 'boolean') throw new Invalid('mock must be true or false');
+    if (patch.mock && !res.added.length) throw new Invalid('mock: true goes with the new things it draws (add)');
+    if (patch.mock) for (const id of res.added) trial.items.find((x) => x.id === id).mock = 'needed';
+  }
   if (patch.decisions !== undefined) applyDecisions(trial, patch.decisions);
   if (patch.out !== undefined) trial.out = strList(patch.out, 'out');
   if (patch.open_questions !== undefined) trial.open_questions = strList(patch.open_questions, 'open_questions');

@@ -54,6 +54,7 @@ function agreedIdea(h, name = 'ABC Friends', items = ITEMS) {
   assert.equal(run(h, ['idea', 'set', '--dir', dir, '--json', JSON.stringify({ items, gates: GATES })]).code, 0);
   const a = run(h, ['idea', 'agree', '--dir', dir]);
   assert.equal(a.code, 0, a.err);
+  H.mockSignedOff(dir);
   return dir;
 }
 

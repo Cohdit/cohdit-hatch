@@ -56,8 +56,11 @@ test('a read-only agent has no Bash, so it is never asked to fetch', () => {
     const text = fs.readFileSync(path.join(ROOT, 'agents', name + '.md'), 'utf8');
     assert.match(text, /^tools: Read, Glob, Grep$/m, name);
   }
-  // The tester writes one file and runs nothing: Write, and still no Bash.
+  // The tester writes one file and runs nothing: Write, and still no Bash. The designer the same: the mock-up only.
   assert.match(fs.readFileSync(path.join(ROOT, 'agents', 'tester.md'), 'utf8'), /^tools: Read, Glob, Grep, Write$/m);
+  const designer = fs.readFileSync(path.join(ROOT, 'agents', 'designer.md'), 'utf8');
+  assert.match(designer, /^tools: Read, Glob, Grep, Write$/m);
+  assert.match(designer, /^skills:\n {2}- frontend-design:frontend-design$/m, 'Anthropic\'s frontend-design skill, preloaded');
 });
 
 test('the only key prefix in the plugin is the shape regex', () => {

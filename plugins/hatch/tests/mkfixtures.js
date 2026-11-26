@@ -377,6 +377,7 @@ function main() {
     ['ASK', null, { goal: 'walk', n: 1 }],
     ['READBACK', null, { kind: 'full', items: 4, inferred: 6, open: 1 }],
     ['SPEC', null, { items: 4, gates_yes: 1, held: 1 }],
+    ['MOCK', null, { state: 'drawn', screens: 5, round: 1 }],
     ['REFUSE', null, { category: 'harm' }],
     ['DECIDE', 'ITEM-003', { type: 'design', choice: 'sunday_night', who: 'you' }],
     ['PICK', 'ITEM-001', { branch: 'item/001-add-a-chore', fork: '3f2a9c1e' }],

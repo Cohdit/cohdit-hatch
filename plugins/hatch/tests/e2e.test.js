@@ -33,6 +33,7 @@ function idea(h, name = 'ABC Friends') {
   const dir = hintOf(n, 'dir');
   assert.equal(run(h, ['idea', 'set', '--dir', dir, '--json', JSON.stringify({ items: ITEMS, gates: GATES })]).code, 0);
   assert.equal(run(h, ['idea', 'agree', '--dir', dir]).code, 0);
+  H.mockSignedOff(dir);
   return dir;
 }
 

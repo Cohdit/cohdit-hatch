@@ -22,8 +22,12 @@ function probes(dir, map) {
 }
 
 /** A home directory for the person and the env that points every script at it. */
-function home() {
+function home(design = true) {
   const d = H.mkrepo();                              // any temp dir; the harness cleans it up
+  if (design) {                                      // Anthropic's design plugin, as Claude Code records it
+    fs.mkdirSync(path.join(d, '.claude', 'plugins'), { recursive: true });
+    fs.writeFileSync(path.join(d, '.claude', 'plugins', 'installed_plugins.json'), JSON.stringify({ version: 2, plugins: { 'frontend-design@claude-plugins-official': [{ scope: 'user' }] } }));
+  }
   return { dir: d, env: { COHDIT_HOME: d, GIT_CONFIG_GLOBAL: path.join(d, 'gitconfig') } };
 }
 
@@ -120,6 +124,15 @@ test('advisory checks never block: a hooks path owned by another tool is reporte
   assert.equal(r.out.split('\n').pop(), 'Everything is ready.');
   assert.doesNotMatch(fs.readFileSync(path.join(h.dir, 'gitconfig'), 'utf8'), /cohdit/, 'the other tool\'s hooks path was left alone');
   assert.ok(!fs.existsSync(path.join(h.dir, '.cohdit', 'guard', 'pre-commit')), 'nothing copied for a guard that is not wired');
+});
+
+test('the design plugin is advisory: missing, it is said once and never blocks', () => {
+  const h = home(false);
+  const env = Object.assign({ COHDIT_PROBES: probes(h.dir, EVERYTHING) }, h.env);
+  const r = H.run('hatch.js', ['setup'], { env });
+  assert.equal(r.code, 0, r.err);
+  assert.match(r.out, /^  Design      not added — mock-ups are drawn without Anthropic's design guidance until it is$/m);
+  assert.equal(r.out.split('\n').pop(), 'Everything is ready.');
 });
 
 test('tech level shows every check as a sentence, never the run summary', () => {

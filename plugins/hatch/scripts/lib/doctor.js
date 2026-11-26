@@ -18,9 +18,9 @@ const ml = require('./ledger');
 const tools = require('./tools');
 
 const NODE_MIN = 20;
-const ORDER = ['node', 'git', 'gh', 'gh_auth', 'vercel', 'vercel_auth', 'guard', 'hook_path'];
+const ORDER = ['node', 'git', 'gh', 'gh_auth', 'vercel', 'vercel_auth', 'guard', 'hook_path', 'design'];
 /** Hatch's own two installs. They never block "Everything is ready." and never need the person. */
-const ADVISORY = ['guard', 'hook_path'];
+const ADVISORY = ['guard', 'hook_path', 'design'];
 /** The publishing tool is run through npx, so there is nothing for the person to install. */
 const VERCEL = ['npx', '-y', 'vercel@latest'];
 const GUARD_FILES = ['pre-commit', 'pre-push', '_env-guard.sh', 'gitignore'];
@@ -102,6 +102,23 @@ function guardInstalled() {
   return !!hooks && path.resolve(hooks) === path.resolve(dir) && !!excludes && path.resolve(excludes) === path.resolve(path.join(dir, 'gitignore'));
 }
 
+/** Anthropic's design plugin, whose skill the designer preloads to draw the mock-up. Without it the designer still
+ *  draws, without that guidance (Claude Code skips a preloaded skill that is not installed). */
+const DESIGN_PLUGIN = 'frontend-design@claude-plugins-official';
+function designInstalled() {
+  const f = path.join(homeDir(), '.claude', 'plugins', 'installed_plugins.json');
+  try {
+    const j = JSON.parse(fs.readFileSync(f, 'utf8'));
+    return Object.keys(j.plugins || j).some((k) => k.split('@')[0] === 'frontend-design');
+  } catch (e) { return false; }
+}
+
+/** Add the design plugin through Claude Code's own command. Returns true when it says it did. */
+function installDesign() {
+  const r = realRun('claude', ['plugin', 'install', DESIGN_PLUGIN], { timeout: 120000 });
+  return r.code === 0;
+}
+
 /** The GitHub tool to run: tests see plain `gh`; a real machine may use Hatch's own copy. */
 function gh() {
   return process.env.COHDIT_PROBES ? 'gh' : tools.ghCmd();
@@ -132,6 +149,7 @@ function probe(name, run, opts) {
     case 'gh_org': return !o.org || run(gh(), ['api', 'user/memberships/orgs/' + o.org]).code === 0 ? 'ok' : 'missing';
     case 'guard': return guardInstalled() ? 'ok' : 'missing';
     case 'hook_path': return nodeOnPath() ? 'ok' : 'missing';
+    case 'design': return designInstalled() ? 'ok' : 'missing';
     default: throw new Error('unknown capability ' + name);
   }
 }
@@ -234,7 +252,7 @@ function ensureIdentity(run) {
   return true;
 }
 
-module.exports = {
+module.exports = { designInstalled, installDesign, DESIGN_PLUGIN,
   ORDER, ADVISORY, VERCEL, NODE_MIN, GUARD_FILES, homeDir, cohditHome, guardDir, runner, realRun, fakeRun, major,
   nodeOnPath, gh, probe, who, teams, checks, next, ensureSettings, setLevel, installGuard, ensureIdentity, guardInstalled,
 };

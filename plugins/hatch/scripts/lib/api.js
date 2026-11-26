@@ -42,15 +42,16 @@ const limits = {
 const DOWN_MS = 60 * 1000;      // after a failed request, use the cache without asking for this long
 const KEY_RE = /^hk_sub_[A-Za-z0-9]+\.[A-Za-z0-9_-]{32}$/;
 const NAMES = {
-  skill: ['setup', 'dream', 'build', 'try', 'share', 'fix', 'remember', 'ask', 'status'],
-  agent: ['advisor', 'maker', 'runner', 'tester', 'checker', 'lens-security', 'lens-privacy', 'lens-compliance', 'lens-cost'],
+  skill: ['setup', 'dream', 'mock', 'build', 'try', 'share', 'fix', 'remember', 'ask', 'status'],
+  agent: ['advisor', 'maker', 'runner', 'tester', 'checker', 'lens-security', 'lens-privacy', 'lens-compliance', 'lens-cost', 'designer'],
   data: ['baseline', 'codes', 'domains', 'hosting', 'interview', 'lenses', 'lessons', 'prices', 'questions', 'rails', 'stack', 'TERMS'],
 };
 const MARKDOWN_DATA = ['TERMS'];
 // Agents with no Bash: hatch.js writes their instructions next to the brief (lib/build.js writeRole).
 const READ_ONLY = ['advisor', 'checker', 'lens-security', 'lens-privacy', 'lens-compliance', 'lens-cost'];
 // The tester has no Bash either, so its instructions reach it the same way, but it writes one file: the browser test.
-const BRIEFED = READ_ONLY.concat(['tester']);
+// The designer likewise: no Bash, and it writes only the mock-up.
+const BRIEFED = READ_ONLY.concat(['tester', 'designer']);
 const FORBIDDEN = ['inactive', 'revoked', 'wrong_plan'];
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,28}$/;
 
