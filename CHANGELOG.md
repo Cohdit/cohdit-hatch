@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.0.40 — Hatch checks each thing in a real browser before you do (2026-11-26)
+
+- A new idea gets browser checks. Before each thing is built, a tester writes a test of it from your own checks; the test
+  must fail first, because the thing is not there yet. The builder never sees that test and cannot change it, and its work
+  is only kept once the test passes in a real browser, along with the test of every thing finished before.
+- A skipped test counts as failed, and one that fails and then passes is not a pass.
+- When a test does not pass, the builder is told the thing, the check, what the browser saw and what it may touch.
+- The builder cannot change how the checks run either: the test settings and the project's scripts are put back, a test
+  it switches off is refused, and work it commits around the checks is set aside.
+- Hatch's own settings inside an idea change only through Hatch. The builder, the tester and the runner are each held to
+  their own job by the permission hook.
+- A thing nothing on a screen shows is built on its own tests as before, and is marked as having no browser check.
+- Ideas started before this version build exactly as they did. Nothing changes until the matching content is out.
+- The first build of a new idea downloads one browser, once per computer.
+
 ## 0.0.39 — no terms to agree to inside Hatch (2026-11-25)
 
 - The terms are accepted once, on the Hatch site, before your key is issued. Inside Hatch there is nothing to agree to:

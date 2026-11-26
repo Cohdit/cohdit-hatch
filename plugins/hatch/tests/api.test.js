@@ -236,12 +236,22 @@ test('preloadData fetches every data file once; dataJson then reads it synchrono
   assert.deepEqual(api.dataJson('stack'), { name: 'stack' });
 });
 
+test('an agent the served content does not have yet (the tester) is left out; a build still loads', async () => {
+  storeKey();
+  reply = (req) => (req.url.includes('/agent/tester') ? { status: 404, body: '{"error":"not_found"}' }
+    : { status: 200, body: req.url.includes('/agent/') || req.url.endsWith('/TERMS') ? '# x' : '{}' });
+  await api.preloadData(true);
+  assert.equal(api.agentText('checker'), '# x');
+  assert.throws(() => api.agentText('tester'), (e) => e.code === 'unavailable');
+});
+
 test('preloadData(true) adds the read-only agents; agentText reads them synchronously', async () => {
   storeKey();
   reply = (req) => ({ status: 200, body: req.url.includes('/agent/') || req.url.endsWith('/TERMS') ? '# ' + req.url.split('/').slice(-2).join('/') : '{}' });
   await api.preloadData(true);
-  assert.equal(hits.length, api.NAMES.data.length + api.READ_ONLY.length);
+  assert.equal(hits.length, api.NAMES.data.length + api.BRIEFED.length);
   assert.equal(api.agentText('lens-cost'), '# agent/lens-cost');
+  assert.equal(api.agentText('tester'), '# agent/tester');
   assert.equal(api.dataText('TERMS'), '# data/TERMS');
   assert.equal(api.dataText('codes'), '{}');
   assert.throws(() => api.agentText('../maker'), (e) => e.code === 'not_found');

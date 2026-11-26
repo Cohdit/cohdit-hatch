@@ -110,6 +110,7 @@ const sh = require('./lib/share');
 const ls = require('./lib/lessons');
 const ld = require('./lib/leader');
 const api = require('./lib/api');
+const e2 = require('./lib/e2e');
 const mt = require('./lib/metrics');
 const render = require('./render');
 
@@ -516,6 +517,7 @@ const land = bd.land;
 /** An item is finished without a merge: set aside or refused. */
 function setAside(dir, cur, item, lvl, recs) {
   const o = cur.open[item];
+  e2.drop(dir, item);                                            // its browser test is written again if it is tried again
   const kept = bd.keepWork(dir, o);                              // committed work is kept, never deleted
   if (kept) hint('kept', kept);
   bd.releaseClaim(dir, o.branch);
@@ -553,6 +555,16 @@ function verifyNow(dir, cur, cfg, lvl, quiet) {
   }
   const f = { rc, dur_s };
   if (cov !== null) f.cov = cov;
+  if (rc === 0 && e2.enabled(cfg)) {                             // then every browser test, this thing's own held copy among them
+    const placed = item ? e2.place(dir, item) : [];
+    let res = null;
+    try { if (e2.hasSpecs(dir)) res = e2.run(dir, cfg); } finally { e2.clear(dir, placed); }
+    if (res) {
+      if (!res.error) { f.e2e = res.passed; f.e2e_fail = res.tests - res.passed; }
+      if (!e2.green(res)) { rc = 1; f.rc = 1; tail = e2.record(res, item); }
+      f.dur_s = Math.max(0, Math.round((Date.now() - t0) / 1000));
+    }
+  }
   if (rc !== 0 && tail) f.cmd = bd.blob(dir, tail);
   const recs = bd.emit(dir, cur.run, [['VERIFY', f, item]]);
   say(dir, recs, lvl);
@@ -566,6 +578,14 @@ function gate(dir, cur, spec, item, lvl, lead) {
   const o = cur.open[item];
   const cfg = bd.readCfg(dir);
   bd.resetTree(dir);                                             // only what passed the gate's commit counts
+  if (o.e2e && o.e2e.spec) {                                     // the thing's browser test joins the project now, by the script's hand
+    if (bd.currentBranch(dir) !== o.branch) bd.git(['checkout', '-q', o.branch], dir);
+    const placed = e2.place(dir, item);
+    if (placed.length) {
+      bd.git(['add', '--'].concat(placed), dir);
+      bd.git(['commit', '-q', '-m', 'Hatch: the browser check for ' + item], dir);
+    }
+  }
   let landed = false;
   for (let attempt = 0; attempt < 3 && !landed; attempt++) {
     const base = bd.baseSha(dir);
@@ -602,10 +622,12 @@ function gate(dir, cur, spec, item, lvl, lead) {
     if (o.cases.na.length) done.na = o.cases.na.join(',');
     done.rev = o.cases.reviewed ? 1 : 0;
   }
+  if (o.e2e) { done.e2e = o.e2e.tests || 0; done.red = o.e2e.red ? 1 : 0; }   // its browser tests, and whether they were seen to fail first
   const recs = (lead || []).concat([['GATE', { result: 'pass' }, item], ['DONE', done, item]]);
   const written = bd.emit(dir, cur.run, recs);
   bd.releaseClaim(dir, o.branch);
   bd.git(['branch', '-q', '-D', o.branch], dir, false);
+  e2.drop(dir, item);
   delete cur.open[item];
   bd.saveActive(dir, cur);
   land(dir, cur, 'Hatch: ' + item + ' done');
@@ -628,6 +650,7 @@ function clash(dir, cur, spec, cfg, item, lvl, lead, why) {
   o.base = base;
   o.fork = bd.headSha(dir, base);
   o.clashed = true;
+  if (Array.isArray(o.commits)) o.commits = [];
   if (bd.hasRemote(dir)) bd.gitNet(['push', '-q', '-f', 'origin', 'refs/heads/' + o.branch + ':refs/heads/' + o.branch], dir);   // our own claim, restarted
   fs.writeFileSync(bd.diffPath(dir, item), earlier);
   o.notes = ['Another change reached main while this was being built, and the two ' + (why === 'conflict' ? 'change the same lines' : 'fail the checks together')
@@ -666,10 +689,75 @@ function dispatchMaker(dir, cur, spec, cfg, item, lvl, notes, status) {
   const o = cur.open[item];
   o.phase = 'maker';
   bd.saveActive(dir, cur);
-  fs.writeFileSync(bd.briefPath(dir, item), bd.brief(dir, spec, item, cfg, notes, status, o.advice));
+  fs.writeFileSync(bd.briefPath(dir, item), bd.brief(dir, spec, item, cfg, notes, status, o.advice, o.e2e));
   hint('item', item);
   hint('brief', bd.briefPath(dir, item));
   hint('next', 'maker');
+}
+
+/** Before the maker: the tester writes this thing's browser test from the person's checks. */
+function dispatchTester(dir, cur, spec, item, status) {
+  const o = cur.open[item];
+  o.phase = 'tester';
+  bd.saveActive(dir, cur);
+  fs.writeFileSync(bd.testerPath(dir, item), bd.testerBrief(dir, spec, item, status));
+  bd.writeRole(dir, 'tester', item);
+  hint('item', item);
+  hint('brief', bd.testerPath(dir, item));
+  hint('roles', ml.spoolDir(dir));
+  hint('next', 'tester');
+}
+
+/** The tester is done, one way or the other: on to the maker. */
+function toMaker(dir, cur, spec, cfg, item, lvl, lead) {
+  bd.resetTree(dir);                                             // nothing the tester left in the folder reaches the maker
+  bd.emit(dir, cur.run, lead.concat([['DISPATCH', { agent: 'maker', model: bd.agentModel('maker') }, item]]));
+  dispatchMaker(dir, cur, spec, cfg, item, lvl);
+  return 0;
+}
+
+/** A test the script will not take: the tester is asked once more with the reason; a second time the thing is
+ *  built without a browser test, and says so wherever it is shown. */
+function badTest(dir, cur, spec, cfg, item, lvl, why, lead) {
+  const o = cur.open[item];
+  o.tcontract = (o.tcontract || 0) + 1;
+  bd.resetTree(dir);
+  if (o.tcontract < 2) {
+    bd.saveActive(dir, cur);
+    bd.emit(dir, cur.run, lead.concat([['ROUND', { cause: 'contract' }, item]]));
+    process.stderr.write('hatch: ' + why + '\n');
+    hint('hint', 'reask');
+    return 64;
+  }
+  o.e2e = { none: 'no usable browser test could be written' };
+  return toMaker(dir, cur, spec, cfg, item, lvl, lead.concat([['FINDING', { scope: 'in', sev: 'medium', blob: bd.blob(dir, 'No browser test for this thing: ' + why) }, item]]));
+}
+
+/** A change to the browser tests or their settings by anyone but the script is put back. Returns what it put back. */
+function guardTests(dir, cfg) {
+  if (!e2.enabled(cfg)) return [];
+  const touched = bd.dirtyPaths(dir).filter(e2.isProtected);
+  if (!touched.length) return [];
+  for (const f of touched) {
+    if (bd.git(['ls-files', '--error-unmatch', '--', f], dir, false) === null) fs.rmSync(path.join(dir, f), { force: true });
+    else bd.git(['checkout', '-q', 'HEAD', '--', f], dir, false);
+  }
+  process.stderr.write('hatch: the browser tests are not yours to change; put back: ' + touched.join(', ') + '\n');
+  hint('hint', 'protected');
+  return touched;
+}
+
+/** The same for what the checks run through, and for the maker's own tests: the test runner's settings and
+ *  package.json's scripts are put back, and a change that switches a test off is refused. Returns what stopped it. */
+function guardChecks(dir, cfg) {
+  if (!e2.enabled(cfg)) return [];
+  const dirty = bd.dirtyPaths(dir);
+  const back = e2.restoreSettings(dir, dirty);
+  if (back.length) process.stderr.write('hatch: how the checks run is not yours to change; put back: ' + back.join(', ') + '. If the thing cannot be built without that, return blocked and say why.\n');
+  const off = e2.switchedOff(dir, dirty);
+  if (off.length) process.stderr.write('hatch: a test is switched off (skip, only or todo) in: ' + off.join(', ') + '. Every test runs; fix it or remove the switch.\n');
+  if (back.length || off.length) hint('hint', 'protected');
+  return back.concat(off);
 }
 
 /** The lenses still to report on an item under review; the skill dispatches exactly these. */
@@ -900,7 +988,10 @@ function cmdBuild(argv) {
         const item = open[0], o = cur.open[item];
         if (o.phase === 'review') awaitReview(dir, item, o);
         else if (o.phase === 'advisor') awaitAdvisor(dir, item);
-        else {
+        else if (o.phase === 'tester') {
+          if (bd.currentBranch(dir) !== o.branch) bd.git(['checkout', '-q', o.branch], dir);
+          dispatchTester(dir, cur, spec, item);
+        } else {
           if (bd.currentBranch(dir) !== o.branch) bd.git(['checkout', '-q', o.branch], dir);
           dispatchMaker(dir, cur, spec, cfg, item, lvl, o.notes);
         }
@@ -962,25 +1053,33 @@ function cmdBuild(argv) {
         hint('next', 'close');
         return 0;
       }
-      cur.open[picked.id] = { branch, base, start, fork: bd.headSha(dir, base), picked_at: ml.utcNow(), rounds: 0, contract: 0, phase: 'maker' };
+      const first = e2.enabled(cfg) ? 'tester' : 'maker';        // with browser checks, the test is written before the thing
+      cur.open[picked.id] = { branch, base, start, fork: bd.headSha(dir, base), picked_at: ml.utcNow(), rounds: 0, contract: 0, phase: first, commits: [] };
       cur.picked.push(picked.id);
-      const recs = bd.emit(dir, cur.run, [['PICK', { branch, fork: bd.headSha(dir, base) }, picked.id], ['DISPATCH', { agent: 'maker', model: bd.agentModel('maker') }, picked.id]]);
+      const recs = bd.emit(dir, cur.run, [['PICK', { branch, fork: bd.headSha(dir, base) }, picked.id], ['DISPATCH', { agent: first, model: bd.agentModel(first) }, picked.id]]);
       say(dir, [recs[0]], lvl);
       status.set(picked.id, 'building');
-      dispatchMaker(dir, cur, spec, cfg, picked.id, lvl, undefined, status);   // read on the main line, before the branch switch
+      if (first === 'tester') dispatchTester(dir, cur, spec, picked.id, status);
+      else dispatchMaker(dir, cur, spec, cfg, picked.id, lvl, undefined, status);   // read on the main line, before the branch switch
       return 0;
     }
-    if (sub === 'verify') return verifyNow(dir, cur, cfg, lvl) === 0 ? 0 : 1;
+    if (sub === 'verify') {
+      if (guardTests(dir, cfg).length + guardChecks(dir, cfg).length) return 1;
+      return verifyNow(dir, cur, cfg, lvl) === 0 ? 0 : 1;
+    }
     if (sub === 'commit') {
       const msg = opt(rest, '-m');
       if (!msg) return fail('commit needs -m <message>');
       const item = Object.keys(cur.open)[0];
       if (!item) return fail('nothing is being built; there is no branch to commit on');
+      if (cur.open[item].phase === 'tester') return fail('the test for ' + item + ' is still being written; nothing to commit yet');
+      if (guardTests(dir, cfg).length + guardChecks(dir, cfg).length) return 1;
       if (verifyNow(dir, cur, cfg, lvl) !== 0) { hint('hint', 'checks_failed'); return 1; }
       bd.git(['add', '-A', '--', '.', ':(exclude).cohdit'], dir);
       const staged = (bd.git(['diff', '--cached', '--name-only'], dir, false) || '').split('\n').filter((f) => f && !f.startsWith('.cohdit/'));
       if (!staged.length) { hint('hint', 'nothing_to_commit'); return 1; }
       bd.git(['commit', '-q', '-m', msg], dir);
+      if (Array.isArray(cur.open[item].commits)) { cur.open[item].commits.push(bd.fullSha(dir, 'HEAD')); bd.saveActive(dir, cur); }   // the gate's own, by name
       if (bd.hasRemote(dir)) bd.gitNet(['push', '-q', 'origin', cur.open[item].branch], dir);   // the claim stays alive and the work is safe
       hint('head', bd.headSha(dir));
       return 0;
@@ -1006,6 +1105,41 @@ function cmdBuild(argv) {
       const r = doc.realRun('npm', ['install', '--no-audit', '--no-fund', pkg], { cwd: dir, timeout: bd.LONG_MS });
       if (r.code !== 0) { process.stderr.write((r.err || r.out).trim().split('\n').slice(-3).join('\n') + '\n'); return 1; }
       return 0;
+    }
+    if (sub === 'tested') {                                      // the tester's report: its one file is checked, seen to fail, and held
+      const item = words(rest, VALUED)[0];
+      if (!item || !cur.open[item]) return fail('tested needs an open ITEM-NNN (open: ' + (Object.keys(cur.open).join(', ') || 'none') + ')');
+      const o = cur.open[item];
+      if (o.phase !== 'tester') { hint('hint', 'wrong_phase'); return fail(item + ' is with the ' + o.phase + ', not the tester; this report was not expected'); }
+      let r;
+      try { r = e2.testerReturn(readReturn(rest)); } catch (e) {
+        if (!(e instanceof e2.Invalid)) throw e;
+        return badTest(dir, cur, spec, cfg, item, lvl, e.message, []);
+      }
+      const lead = [['RETURN', { agent: 'tester', verdict: r.verdict }, item]];
+      if (r.verdict === 'none') {
+        o.e2e = { none: r.reason };
+        return toMaker(dir, cur, spec, cfg, item, lvl, lead.concat([['FINDING', { scope: 'in', sev: 'low', blob: bd.blob(dir, 'No browser test for this thing: ' + r.reason) }, item]]));
+      }
+      const want = e2.specName(item);
+      const changed = bd.dirtyPaths(dir);
+      if (!changed.includes(want)) return badTest(dir, cur, spec, cfg, item, lvl, 'no test was written at ' + want, lead);
+      const stray = changed.filter((f) => f !== want);
+      if (stray.length) return badTest(dir, cur, spec, cfg, item, lvl, 'write only ' + want + '; these were changed as well and are thrown away: ' + stray.slice(0, 8).join(', '), lead);
+      const problems = e2.lint(fs.readFileSync(path.join(dir, want), 'utf8'));
+      if (problems.length) return badTest(dir, cur, spec, cfg, item, lvl, 'the test breaks these rules: ' + problems.join('; '), lead);
+      const env = Object.assign({}, process.env, { PATH: tools.pathWithExtras(), CI: '1' });
+      const b = spawnSync(cfg.e2e.build || 'npm run build', { cwd: dir, shell: true, encoding: 'utf8', timeout: bd.LONG_MS, env });
+      if (b.status !== 0) return badTest(dir, cur, spec, cfg, item, lvl, 'the app does not build with your test in it: ' + ((b.stdout || '') + (b.stderr || '')).trim().split('\n').slice(-12).join(' | '), lead);
+      const res = e2.run(dir, cfg, { files: [want], once: true });
+      if (res.error) return badTest(dir, cur, spec, cfg, item, lvl, 'the test could not run: ' + res.error.split('\n').slice(-8).join(' | '), lead);
+      if (res.skipped || !res.tests) return badTest(dir, cur, spec, cfg, item, lvl, 'the file has ' + (res.tests ? 'a skipped test' : 'no test that ran'), lead);
+      const red = res.failed > 0;
+      if (!red && !o.tcontract) return badTest(dir, cur, spec, cfg, item, lvl, 'every test passes before the thing is built, so it tests nothing new. Test what this thing adds', lead);
+      e2.hold(dir, item, [want]);
+      o.e2e = { spec: want, tests: res.tests, red: red ? 1 : 0 };
+      if (r.stand_ins.length) o.e2e.stand_ins = r.stand_ins;
+      return toMaker(dir, cur, spec, cfg, item, lvl, lead);
     }
     if (sub === 'built' || sub === 'checked' || sub === 'advised') {
       const item = words(rest, VALUED)[0];
@@ -1055,6 +1189,11 @@ function cmdBuild(argv) {
         if (unmet.length) return blocked(dir, cur, item, lvl, 'other', 'the maker reported done but check ' + unmet.join(', ') + ' is not met', lead);
         const n = Number(bd.git(['rev-list', '--count', (o.start || o.base) + '..' + o.branch], dir, false) || 0);
         if (!n) return blocked(dir, cur, item, lvl, 'other', 'the maker reported done but nothing was committed through the gate', lead);
+        if (Array.isArray(o.commits)) {                          // every commit on the thing is one `build commit` made: nothing reaches main past the checks
+          const made = (bd.git(['rev-list', (o.start || o.base) + '..' + o.branch], dir, false) || '').split('\n').filter(Boolean);
+          const past = made.filter((sha) => !o.commits.includes(sha));
+          if (past.length) return blocked(dir, cur, item, lvl, 'other', past.length + ' commit(s) on this thing were not made through the gate, so the checks never ran on them', lead);
+        }
         const files = (bd.git(['diff', '--name-only', o.base + '..' + o.branch], dir, false) || '').split('\n').filter(Boolean);
         const diff = bd.git(['diff', o.base + '..' + o.branch], dir, false) || '';
         const risk = bd.risk(r.change, files, spec, diff, bd.dependencies(dir));
@@ -1142,7 +1281,7 @@ function cmdBuild(argv) {
       hint('next', done ? 'try' : 'none');
       return cur.stop ? 1 : 0;
     }
-    return fail('build needs one of open, next, verify, commit, add, built, checked, advised, narrow, close');
+    return fail('build needs one of open, next, verify, commit, add, tested, built, checked, advised, narrow, close');
   } catch (e) {
     if (e instanceof sp.Invalid || e instanceof bd.Invalid) {
       process.stderr.write('hatch: ' + e.message + '\n');
@@ -1553,6 +1692,42 @@ function allowDecision(h, projects, hatchPath) {
   return null;
 }
 
+/** Why a tool call is refused outright, in every permission mode, or null. Hatch's own records and settings
+ *  inside a project (`.cohdit/`: the checks' command and floor live there) change only through the script, so no
+ *  edit tool may write them; and the browser tests held away from the maker are neither read nor written. */
+function denyDecision(h, projects, home, hatchPath) {
+  const tool = h.tool_name;
+  const inp = h.tool_input || {};
+  // Inside one of Hatch's own agents the hook is told which (`agent_type`, e.g. hatch:maker), and holds it to its job:
+  // the maker and the runner run this script and nothing else; the maker writes no browser test; the tester writes
+  // only its one. The script checks all of this again on the files themselves, whatever the hook was told.
+  const role = /(?:^|:)(maker|runner|tester)$/.exec(String(h.agent_type || ''));
+  if (role) {
+    const who = role[1];
+    if (tool === 'Bash' && (who === 'maker' || who === 'runner') && hatchPath && !allowDecision(h, projects, hatchPath)) return 'Hatch: the ' + who + ' runs Hatch\'s own script, one call at a time, and nothing else';
+    const target = inp.file_path || inp.notebook_path;
+    if (EDIT_TOOLS.includes(tool) && target) {
+      const rel = path.resolve(target).split(path.sep).join('/');
+      const test = /\/e2e\/[^/]+$|\/playwright\.config\.[^/]+$/.test(rel);
+      if (who === 'maker' && test) return 'Hatch: the browser tests are not the maker\'s to write or change';
+      if (who === 'tester' && !/\/e2e\/item-\d+\.spec\.ts$/.test(rel)) return 'Hatch: the tester writes one file, e2e/item-NNN.spec.ts, and nothing else';
+      if (who === 'runner') return 'Hatch: the runner edits nothing';
+    }
+  }
+  if (!EDIT_TOOLS.includes(tool) && !READ_TOOLS.includes(tool)) return null;
+  const fp = inp.file_path || inp.notebook_path || inp.path;
+  if (!fp) return null;
+  const abs = path.resolve(fp);
+  const held = path.join(path.resolve(home), '.cohdit', 'held');
+  if (abs === held || abs.startsWith(held + path.sep)) return 'Hatch: the browser tests are held here until the thing passes them; they are not read or changed before then';
+  if (!EDIT_TOOLS.includes(tool)) return null;
+  for (const p of projects) {
+    const own = path.join(path.resolve(p), ml.COHDIT_DIR);
+    if (abs === own || abs.startsWith(own + path.sep)) return 'Hatch: its own records and settings change only through its script';
+  }
+  return null;
+}
+
 /** A build, try or share call learns which Claude Code session made it, so two sessions on one computer
  *  get their own working copies and the usage hook finds each one's run: the hook adds `--session <id>`. */
 function withSession(command, sessionId) {
@@ -1566,6 +1741,11 @@ function cmdAllow() {
   try {
     const h = JSON.parse(fs.readFileSync(0, 'utf8') || '{}');
     const projects = sp.registry().projects.map((p) => p.path).concat([path.join(sp.homeDir(), 'Hatch', '.work')]);
+    const no = denyDecision(h, projects, sp.homeDir(), __filename);
+    if (no) {
+      process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: no } }) + '\n');
+      return 0;
+    }
     const why = allowDecision(h, projects, __filename);
     if (why) {
       const out = { hookEventName: 'PreToolUse', permissionDecision: 'allow', permissionDecisionReason: why };
@@ -2142,4 +2322,4 @@ function dispatch(argv) {
 }
 
 if (require.main === module) Promise.resolve(main(process.argv.slice(2))).then((code) => { process.exitCode = code; });
-module.exports = { main, writeSetupRun, newRunId, appendEvents, allowDecision, withSession };
+module.exports = { main, writeSetupRun, newRunId, appendEvents, allowDecision, denyDecision, withSession };

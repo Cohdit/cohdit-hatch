@@ -47,6 +47,7 @@ const tools = require('./tools');
 const ls = require('./lessons');
 const ld = require('./leader');
 const api = require('./api');
+const e2 = require('./e2e');
 
 // "build it" takes the next DEFAULT_ITEMS things; "build all" the whole list (hatch.js runWant).
 const DEFAULT_ITEMS = 10;
@@ -516,6 +517,32 @@ function noteSetAside(dir, spec, item, reason, text) {
 
 // --- scaffold and the shared copy ---------------------------------------------------------------
 
+// The tests' stand-in for the browser runner. A test file says what it needs in comments: `// needs: <path>` is
+// one test that passes when that file exists; `// flaky` and `// skip` are one test each with that outcome.
+const FAKE_E2E = `const fs = require('fs'), path = require('path');
+const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const dir = path.join(process.cwd(), 'e2e');
+const files = args.length ? args : (fs.existsSync(dir) ? fs.readdirSync(dir).filter((n) => /\\.spec\\./.test(n)).map((n) => 'e2e/' + n) : []);
+const suites = []; let bad = 0;
+for (const f of files) {
+  if (!fs.existsSync(f)) continue;
+  const specs = [];
+  for (const line of fs.readFileSync(f, 'utf8').split('\\n')) {
+    const need = /^\\/\\/ needs: (.+)$/.exec(line.trim());
+    let status = null, title = line.trim().slice(3);
+    if (need) status = fs.existsSync(need[1].trim()) ? 'expected' : 'unexpected';
+    else if (line.trim() === '// flaky') status = 'flaky';
+    else if (line.trim() === '// skip') status = 'skipped';
+    if (!status) continue;
+    if (status !== 'expected') bad = 1;
+    specs.push({ title, file: f, ok: status === 'expected', tests: [{ status, results: [status === 'unexpected' ? { status: 'failed', error: { message: 'expected ' + need[1].trim() + ' to be there' } } : { status: 'passed' }] }] });
+  }
+  suites.push({ file: f, specs, suites: [] });
+}
+fs.writeFileSync(process.env.PLAYWRIGHT_JSON_OUTPUT_FILE, JSON.stringify({ suites }));
+process.exit(bad);
+`;
+
 /** The first version's skeleton, from stack.json's scaffold entry; COHDIT_FAKE_SCAFFOLD writes a stub
  *  so tests never touch the network. Returns true when it ran. */
 function scaffold(dir, spec, cfg) {
@@ -529,6 +556,10 @@ function scaffold(dir, spec, cfg) {
     fs.writeFileSync(path.join(dir, 'server.js'), "const a = process.argv; const port = Number(a[a.indexOf('-p') + 1]); const host = a[a.indexOf('-H') + 1];\n"
       + "if (process.env.COHDIT_FAKE_DEV === 'die') process.exit(1);\n"
       + "require('http').createServer((q, s) => s.end('ok')).listen(port, host, () => console.log('ready on ' + host + ':' + port));\n");
+    if (process.env.COHDIT_FAKE_E2E) {                           // a stand-in for the browser runner, see FAKE_E2E below
+      fs.writeFileSync(path.join(dir, 'e2e-fake.js'), FAKE_E2E);
+      cfg.e2e = { command: 'node e2e-fake.js', build: 'node -e 0' };
+    }
   } else {
     // staged beside the project, on the same volume, so the move into place is a rename and never a copy
     const tmp = fs.mkdtempSync(path.join(path.dirname(dir), '.hatch-scaffold-'));
@@ -565,6 +596,12 @@ function scaffold(dir, spec, cfg) {
     const have = fs.existsSync(gi) ? fs.readFileSync(gi, 'utf8') : '';
     const missing = (sc.gitignore || []).filter((l) => !have.split('\n').includes(l));
     if (missing.length) fs.appendFileSync(gi, (have && !have.endsWith('\n') ? '\n' : '') + missing.join('\n') + '\n');
+    if (sc.e2e && sc.e2e.command) {                              // the browser the checks run in; without it the idea builds as before
+      const ins = sc.e2e.install;
+      const got = !ins || doc.realRun(ins.command, ins.args || [], { cwd: dir, timeout: LONG_MS });
+      if (got === true || got.code === 0) cfg.e2e = { command: sc.e2e.command, build: sc.e2e.build || 'npm run build' };
+      else process.stderr.write('hatch: the browser for the checks could not be set up; this idea builds without browser checks\n');
+    }
   }
   if (sc.coverage_min) cfg.coverage_min = sc.coverage_min;
   cfg.verify = cfg.verify || DEFAULT_VERIFY;
@@ -778,7 +815,7 @@ function baselineFor(spec) {
 
 function hatchCmd() { return 'node "' + path.join(ml.SCRIPTS, 'hatch.js') + '"'; }
 
-function brief(dir, spec, item, cfg, notes, status, advice) {
+function brief(dir, spec, item, cfg, notes, status, advice, check) {
   const it = spec.items.find((i) => i.id === item);
   const rails = cz.loadRails().rule || {};
   const stack = sp.loadStack();
@@ -836,6 +873,14 @@ function brief(dir, spec, item, cfg, notes, status, advice) {
   out.push('- `' + H + ' commit --dir "' + dir + '" -m "<what changed>"` runs the checks and commits only when they pass. This is the only way to commit.');
   out.push('- `' + H + ' add <package> --dir "' + dir + '"` installs a package from the list above. Nothing else can be installed.');
   out.push('', '## Proof', 'Every check is proved by a test you can name in `criteria[].test`: a unit test where one fits, an integration test through the route or the data when the check crosses them. The gate refuses a commit under ' + (cfg.coverage_min || 0) + '% coverage' + (cfg.coverage_min ? '' : ' (not measured on this project)') + '. A problem-report page lives at /report (components/ReportLink.tsx links it); keep the link reachable from every page you add.');
+  if (check && check.spec) {
+    out.push('', '## The browser check', 'A test of this thing in a real browser was written from the checks above before you started. You cannot see it and it is not yours to change. `verify` and `commit` run it, with the test of every thing finished before, against the built app, and print what did not pass: the check, what the browser saw, and what you may touch.',
+      '- Never create or edit anything under `e2e/` or `playwright.config.*`: the change is put back and the commit refused.',
+      '- Make the app do what the check says for any input. Never detect the test or special-case the values it uses.',
+      '- If you are sure the test asks for something the checks above do not, return `blocked` with reason `other` and text that starts `test:` and says what is wrong. That is a correct outcome, not a failure.');
+  } else if (check && check.none) {
+    out.push('', '## The browser check', 'No browser test was written for this thing (' + check.none + '). Your own tests are its only proof; the person is told to try it by hand.');
+  }
   out.push('', '## Deciding', 'A choice where every option passes the check is yours: take the simplest, record it in `decisions`. Words the person must write: draft them, and say so in `try_note` so they read them when they try it. Block only on a fact about the idea you cannot know, or something you cannot reach.');
   out.push('', '## Asking a colleague', 'Once per thing, when a design question would otherwise be a guess, return `verdict: consult` with `consult: {role, question}`; the role is one of ' + ROLES.join(', ') + '. The answer comes back in this brief and you carry on where you were. Never for a fact only the person knows: that is `blocked`.');
   if (advice) out.push('', '## The ' + advice.role + "'s answer", 'You asked: ' + advice.question, '', advice.answer);
@@ -850,6 +895,39 @@ function brief(dir, spec, item, cfg, notes, status, advice) {
     ' "decisions":[{"type":"design","choice":"fox_for_x"}],', ' "try_note":null,', ' "measured":[{"what":"the list the screen loads","rows":200,"kb":42}],',
     ' "cases":{"tested":["normal","empty"],"na":["speed"]},', ' "findings":[{"scope":"in|out","sev":"low|medium|high|critical","text":"…"}]}', '```',
     'Limits the script enforces: `decisions[].choice` is a short slug of letters, digits and `. _ / : @ -`, at most 96 characters, no spaces or punctuation (the detail goes in `findings` or `try_note`). `criteria[].test` is exactly one test file path, optionally `:line`; other files go in `ref`. `measured` is for a thing with a list screen: what its test measured (the size in KB of what the list sends, at that many rows); leave it empty otherwise. `cases` is which kinds of case your tests cover (' + CASE_KINDS.join(', ') + '): `tested` only the ones a test you wrote or one already there really runs, `na` the ones that cannot apply to this thing (no list: no `speed`). Be exact: the reviewer checks it.');
+  return out.join('\n') + '\n';
+}
+
+/** What the tester reads: the thing in the person's words and the rules a browser test is held to. It is told
+ *  nothing about how the thing will be built, because nothing has been. */
+function testerBrief(dir, spec, item, status) {
+  const it = spec.items.find((i) => i.id === item);
+  const st = status || itemStatus(dir, spec);
+  const file = e2.specName(item);
+  const bug = it.kind === 'bug';
+  const out = ['# Write the browser test for one ' + (bug ? 'bug' : 'thing') + ': "' + it.title + '" (' + it.id + ')', '', 'Folder: ' + dir,
+    (bug ? 'The bug is not fixed yet.' : 'The thing is not built yet.') + ' You write the test that says whether it works, from the person\'s own words below. A builder who never sees your file then builds until it passes.', ''];
+  out.push('## The idea', spec.name + (spec.for ? ' — for ' + spec.for : '') + (spec.anchor ? '. Worked: ' + spec.anchor : '') + '.');
+  if (spec.pitch) out.push(spec.pitch);
+  out.push('', bug ? '## The bug, and what must be true once it is fixed' : '## This thing, and how the person will check it');
+  for (const c of it.criteria || []) out.push('- ' + c);
+  const tried = lastFailNote(dir, item);
+  if (tried) out.push('', '## When they tried it', 'The person tried this thing and said, in their words: ' + tried, 'Test for that as well.');
+  out.push('', '## The whole first version (for context; test only the thing above)');
+  for (const o of spec.items) out.push('- ' + o.id + ' ' + o.title + (st.get(o.id) !== 'queued' ? ' (' + st.get(o.id) + ')' : '') + (o.device ? ' (a device check, not built)' : ''));
+  out.push('', '## What you write', 'Exactly one file: `' + file + '`. Any other change in the folder is thrown away and you are asked again. You run nothing.',
+    '- One `test(` for each check above, titled in the person\'s words, importing only `test` and `expect` from `@playwright/test`.',
+    '- Each test starts where a person starts (`await page.goto("/")`) and does what the check says, step by step.',
+    '- Find things the way a person does: `getByRole`, `getByLabel`, `getByText`, `getByPlaceholder`. Use the person\'s own words for names; the builder is told what your test looked for when it does not pass.',
+    '- Assert what the person would see, with assertions that wait: `await expect(...).toBeVisible()`, `toHaveText`, `toHaveURL`.',
+    '- When the check keeps something (adds, saves, signs in), reload the page or open it again and assert it is still there. A screen that only looks right is the commonest false pass.',
+    '- A test makes what it needs through the app itself. It never relies on another test having run first.',
+    '- Another company\'s page (a payment form, signing in through another service) is never driven: stop where the app hands over, and name it in `stand_ins`.',
+    '- Read the project to learn which pages and words exist today. Where this thing\'s own do not exist yet, the check\'s words are your guide.',
+    '- Never: skip, fixme or only; fixed waits; CSS or XPath selectors; `page.route`, `page.evaluate` or anything that fakes the app; timeouts or retries of your own.',
+    '', 'The script reads your file, refuses one that breaks a rule above, and runs it against the app as it is now: it must fail, because the ' + (bug ? 'bug is still there' : 'thing does not exist yet') + '. A test that passes already tests nothing.');
+  out.push('', '## Return', 'Your final message is exactly one fenced JSON block, nothing else:', '```json', '{"verdict":"written","stand_ins":[]}', '```',
+    'or, only when nothing on any screen changes because of this thing, so a browser cannot check it: `{"verdict":"none","reason":"one sentence saying why"}`. The person is then told to try it by hand.');
   return out.join('\n') + '\n';
 }
 
@@ -868,6 +946,7 @@ function scanBrief(dir, spec, cfg) {
   return out.join('\n') + '\n';
 }
 
+function testerPath(dir, item) { return path.join(ml.spoolDir(dir), 'tester-' + item + '.md'); }
 function briefPath(dir, item) { return path.join(ml.spoolDir(dir), 'brief-' + item + '.md'); }
 function diffPath(dir, item) { return path.join(ml.spoolDir(dir), 'diff-' + item + '.patch'); }
 function consultPath(dir, item) { return path.join(ml.spoolDir(dir), 'consult-' + item + '.md'); }
@@ -1165,6 +1244,6 @@ module.exports = {
   git, gitNet, hasRemote, headSha, fullSha, currentBranch, isPrimary, mainBranch, resetTree, dirtyPaths, fetch, remoteMain, toMain, rebaseOnto, fastForward, baseSha, startBase, keepWork, pushMain, commitLedger, landMain, land, agentModel,
   active, saveActive, isLive, setPointer, clearPointer, newRunId, runStart, stopBefore, abandon,
   allRecords, itemStatus, lastFailNote, branchFor, remoteClaims, candidates, startItem, claim, releaseClaim, writeNote, writeMeasured, markWords, readNote,
-  scaffold, ensureRepo, fetchIdea, workDir, sideCopy, laneCount, installDeps, openLanes, laneGroup, homeDir, LANES_MAX, findSideCopy, removeSideCopy, sweepSideCopies, brief, baselineFor, expertSections, itemAbout, scanBrief, briefPath, diffPath, consultPath, scanPath, rolePath, writeRole, writeConsult, hatchCmd, refusalClause,
+  scaffold, ensureRepo, fetchIdea, workDir, sideCopy, laneCount, installDeps, openLanes, laneGroup, homeDir, LANES_MAX, findSideCopy, removeSideCopy, sweepSideCopies, brief, testerBrief, testerPath, baselineFor, expertSections, itemAbout, scanBrief, briefPath, diffPath, consultPath, scanPath, rolePath, writeRole, writeConsult, hatchCmd, refusalClause,
   parseReturn, makerReturn, checkerReturn, advisorReturn, risk, loadLenses, lensesFor, dependencies, coverage, ROLES,
 };

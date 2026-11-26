@@ -43,12 +43,14 @@ const DOWN_MS = 60 * 1000;      // after a failed request, use the cache without
 const KEY_RE = /^hk_sub_[A-Za-z0-9]+\.[A-Za-z0-9_-]{32}$/;
 const NAMES = {
   skill: ['setup', 'dream', 'build', 'try', 'share', 'fix', 'remember', 'ask', 'status'],
-  agent: ['advisor', 'maker', 'runner', 'checker', 'lens-security', 'lens-privacy', 'lens-compliance', 'lens-cost'],
+  agent: ['advisor', 'maker', 'runner', 'tester', 'checker', 'lens-security', 'lens-privacy', 'lens-compliance', 'lens-cost'],
   data: ['baseline', 'codes', 'domains', 'hosting', 'interview', 'lenses', 'lessons', 'prices', 'questions', 'rails', 'stack', 'TERMS'],
 };
 const MARKDOWN_DATA = ['TERMS'];
 // Agents with no Bash: hatch.js writes their instructions next to the brief (lib/build.js writeRole).
 const READ_ONLY = ['advisor', 'checker', 'lens-security', 'lens-privacy', 'lens-compliance', 'lens-cost'];
+// The tester has no Bash either, so its instructions reach it the same way, but it writes one file: the browser test.
+const BRIEFED = READ_ONLY.concat(['tester']);
 const FORBIDDEN = ['inactive', 'revoked', 'wrong_plan'];
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,28}$/;
 
@@ -314,9 +316,12 @@ const loaded = new Map();
 
 async function preloadData(agents) {
   if (devDir()) return;
-  const want = NAMES.data.map((n) => ['data', n]).concat(agents ? READ_ONLY.map((n) => ['agent', n]) : []);
-  const texts = await Promise.all(want.map(([k, n]) => fetchContent(k, n)));
-  want.forEach(([k, n], i) => loaded.set(k + '/' + n, texts[i]));
+  const want = NAMES.data.map((n) => ['data', n]).concat(agents ? BRIEFED.map((n) => ['agent', n]) : []);
+  // An agent newer than the content this key is served (the tester, before its content is out) is left out, never fatal:
+  // nothing asks for it until the content that names it is there.
+  const later = (k, n) => k === 'agent' && !READ_ONLY.includes(n);
+  const texts = await Promise.all(want.map(([k, n]) => (later(k, n) ? fetchContent(k, n).catch(() => null) : fetchContent(k, n))));
+  want.forEach(([k, n], i) => { if (texts[i] !== null) loaded.set(k + '/' + n, texts[i]); });
 }
 
 function loadedText(kind, name) {
@@ -352,7 +357,7 @@ function agentText(name) { return loadedText('agent', name); }
 function dataJson(name) { return JSON.parse(dataText(name)); }
 
 module.exports = {
-  BASE, FRESH_MS, STALE_MS, DOWN_MS, KEY_RE, SLUG_RE, limits, NAMES, READ_ONLY, MESSAGES, HatchError, message,
+  BASE, FRESH_MS, STALE_MS, DOWN_MS, KEY_RE, SLUG_RE, limits, NAMES, READ_ONLY, BRIEFED, MESSAGES, HatchError, message,
   me, send, askFree, buyLink, manage, preloadExperts, expertJson,
   home, keyFile, cacheFile, downFile, machineFile, machineId, readKey, fetchContent, setKey, keyStatus, preloadData, dataText, dataJson, agentText,
 };

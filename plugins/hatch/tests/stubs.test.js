@@ -45,7 +45,7 @@ function readOnlyStub(name) {
 
 test('every agent is its frontmatter and a stub: the maker fetches, the read-only ones read their file', () => {
   for (const name of api.NAMES.agent) {
-    const want = api.READ_ONLY.includes(name) ? readOnlyStub(name) : stub('agent', name);
+    const want = api.BRIEFED.includes(name) ? readOnlyStub(name) : stub('agent', name);
     assert.equal(body(path.join(ROOT, 'agents', name + '.md')), want, name);
   }
   assert.deepEqual(fs.readdirSync(path.join(ROOT, 'agents')).sort(), api.NAMES.agent.map((n) => n + '.md').sort());
@@ -56,6 +56,8 @@ test('a read-only agent has no Bash, so it is never asked to fetch', () => {
     const text = fs.readFileSync(path.join(ROOT, 'agents', name + '.md'), 'utf8');
     assert.match(text, /^tools: Read, Glob, Grep$/m, name);
   }
+  // The tester writes one file and runs nothing: Write, and still no Bash.
+  assert.match(fs.readFileSync(path.join(ROOT, 'agents', 'tester.md'), 'utf8'), /^tools: Read, Glob, Grep, Write$/m);
 });
 
 test('the only key prefix in the plugin is the shape regex', () => {

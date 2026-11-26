@@ -165,7 +165,7 @@ fi
 
 step "agents: maker, checker, the lenses and the advisor exist, one page each, a contract not a procedure"
 ag_ok=1
-for a in maker runner checker lens-security lens-privacy lens-cost advisor; do
+for a in maker runner tester checker lens-security lens-privacy lens-cost advisor; do
   f="plugins/hatch/agents/$a.md"
   [ -f "$f" ] || { bad "$f missing"; ag_ok=0; continue; }
   body="$C/agents/$a.md"
