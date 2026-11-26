@@ -73,6 +73,14 @@ function oneLane(dir) {
   fs.writeFileSync(f, JSON.stringify(cfg, null, 2) + '\n');
 }
 
+/** The limits of the loop as they were before the second pass: two rounds, no fresh start. For tests of other things. */
+function oldLimits(dir) {
+  const f = path.join(dir, '.cohdit', 'config.json');
+  const cfg = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : { v: 1 };
+  cfg.caps = Object.assign({}, cfg.caps, { rounds_per_item: 2, restarts: 0 });
+  fs.writeFileSync(f, JSON.stringify(cfg, null, 2) + '\n');
+}
+
 /** The maker's work: a file and a commit through the gate. */
 function makerCommits(h, dir, file, text, msg) {
   fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
@@ -132,6 +140,7 @@ test('the gate: commit refuses failing checks; a logic change goes to the checke
   const dir = agreedIdea(h);
   const bare = withOrigin(dir);
   B(h, dir, ['open']);
+  oldLimits(dir);
   B(h, dir, ['next']);
   const lie = B(h, dir, ['built', 'ITEM-001', '--return', DONE()]);
   assert.equal(lie.code, 0, lie.err);
@@ -220,6 +229,7 @@ test('review rounds: a fail sends the maker back once; a second fail sets the th
   const h = home();
   const dir = agreedIdea(h, 'Rounds', ITEMS.slice(0, 1));
   B(h, dir, ['open']);
+  oldLimits(dir);
   B(h, dir, ['next']);
   makerCommits(h, dir, 'app/grid.tsx', 'v1\n', 'grid');
   const b1 = B(h, dir, ['built', 'ITEM-001', '--return', DONE()]);
@@ -1053,4 +1063,28 @@ test('terms: never stop a build, whatever version an idea carries; the plugin no
   }
   const gone = run(h, ['idea', 'terms-agree', '--dir', dir]);
   assert.notEqual(gone.code, 0, 'there is nothing to agree to in the plugin');
+});
+
+test('the second pass: a thing set aside gets one fresh start with what stopped it, never a third, and none when it waits on the person', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Second pass', ITEMS.slice(0, 1));
+  B(h, dir, ['open']);
+  B(h, dir, ['next']);
+  const one = B(h, dir, ['built', 'ITEM-001', '--return', BLOCKED('the grid library would not load')]);
+  assert.match(one.out, /^Set aside "Letter grid"\.$/m);
+  const again = B(h, dir, ['next']);
+  assert.match(again.out, /^Trying "Letter grid" again from a fresh start\.$/m);
+  assert.equal(hintOf(again, 'next'), 'maker');
+  const brief = fs.readFileSync(hintOf(again, 'brief'), 'utf8');
+  assert.match(brief, /## What stopped it last time\n[^\n]*fresh start[^\n]*\nthe grid library would not load/);
+  assert.doesNotMatch(brief, /The person tried this thing/);
+  B(h, dir, ['built', 'ITEM-001', '--return', BLOCKED('the grid library would not load')]);
+  assert.equal(hintOf(B(h, dir, ['next']), 'next'), 'close', 'one fresh start, not two');
+
+  const h2 = home();
+  const d2 = agreedIdea(h2, 'Waits', ITEMS.slice(0, 1));
+  B(h2, d2, ['open']);
+  B(h2, d2, ['next']);
+  B(h2, d2, ['built', 'ITEM-001', '--return', '{"verdict":"blocked","blocked":{"reason":"ambiguous","text":"Which voice?"},"findings":[]}']);
+  assert.equal(hintOf(B(h2, d2, ['next']), 'next'), 'close', 'a question for the person is not answered by trying again');
 });

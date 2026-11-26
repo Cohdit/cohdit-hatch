@@ -77,7 +77,7 @@ const WORDS = {
     yourAnswer: ' — your answer needed',
     row: { open: 'open', done: 'done', held: 'parked', blocked: 'set aside', refused: 'refused' },
     heldRow: (title, q) => title + ' — needs you: ' + q + ' (say "status" to answer)',
-    blockWhy: { dependency: 'needs something else built first', ambiguous: 'needs your decision', access: 'no access to something it needs', env: 'something on this computer is in the way' },
+    blockWhy: { dependency: 'needs something else built first', ambiguous: 'needs your decision', access: 'no access to something it needs', env: 'something on this computer is in the way', budget: 'it reached the cost limit for one thing' },
     failedTimes: (n) => 'the checks failed ' + times(n),
     couldntFinish: "couldn't finish it",
     crash: {
@@ -153,7 +153,7 @@ const WORDS = {
     yourAnswer: ' — your decision needed',
     row: { open: 'open', done: 'done', held: 'held', blocked: 'blocked', refused: 'refused' },
     heldRow: (title, q) => title + ' — held: ' + q,
-    blockWhy: { dependency: 'depends on something not built yet', ambiguous: 'needs your decision', access: 'missing access', env: 'environment problem on this machine' },
+    blockWhy: { dependency: 'depends on something not built yet', ambiguous: 'needs your decision', access: 'missing access', env: 'environment problem on this machine', budget: 'per-item cost limit reached' },
     failedTimes: (n) => 'failed tests ' + times(n),
     couldntFinish: 'builder could not finish',
     crash: {

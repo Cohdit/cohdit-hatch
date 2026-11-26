@@ -514,6 +514,42 @@ function stopRun(dir, cur, cause, lvl, extra) {
 
 const land = bd.land;
 
+/** What one thing has cost so far at list prices, over every run; null when a model has no known price. */
+function spentOn(dir, home, item) {
+  const prices = ml.loadPrices();
+  let usd = 0;
+  for (const r of bd.allRecords(home)) {
+    if (r.c !== 'USAGE' || r.i !== item || !r.f || !r.f.models) continue;
+    const c = ml.usageCost(r.f.models, prices);
+    if (c === null) return null;
+    usd += c;
+  }
+  return usd;
+}
+
+/** The second pass: each thing set aside for a reason a fresh builder may get past goes back on the list, once
+ *  (caps.restarts), unless it has already cost the limit for one thing. Returns how many went back. */
+const RETRIABLE = ['other', 'env'];
+function secondPass(dir, home, cur, spec, status, cfg, lvl) {
+  const all = bd.allRecords(home);
+  let n = 0;
+  for (const it of spec.items) {
+    if (status.get(it.id) !== 'blocked') continue;
+    const mine = all.filter((r) => r.i === it.id);
+    const last = mine.filter((r) => r.c === 'BLOCKED').sort((x, y) => (x.ts < y.ts ? -1 : 1)).pop();
+    if (!last || !RETRIABLE.includes(last.f.reason)) continue;
+    if (mine.filter((r) => r.c === 'ROUND' && r.f.cause === 'restart').length >= cfg.caps.restarts) continue;
+    const cost = spentOn(dir, home, it.id);
+    if (cost !== null && cost >= cfg.caps.usd_per_item) continue;
+    const why = (last.f.blob && ml.readBlob(sp.cohditDir(home), last.f.blob, home)) || 'it was set aside';
+    const recs = bd.emit(dir, cur.run, [['ROUND', { cause: 'restart' }, it.id],
+      ['TRY_RESULT', { result: 'fail', blob: bd.blob(dir, bd.TRIED_AGAIN + String(why).trim().slice(0, 1500)) }, it.id]]);
+    say(dir, recs.filter((r) => r.c === 'ROUND'), lvl);
+    n += 1;
+  }
+  return n;
+}
+
 /** An item is finished without a merge: set aside or refused. */
 function setAside(dir, cur, item, lvl, recs) {
   const o = cur.open[item];
@@ -1029,7 +1065,13 @@ function cmdBuild(argv) {
       const held = new Set(group.flatMap((g) => Object.keys(g.cur.open || {})));
       let picked = null, branch = null, start = null;
       for (let tries = 0; tries < 4 && !picked; tries++) {
-        const cands = bd.candidates(dir, spec, status, claims).filter((i) => !held.has(i.id) && bd.wanted(want, i));
+        let cands = bd.candidates(dir, spec, status, claims).filter((i) => !held.has(i.id) && bd.wanted(want, i));
+        // Nothing left to pick and no lane mid-thing: what was set aside for a reason a fresh builder may get past
+        // goes back on the list once, with what stopped it. What waited on it can then be built too.
+        if (!cands.length && !busy && !cur.lead && secondPass(dir, home, cur, spec, status, cfg, lvl)) {
+          status = bd.itemStatus(home, spec);
+          cands = bd.candidates(dir, spec, status, claims).filter((i) => !held.has(i.id) && bd.wanted(want, i));
+        }
         if (!cands.length) break;
         const it = cands[0];
         const b = bd.branchFor(it);
@@ -1235,6 +1277,10 @@ function cmdBuild(argv) {
       delete o.review;
       if (!notes.length) return gate(dir, cur, spec, item, lvl, []);
       o.rounds += 1;
+      const cost = spentOn(dir, bd.homeDir(dir, cur), item);
+      if (cost !== null && cost >= cfg.caps.usd_per_item) {
+        return blocked(dir, cur, item, lvl, 'budget', 'this thing reached the limit for one thing (about ' + cfg.caps.usd_per_item + ' dollars at list prices) with the review still asking for changes:\n' + notes.join('\n'), [['ROUND', { cause: 'review' }, item]]);
+      }
       if (o.rounds < cfg.caps.rounds_per_item) {
         o.notes = notes;
         bd.git(['checkout', '-q', o.branch], dir);
@@ -1255,7 +1301,7 @@ function cmdBuild(argv) {
       for (const id of ids) {
         const last = all.filter((r) => r.c === 'BLOCKED' && r.i === id).sort((x, y) => (x.ts < y.ts ? -1 : 1)).pop();
         const why = (last && last.f && last.f.blob && ml.readBlob(sp.cohditDir(dir), last.f.blob, dir)) || 'it was set aside';
-        const recs = bd.emit(dir, cur.run, [['TRY_RESULT', { result: 'fail', blob: bd.blob(dir, 'Tried again. What stopped it last time: ' + String(why).trim().slice(0, 1500)) }, id]]);
+        const recs = bd.emit(dir, cur.run, [['TRY_RESULT', { result: 'fail', blob: bd.blob(dir, bd.TRIED_AGAIN + String(why).trim().slice(0, 1500)) }, id]]);
         say(dir, recs, lvl);
       }
       hint('retried', ids.join(','));

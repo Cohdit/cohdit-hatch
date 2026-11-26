@@ -51,7 +51,7 @@ const e2 = require('./e2e');
 
 // "build it" takes the next DEFAULT_ITEMS things; "build all" the whole list (hatch.js runWant).
 const DEFAULT_ITEMS = 10;
-const DEFAULT_CAPS = { items_per_run: DEFAULT_ITEMS, usd_per_run: 15, rounds_per_item: 2, minutes_per_item: 40, lanes: 3 };
+const DEFAULT_CAPS = { items_per_run: DEFAULT_ITEMS, usd_per_run: 15, rounds_per_item: 3, restarts: 1, usd_per_item: 5, minutes_per_item: 40, lanes: 3 };
 const LANES_MAX = 3;                             // makers at once: the person's plan, their computer, and clashes all grow with it
 const DEFAULT_VERIFY = 'npm test && npm run build';
 const LONG_MS = 9 * 60000;                       // one verify, one scaffold step: under Claude Code's limit for a call
@@ -388,6 +388,16 @@ function itemStatus(dir, spec) {
 }
 
 /** What the person saw the last time this thing did not work, or null. The brief carries it. */
+/** How a retried thing's earlier stop is marked, so a brief can tell it from the person's own words at a try. */
+const TRIED_AGAIN = 'Tried again. What stopped it last time: ';
+function failSection(tried, tail) {
+  if (tried.startsWith(TRIED_AGAIN)) {
+    return ['## What stopped it last time', 'An earlier builder worked on this thing and it was set aside. This is a fresh start from the main line; none of that work is here. What stopped it:',
+      tried.slice(TRIED_AGAIN.length), 'Do not repeat that. If the same thing stops you, say so plainly in your report.'];
+  }
+  return ['## When they tried it', 'The person tried this thing and said, in their words: ' + tried, tail];
+}
+
 function lastFailNote(dir, item) {
   const fails = allRecords(dir).filter((r) => r.c === 'TRY_RESULT' && r.i === item && r.f && r.f.result === 'fail' && r.f.blob)
     .sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
@@ -832,7 +842,7 @@ function brief(dir, spec, item, cfg, notes, status, advice, check) {
   if (bug) out.push('(' + (it.source === 'report' ? 'The person using the app reported this.' : 'The ' + (it.by || 'review') + ' found this on a scan.') + ' Write the failing test first; the fix is the minimum that makes it pass.)');
   if (it.source === 'inferred') out.push('(Hatch inferred this thing from what the person said; keep it minimal.)');
   const tried = lastFailNote(dir, item);
-  if (tried) out.push('', '## When they tried it', 'The person tried this thing and said, in their words: ' + tried, 'Make that true as well as the checks above; it is what they will look for first.');
+  if (tried) out.push('', ...failSection(tried, 'Make that true as well as the checks above; it is what they will look for first.'));
   out.push('', '## The whole first version (for context; build only the thing above)');
   for (const o of spec.items) out.push('- ' + o.id + ' ' + o.title + (st.get(o.id) !== 'queued' ? ' (' + st.get(o.id) + ')' : '') + (o.device ? ' (a device check, not built)' : ''));
   if ((spec.out || []).length) out.push('', 'Not in the first version: ' + spec.out.join(', ') + '.');
@@ -912,7 +922,7 @@ function testerBrief(dir, spec, item, status) {
   out.push('', bug ? '## The bug, and what must be true once it is fixed' : '## This thing, and how the person will check it');
   for (const c of it.criteria || []) out.push('- ' + c);
   const tried = lastFailNote(dir, item);
-  if (tried) out.push('', '## When they tried it', 'The person tried this thing and said, in their words: ' + tried, 'Test for that as well.');
+  if (tried) out.push('', ...failSection(tried, 'Test for that as well.'));
   out.push('', '## The whole first version (for context; test only the thing above)');
   for (const o of spec.items) out.push('- ' + o.id + ' ' + o.title + (st.get(o.id) !== 'queued' ? ' (' + st.get(o.id) + ')' : '') + (o.device ? ' (a device check, not built)' : ''));
   out.push('', '## What you write', 'Exactly one file: `' + file + '`. Any other change in the folder is thrown away and you are asked again. You run nothing.',
@@ -1245,7 +1255,7 @@ module.exports = {
   cohditDir, notesDir, readCfg, saveCfg, level, blob, emit, spoolFile, flush,
   git, gitNet, hasRemote, headSha, fullSha, currentBranch, isPrimary, mainBranch, resetTree, dirtyPaths, fetch, remoteMain, toMain, rebaseOnto, fastForward, baseSha, startBase, keepWork, pushMain, commitLedger, landMain, land, agentModel,
   active, saveActive, isLive, setPointer, clearPointer, newRunId, runStart, stopBefore, abandon,
-  allRecords, itemStatus, lastFailNote, branchFor, remoteClaims, candidates, startItem, claim, releaseClaim, writeNote, writeMeasured, markWords, readNote,
+  allRecords, itemStatus, lastFailNote, TRIED_AGAIN, branchFor, remoteClaims, candidates, startItem, claim, releaseClaim, writeNote, writeMeasured, markWords, readNote,
   scaffold, ensureRepo, fetchIdea, workDir, sideCopy, laneCount, installDeps, openLanes, laneGroup, homeDir, LANES_MAX, findSideCopy, removeSideCopy, sweepSideCopies, brief, testerBrief, testerPath, baselineFor, expertSections, itemAbout, scanBrief, briefPath, diffPath, consultPath, scanPath, rolePath, writeRole, writeConsult, hatchCmd, refusalClause,
   parseReturn, makerReturn, checkerReturn, advisorReturn, risk, loadLenses, lensesFor, dependencies, coverage, ROLES,
 };
