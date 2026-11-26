@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.0.43 — you see a mock-up of every screen, and sign it off, before anything is built (2026-11-26)
 
 - Before anything is built, you see it. Once you agree your idea, Hatch draws a mock-up of every screen, using your own
   words and examples, and opens it in your browser. Tell it what to change until it's right, then sign it off. Nothing is
