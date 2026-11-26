@@ -360,6 +360,7 @@ function cmdIdea(argv) {
         sp.writeLocal(dir, local);
       }
       showSpec(dir, true);
+      for (const v of sp.vagueChecks(spec)) hint('vague', v);   // for the interviewer: a check nobody could verify
       return 0;
     }
     if (sub === 'change' || sub === 'reopen') {

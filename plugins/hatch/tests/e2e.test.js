@@ -385,3 +385,16 @@ test('the reviewer reads the browser test; what it says against the test goes to
   const list = H.run('render.js', ['checklist', '--level', 'plain', '--cohdit', path.join(dir, '.cohdit')], { env: h.env }).out;
   assert.match(list, /1\. Letter grid\n   Check: Open it; you see all 26 letters, big\n   Checked in a browser, but the test may prove less than you asked: check this one with care\./);
 });
+
+test('a check nobody could verify is named to the interviewer: "works" with nothing to see and no example', () => {
+  const sp = require('../scripts/lib/spec');
+  const spec = { items: [
+    { title: 'Search', criteria: ['Search works correctly', "Type 'cat' and see the runs with cat in the note"] },
+    { title: 'Totals', criteria: ['The totals work for 10,000 runs', 'It saves properly'] },
+  ] };
+  assert.deepEqual(sp.vagueChecks(spec), ['Search: Search works correctly', 'Totals: It saves properly']);
+  const h = home();
+  const n = run(h, ['idea', 'new', 'Vague']);
+  const r = run(h, ['idea', 'set', '--dir', hintOf(n, 'dir'), '--json', JSON.stringify({ items: [{ title: 'Search', criteria: ['Search works'] }] })]);
+  assert.equal(hintOf(r, 'vague'), 'Search: Search works');
+});

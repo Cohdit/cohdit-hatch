@@ -384,6 +384,19 @@ function addBug(dir, bug, open) {
 }
 
 /** Why the idea cannot be agreed yet; [] when it can. */
+/** Checks that say a thing "works" without saying what is seen, and give no example to look for: nothing a test or
+ *  a person can verify. The interviewer is told (never the person) so it can ask or decide before the read-back. */
+const VAGUE = /\b(works?|working|correctly|properly|as expected|successfully|functions?|is fine|is ok(ay)?)\b/i;
+function vagueChecks(spec) {
+  const out = [];
+  for (const it of spec.items || []) {
+    for (const c of it.criteria || []) {
+      if (VAGUE.test(c) && !/['"\u2018\u2019\u201c\u201d]\S|\d/.test(c)) out.push(it.title + ': ' + c);
+    }
+  }
+  return out;
+}
+
 function agreeProblems(spec) {
   const out = [];
   if (!spec.items.length) out.push('nothing to build yet');
@@ -411,7 +424,7 @@ function railsFor(spec) {
   return Object.keys(spec.gates).filter((g) => spec.gates[g].value).sort();
 }
 
-module.exports = {
+module.exports = { vagueChecks,
   Invalid, SOURCES, SHAPES, applyChange,
   loadInterview, loadStack, loadHosting, terms, slugify, homeDir, cohditDir, specPath, load, save, readLocal, writeLocal,
   registry, saveRegistry, newProject, findProject, applyPatch, addBug, sameBug, agreeProblems, checkStack, railsFor,

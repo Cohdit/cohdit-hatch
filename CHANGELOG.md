@@ -5,6 +5,13 @@
 - A browser test is only accepted when each of your checks has a test named after it, word for word. A check with no
   test is sent back to the tester, so nothing you asked for goes unproven without Hatch saying so.
 - The tester is told whether your idea remembers anything, and no longer tests that things are kept when it does not.
+- The list you try from now shows your own checks, word for word, and says for each thing whether Hatch already proved
+  it in a browser. The line about test counts is gone at the plain level.
+- A thing that is set aside gets one fresh start, with what stopped it, once everything else is built; what waited on it
+  is then built too. A thing gets three rounds of fixing, and stops when it has cost about five dollars at list prices.
+- The reviewer reads the browser test beside your check. A test that proves less than you asked is flagged on the try
+  list, so you know which thing to look at with care.
+- Before the read-back, the list is reviewed once for checks nobody could verify.
 
 ## 0.0.40 — Hatch checks each thing in a real browser before you do (2026-11-26)
 
