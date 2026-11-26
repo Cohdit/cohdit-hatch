@@ -1,4 +1,5 @@
 1. Add a chore (ITEM-001)
-   Try: Type "Dishes", press Add: it appears in the list
+   Check: Type "Dishes", press Add: it appears in the list
+   No browser test: check by hand.
 
 Say "let me try it" to run it locally.

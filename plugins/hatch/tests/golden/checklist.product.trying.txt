@@ -1,8 +1,8 @@
 Local test running at http://localhost:3000.
 
 2. Tick a chore done
-   Try: Tick Dishes: it moves under Done
-   Tests: +2 tests; 78% of its lines run by all tests; cases 2/5, missing: limits, invalid, failure (unreviewed)
+   Check: Tick Dishes: it moves under Done
+   No browser test: check by hand.
 
 3. On the iPad
    Try: On the same wifi, open http://192.168.1.12:3000 on it (if this computer asks whether to allow connections, say yes); the list fills the screen

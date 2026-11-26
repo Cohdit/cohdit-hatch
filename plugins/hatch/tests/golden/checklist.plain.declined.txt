@@ -1,4 +1,5 @@
 1. Tick a chore done
-   Try: Tick Dishes: it moves under Done
+   Check: Tick Dishes: it moves under Done
+   Not checked in a browser: yours to check.
 
 Say "let me try it" to start it on this computer.

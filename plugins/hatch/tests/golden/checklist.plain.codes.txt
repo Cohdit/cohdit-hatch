@@ -1,4 +1,5 @@
 1. Add a chore
-   Try: Type "Dishes", press Add: it appears in the list
+   Check: Type "Dishes", press Add: it appears in the list
+   Not checked in a browser: yours to check.
 
 Say "let me try it" to start it on this computer.

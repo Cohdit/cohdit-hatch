@@ -1,7 +1,8 @@
 Local test running at http://localhost:3000.
 
 2. Tick a chore done (ITEM-002)
-   Try: Tick Dishes: it moves under Done
+   Check: Tick Dishes: it moves under Done
+   No browser test: check by hand.
    Tests: +2 tests; 78% of its lines run by all tests; cases 2/5, missing: limits, invalid, failure (unreviewed)
 
 3. On the iPad (ITEM-005)

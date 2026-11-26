@@ -204,10 +204,10 @@ test('the try standard: at every level, a short title, one short line and one fi
   fs.writeFileSync(path.join(dir, 'notes', ids[1] + '.words'), '');
   const run = (lvl) => H.run('render.js', ['checklist', '--level', lvl, '--cohdit', dir, '--now', H.NOW], { env: { COHDIT_HOME: HOME } }).out;
   const plain = run('plain').split('\n');
-  assert.deepEqual(plain.slice(0, 5), ['', '1. Add a chore', '   Try: Type Dishes and press Add.', '   Tests: 4 new tests; all tests together run 92% of its lines; cases tested 4 of 5, missing: something failing', '', '2. Tick a chore done'].slice(1));
+  assert.deepEqual(plain.slice(0, 5), ['', '1. Add a chore', '   Check: Type "Dishes", press Add: it appears in the list', '   Not checked in a browser: yours to check.', '', '2. Tick a chore done'].slice(1));
   assert.ok(plain.includes("I wrote some of the words in 1 and 2 myself. Change anything that doesn't sound right."), 'the drafted wording is named once, at the end');
   const tech = run('tech').split('\n');
-  assert.deepEqual(tech.slice(0, 2), ['1. Add a chore (' + ids[0] + ')', '   Try: Type Dishes and press Add.'], 'a developer gets the short list too, with ids');
+  assert.deepEqual(tech.slice(0, 2), ['1. Add a chore (' + ids[0] + ')', '   Check: Type "Dishes", press Add: it appears in the list'], 'a developer gets the short list too, with ids');
 });
 
 test('the runner only carries messages, so its cost is coordination; the maker is build, a lens is check', () => {

@@ -95,6 +95,8 @@ const WORDS = {
     stillBuilding: 'Still building; say "status" for where it is up to, and try it once the build has finished.',
     nothingToTry: 'Nothing to try yet. Say "build it".',
     trySay: 'Say "let me try it" to start it on this computer.',
+    browserOk: 'Hatch already checked this in a browser: passed.',
+    browserNo: 'Not checked in a browser: yours to check.',
     tryAnswer: 'Say "pass", or say which one didn\'t work and what you saw.',
     wroteWords: (nums) => 'I wrote some of the words in ' + list(nums) + ' myself. Change anything that doesn\'t sound right.',
     onDevice: (lan) => 'on the same wifi, open ' + lan + ' on it (if this computer asks whether to allow connections, say yes); ',
@@ -169,6 +171,8 @@ const WORDS = {
     stillBuilding: 'A build is still running; say "status" for where it is, and test once it has finished.',
     nothingToTry: 'Nothing to test yet. Say "build it".',
     trySay: 'Say "let me try it" to run it locally.',
+    browserOk: 'Browser test: passed.',
+    browserNo: 'No browser test: check by hand.',
     tryAnswer: 'Say "pass", or name the item that failed and what you saw.',
     wroteWords: (nums) => 'Copy I drafted: ' + list(nums) + '. Edit anything that reads wrong.',
     onDevice: (lan) => 'on the same wifi, open ' + lan + ' on it (if this computer asks whether to allow connections, say yes); ',
@@ -236,6 +240,11 @@ class Ctx {
 
   /** What proves a finished thing, from its DONE record: its own new tests and the coverage of what it touched.
    *  '' for a thing built before Hatch recorded this. */
+  /** True when the thing's browser test passed at the gate. */
+  browserChecked(id) {
+    const rec = [...this.recs].reverse().find((r) => r.c === 'DONE' && r.i === id);
+    return !!(rec && rec.f.e2e > 0);
+  }
   proof(id) {
     const rec = [...this.recs].reverse().find((r) => r.c === 'DONE' && r.i === id);
     if (!rec || rec.f.tests === undefined) return '';
@@ -1115,6 +1124,12 @@ function shortLine(text) {
   return cutAt((s[0].toUpperCase() + s.slice(1)).replace(/<([A-Za-z][^<>]{0,30})>/g, '[$1]'), TRY_LINE_MAX);
 }
 
+/** One of the person's checks as a line of the try list: whole, on one line, with nothing a screen would read as markup. */
+function checkLine(text) {
+  const s = String(text || '').replace(/\s+/g, ' ').trim().replace(/<([A-Za-z][^<>]{0,30})>/g, '[$1]');
+  return s ? s[0].toUpperCase() + s.slice(1) : '';
+}
+
 /** A title short enough to read at a glance (a bug's title can be a whole error message). */
 function shortTitle(text) {
   return cutAt(String(text || '').replace(/\s+/g, ' ').trim(), TRY_TITLE_MAX);
@@ -1156,9 +1171,16 @@ function viewChecklist(c, a) {
     // every level: the title, then how to try it, then the tests; a blank line between things so each reads on its own
     if (out.length && out[out.length - 1] !== '') out.push('');
     out.push(n + '. ' + shortTitle(c.title(i)) + (tech ? ' (' + i + ')' : ''));
-    const how = shortLine(note) || shortLine((it.criteria || [])[0]) || '?';
-    out.push('   Try: ' + (device ? device[0].toUpperCase() + device.slice(1) + how[0].toLowerCase() + how.slice(1) : how));
-    const proof = c.proof(i);
+    const checks = (it.criteria || []).map(checkLine).filter(Boolean);
+    if (it.device || !checks.length) {
+      const how = shortLine(note) || shortLine((it.criteria || [])[0]) || '?';
+      out.push('   Try: ' + (device ? device[0].toUpperCase() + device.slice(1) + how[0].toLowerCase() + how.slice(1) : how));
+    } else {
+      // what to verify is the person's own agreed checks, word for word, then what Hatch has already proven
+      for (const k of checks) out.push('   Check: ' + k);
+      out.push('   ' + (c.browserChecked(i) ? w.browserOk : w.browserNo));
+    }
+    const proof = tech ? c.proof(i) : '';
     if (proof) out.push('   Tests: ' + proof);
     if (c.wroteWords(i)) wrote.push(n);
   }
