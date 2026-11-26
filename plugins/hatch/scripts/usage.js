@@ -7,6 +7,8 @@
  *
  * - SubagentStop — the subagent's usage since its last checkpoint, attributed to an item by the
  *   branch it ran on, else the one open item its prompt names, else the run's only open item.
+ * - PostToolUse on a subagent's Bash call to `hatch.js build verify|commit` — the same, midway, so the cost limit for
+ *   one thing is checked while the maker works (hatch.js reads it at its next verify or commit).
  * - PostToolUse on the main session's own Bash call to ledger.js, step.js or hatch.js (never a subagent's —
  *   their payload carries agent_id) — the orchestrator's usage since its checkpoint. On
  *   `ledger.js start` / `hatch.js build open` / `try start` / `share open` it only sets the checkpoint, so the
@@ -23,6 +25,7 @@ const ml = require('./lib/ledger');
 const api = require('./lib/api');
 
 const MARKS = /(?:ledger|step|hatch)\.js\b/;
+const MIDWAY = /hatch\.js["']?\s+build\s+(?:verify|commit)\b/;
 const STARTS = /ledger\.js["']?\s+start\b|step\.js["']?\s+open\b|hatch\.js["']?\s+(?:build\s+open|try\s+start|share\s+open)\b/;
 
 /** The working copy that is building: the one this session opened (build writes a pointer per session),
@@ -46,8 +49,16 @@ function usageRec(cur, ts, agent, attrib, models, item, extra) {
   return rec;
 }
 
+/** A subagent's own transcript: the hook names it at SubagentStop; on its tool calls it sits beside the session's,
+ *  at <session>/subagents/agent-<id>.jsonl. */
+function agentTranscript(h) {
+  if (h.agent_transcript_path) return h.agent_transcript_path;
+  if (!h.transcript_path || !h.agent_id || !/^[\w-]{1,96}$/.test(String(h.agent_id))) return null;
+  return path.join(h.transcript_path.replace(/\.jsonl$/, ''), 'subagents', 'agent-' + h.agent_id + '.jsonl');
+}
+
 function subagentStop(h, cwd, cur) {
-  const file = h.agent_transcript_path;
+  const file = agentTranscript(h);
   if (!file || !fs.existsSync(file)) return;
   const key = 'transcript:' + file;
   const { models, lastTs } = ml.transcriptUsage(file, ml.checkpoint(key, cwd));
@@ -108,6 +119,11 @@ function handle(h) {
     if (session && session === cur.session) orchestrator(h, cwd, cur, command);
   } else if (event === 'SubagentStop' && session && session === cur.session) {
     subagentStop(h, cwd, cur);
+  } else if (event === 'PostToolUse' && h.tool_name === 'Bash' && h.agent_id && session && session === cur.session
+    && MIDWAY.test((h.tool_input || {}).command || '')) {
+    // A maker's spend so far, each time it runs the checks: the cost limit for one thing is then checked while it
+    // works, not only once it is done. The same checkpoint as SubagentStop, so nothing is counted twice.
+    subagentStop(h, cwd, cur);
   }
 }
 
@@ -129,4 +145,4 @@ function main() {
 }
 
 if (require.main === module) Promise.resolve(main()).then((code) => { process.exitCode = code; });
-module.exports = { handle, MARKS, STARTS };
+module.exports = { handle, MARKS, STARTS, MIDWAY, agentTranscript };

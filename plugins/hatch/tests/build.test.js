@@ -1088,3 +1088,38 @@ test('the second pass: a thing set aside gets one fresh start with what stopped 
   B(h2, d2, ['built', 'ITEM-001', '--return', '{"verdict":"blocked","blocked":{"reason":"ambiguous","text":"Which voice?"},"findings":[]}']);
   assert.equal(hintOf(B(h2, d2, ['next']), 'next'), 'close', 'a question for the person is not answered by trying again');
 });
+
+test('the cost limit for one thing holds while the maker works: its spend is read at each check, the checks then refuse', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Midway', ITEMS.slice(0, 1));
+  oneLane(dir);
+  assert.equal(B(h, dir, ['open', '--session', 's1']).code, 0);
+  const n = B(h, dir, ['next']);
+  assert.equal(hintOf(n, 'next'), 'maker');
+  const item = hintOf(n, 'item');
+  const branch = bdl.active(dir).open[item].branch;
+  // the maker's own transcript, where Claude Code keeps it: beside the session's, under subagents/
+  const main = path.join(H.tmpdir(), 'sess.jsonl');
+  fs.writeFileSync(main, '');
+  const mine = path.join(main.replace(/\.jsonl$/, ''), 'subagents', 'agent-m1.jsonl');
+  fs.mkdirSync(path.dirname(mine), { recursive: true });
+  const row = (ts, id, input) => JSON.stringify({ type: 'assistant', timestamp: ts, gitBranch: branch, message: { id, model: 'claude-sonnet-5-5', content: [{ type: 'text', text: 'x' }], usage: { input_tokens: input, output_tokens: 10, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } } }) + '\n';
+  const U = (command) => H.run('usage.js', ['hook'], { env: h.env, cwd: dir, input: JSON.stringify({ hook_event_name: 'PostToolUse', tool_name: 'Bash', session_id: 's1', agent_id: 'm1', agent_type: 'hatch:maker', cwd: dir, transcript_path: main, tool_input: { command } }) });
+  fs.writeFileSync(mine, row('2026-11-01T09:00:00Z', 'a1', 1000));
+  U('node "' + H.S + '/hatch.js" build verify --dir x');
+  makerCommits(h, dir, 'app/a.txt', 'a\n', 'a small start');     // well under the limit: the checks run
+  fs.appendFileSync(mine, row('2026-11-01T09:10:00Z', 'a2', 5000000));
+  U('node "' + H.S + '/hatch.js" build verify --dir x');
+  const usage = H.records(H.spool(dir)).filter((r) => r.c === 'USAGE' && r.i === item);
+  assert.equal(usage.length, 2, 'spend recorded at each check, nothing counted twice');
+  const v = B(h, dir, ['verify']);
+  assert.equal(v.code, 1);
+  assert.match(v.out, /reached the cost limit for one thing[\s\S]*verdict blocked, reason budget/);
+  assert.equal(hintOf(v, 'hint'), 'budget');
+  fs.writeFileSync(path.join(dir, 'app', 'b.txt'), 'b\n');
+  assert.equal(B(h, dir, ['commit', '-m', 'more']).code, 1, 'and the gate takes nothing more');
+  const r = B(h, dir, ['built', item, '--return', BLOCKED('ran out of road')]);
+  assert.equal(r.code, 0, r.err);
+  const last = bdl.allRecords(dir).filter((x) => x.c === 'BLOCKED' && x.i === item).pop();
+  assert.equal(last.f.reason, 'budget', 'set aside for cost, whatever reason the maker gave, so the second pass leaves it');
+});

@@ -528,6 +528,23 @@ function spentOn(dir, home, item) {
   return usd;
 }
 
+/** Mid-thing: the maker's spend so far (usage.js records it at each verify and commit) against the limit for one
+ *  thing. Over it, the checks and the gate refuse, and the maker is told to stop and report; its report then sets the
+ *  thing aside with reason budget. True when over. */
+function overLimit(dir, cur, cfg, item) {
+  const o = item && cur.open[item];
+  if (!o || o.phase !== 'maker') return false;
+  const cost = spentOn(dir, bd.homeDir(dir, cur), item);
+  if (o.over || (cost !== null && cost >= cfg.caps.usd_per_item)) {
+    if (!o.over) { o.over = true; bd.saveActive(dir, cur); }
+    process.stdout.write('This thing has reached the cost limit for one thing (about ' + cfg.caps.usd_per_item + ' dollars at list prices). '
+      + 'Stop building it. Return your report now: verdict blocked, reason budget, and in text what is done and what is left.\n');
+    hint('hint', 'budget');
+    return true;
+  }
+  return false;
+}
+
 /** The second pass: each thing set aside for a reason a fresh builder may get past goes back on the list, once
  *  (caps.restarts), unless it has already cost the limit for one thing. Returns how many went back. */
 const RETRIABLE = ['other', 'env'];
@@ -737,7 +754,8 @@ function dispatchTester(dir, cur, spec, item, status) {
   const o = cur.open[item];
   o.phase = 'tester';
   bd.saveActive(dir, cur);
-  fs.writeFileSync(bd.testerPath(dir, item), bd.testerBrief(dir, spec, item, status));
+  if (o.retest) e2.place(dir, item);                             // questioned: the tester reads its own test where it wrote it
+  fs.writeFileSync(bd.testerPath(dir, item), bd.testerBrief(dir, spec, item, status, o.retest));
   bd.writeRole(dir, 'tester', item);
   hint('item', item);
   hint('brief', bd.testerPath(dir, item));
@@ -746,11 +764,39 @@ function dispatchTester(dir, cur, spec, item, status) {
 }
 
 /** The tester is done, one way or the other: on to the maker. */
-function toMaker(dir, cur, spec, cfg, item, lvl, lead) {
+function toMaker(dir, cur, spec, cfg, item, lvl, lead, notes) {
   bd.resetTree(dir);                                             // nothing the tester left in the folder reaches the maker
   bd.emit(dir, cur.run, lead.concat([['DISPATCH', { agent: 'maker', model: bd.agentModel('maker') }, item]]));
-  dispatchMaker(dir, cur, spec, cfg, item, lvl);
+  if (notes) cur.open[item].notes = notes;
+  dispatchMaker(dir, cur, spec, cfg, item, lvl, notes);
   return 0;
+}
+
+/** The maker says the browser test asks for more than the person's checks ("test: …"). The first time, the tester
+ *  reads the test again beside the objection and the checks: it rewrites it, or says why it stands. The second
+ *  time, the two disagree and the person decides: the thing is set aside as needing them. */
+function questionTest(dir, cur, spec, item, lvl, text, lead) {
+  const o = cur.open[item];
+  if (o.retest) {
+    const tester = o.retest.kept ? 'The tester kept the test: ' + o.retest.kept : 'The tester already rewrote the test once.';
+    return blocked(dir, cur, item, lvl, 'ambiguous', 'The builder and the tester disagree about the browser test, so this needs you to decide what the check means.\nThe builder: '
+      + text.replace(/^\s*test:\s*/i, '') + '\n' + tester, lead);
+  }
+  o.retest = { objection: text.replace(/^\s*test:\s*/i, '').trim().slice(0, 1500), kept: null };
+  o.tcontract = 0;
+  bd.resetTree(dir);                                             // the maker's half work stays committed; nothing loose reaches the tester
+  const written = bd.emit(dir, cur.run, lead.concat([['ROUND', { cause: 'test' }, item], ['DISPATCH', { agent: 'tester', model: bd.agentModel('tester') }, item]]));
+  say(dir, written.filter((x) => x.c === 'ROUND'), lvl);
+  dispatchTester(dir, cur, spec, item);
+  return 0;
+}
+
+/** The tester read the objection and kept its test: back to the maker, told why. */
+function testStands(dir, cur, spec, cfg, item, lvl, reason, lead) {
+  const o = cur.open[item];
+  o.retest.kept = reason;
+  return toMaker(dir, cur, spec, cfg, item, lvl, lead, ['You questioned the browser test. The tester read your objection against the person\'s checks and kept it: '
+    + reason + ' Build to it. If you are still sure it asks for more than the checks, return blocked with text starting `test:` once more and the person decides.']);
 }
 
 /** A test the script will not take: the tester is asked once more with the reason; a second time the thing is
@@ -766,6 +812,7 @@ function badTest(dir, cur, spec, cfg, item, lvl, why, lead) {
     hint('hint', 'reask');
     return 64;
   }
+  if (o.retest) return testStands(dir, cur, spec, cfg, item, lvl, 'the tester could not write a usable new test (' + why + '), so the test stays as it was', lead);
   o.e2e = { none: 'no usable browser test could be written' };
   return toMaker(dir, cur, spec, cfg, item, lvl, lead.concat([['FINDING', { scope: 'in', sev: 'medium', blob: bd.blob(dir, 'No browser test for this thing: ' + why) }, item]]));
 }
@@ -1115,6 +1162,7 @@ function cmdBuild(argv) {
       return 0;
     }
     if (sub === 'verify') {
+      if (overLimit(dir, cur, cfg, Object.keys(cur.open)[0])) return 1;
       if (guardTests(dir, cfg).length + guardChecks(dir, cfg).length) return 1;
       return verifyNow(dir, cur, cfg, lvl) === 0 ? 0 : 1;
     }
@@ -1124,6 +1172,7 @@ function cmdBuild(argv) {
       const item = Object.keys(cur.open)[0];
       if (!item) return fail('nothing is being built; there is no branch to commit on');
       if (cur.open[item].phase === 'tester') return fail('the test for ' + item + ' is still being written; nothing to commit yet');
+      if (overLimit(dir, cur, cfg, item)) return 1;
       if (guardTests(dir, cfg).length + guardChecks(dir, cfg).length) return 1;
       if (verifyNow(dir, cur, cfg, lvl) !== 0) { hint('hint', 'checks_failed'); return 1; }
       bd.git(['add', '-A', '--', '.', ':(exclude).cohdit'], dir);
@@ -1168,6 +1217,10 @@ function cmdBuild(argv) {
         return badTest(dir, cur, spec, cfg, item, lvl, e.message, []);
       }
       const lead = [['RETURN', { agent: 'tester', verdict: r.verdict }, item]];
+      if (r.verdict === 'stands') {
+        if (!o.retest) return badTest(dir, cur, spec, cfg, item, lvl, 'stands is only for a test the builder questioned; write the test', []);
+        return testStands(dir, cur, spec, cfg, item, lvl, r.reason, lead);
+      }
       if (r.verdict === 'none') {
         o.e2e = { none: r.reason };
         return toMaker(dir, cur, spec, cfg, item, lvl, lead.concat([['FINDING', { scope: 'in', sev: 'low', blob: bd.blob(dir, 'No browser test for this thing: ' + r.reason) }, item]]));
@@ -1189,11 +1242,12 @@ function cmdBuild(argv) {
       if (res.error) return badTest(dir, cur, spec, cfg, item, lvl, 'the test could not run: ' + res.error.split('\n').slice(-8).join(' | '), lead);
       if (res.skipped || !res.tests) return badTest(dir, cur, spec, cfg, item, lvl, 'the file has ' + (res.tests ? 'a skipped test' : 'no test that ran'), lead);
       const red = res.failed > 0;
-      if (!red && !o.tcontract) return badTest(dir, cur, spec, cfg, item, lvl, 'every test passes before the thing is built, so it tests nothing new. Test what this thing adds', lead);
+      if (!red && !o.tcontract && !o.retest) return badTest(dir, cur, spec, cfg, item, lvl, 'every test passes before the thing is built, so it tests nothing new. Test what this thing adds', lead);
       e2.hold(dir, item, [want]);
+      // A rewrite after the builder started need not fail first, and is not said to have: red is what was seen.
       o.e2e = { spec: want, tests: res.tests, red: red ? 1 : 0, checks: (it.criteria || []).length };
       if (r.stand_ins.length) o.e2e.stand_ins = r.stand_ins;
-      return toMaker(dir, cur, spec, cfg, item, lvl, lead);
+      return toMaker(dir, cur, spec, cfg, item, lvl, lead, o.retest ? ['You questioned the browser test and the tester rewrote it. Build to the new test: verify shows what it looks for.'] : undefined);
     }
     if (sub === 'built' || sub === 'checked' || sub === 'advised') {
       const item = words(rest, VALUED)[0];
@@ -1226,6 +1280,10 @@ function cmdBuild(argv) {
           hint('next', 'close');
           return 1;
         }
+        // Over the limit for one thing, whatever the maker gave as the reason: set aside for cost, so the second pass
+        // does not start it again (secondPass skips budget), and status says why.
+        if (o.over && r.verdict !== 'done') return blocked(dir, cur, item, lvl, 'budget', 'this thing reached the limit for one thing (about ' + cfg.caps.usd_per_item + ' dollars at list prices) while it was being built' + (r.verdict === 'blocked' ? ':\n' + r.blocked.text : ''), lead);
+        if (r.verdict === 'blocked' && /^\s*test:/i.test(r.blocked.text) && o.e2e && o.e2e.spec) return questionTest(dir, cur, spec, item, lvl, r.blocked.text, lead);
         if (r.verdict === 'blocked') return blocked(dir, cur, item, lvl, r.blocked.reason, r.blocked.text, lead);
         if (r.verdict === 'consult') {                           // one question per thing; a second is a decision for the person
           if (o.advice) return blocked(dir, cur, item, lvl, 'ambiguous', 'the maker asked a second question: ' + r.consult.question, lead);

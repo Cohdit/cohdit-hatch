@@ -21,6 +21,7 @@ const path = require('path');
 const ml = require('./ledger');
 const cz = require('./codes');
 const api = require('./api');
+const MAX_ITEMS = 40;         // interview.json readback.max_items overrides; a complex idea is agreed whole, not as eight and added to
 
 const SOURCES = ['said', 'inferred'];
 const SHAPES = ['use', 'read', 'runs'];
@@ -241,7 +242,7 @@ function applyChange(spec, patch, interview, status = new Map()) {
     throw new Invalid('reagree: hosting and terms are settled when you agree; reopen the idea to change them');
   }
   const rb = (interview && interview.readback) || {};
-  const maxCrit = rb.max_criteria_per_item || 3;   // no cap on how many things: the cap of eight is the first interview's (applyPatch)
+  const maxCrit = rb.max_criteria_per_item || 3;   // no cap on how many things: the cap is the first interview's (applyPatch)
   const trial = JSON.parse(JSON.stringify(spec));
   const res = { added: [], edited: [] };
   const deps = [];
@@ -285,7 +286,8 @@ function applyPatch(spec, patch, interview) {
   if (spec.agreed) throw new Invalid('the idea is agreed; a small change goes through idea change, a big one through idea reopen');
   if (!patch || typeof patch !== 'object') throw new Invalid('patch must be an object');
   const rb = (interview && interview.readback) || {};
-  const maxItems = rb.max_items || 8, maxCrit = rb.max_criteria_per_item || 3;
+  // The first interview takes a whole idea, however many things it needs; past this many it is two ideas.
+  const maxItems = rb.max_items || MAX_ITEMS, maxCrit = rb.max_criteria_per_item || 3;
   const gateKeys = Object.keys(cz.loadRails().rule || {});
   const asked = [];
   for (const k of Object.keys(patch)) {

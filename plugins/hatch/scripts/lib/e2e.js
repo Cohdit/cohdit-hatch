@@ -277,7 +277,11 @@ function testerReturn(text) {
   if (fence) t = fence[1].trim();
   let r;
   try { r = JSON.parse(t); } catch (e) { throw new Invalid('the report is not one JSON block: ' + e.message); }
-  if (!r || typeof r !== 'object' || !['written', 'none'].includes(r.verdict)) throw new Invalid('verdict must be written or none');
+  if (!r || typeof r !== 'object' || !['written', 'none', 'stands'].includes(r.verdict)) throw new Invalid('verdict must be written, none or stands');
+  if (r.verdict === 'stands') {                                  // only when the builder questioned the test: it asks for what the checks ask
+    if (typeof r.reason !== 'string' || !r.reason.trim()) throw new Invalid('stands needs a reason: why the test asks for no more than the checks');
+    return { verdict: 'stands', reason: r.reason.trim().slice(0, REASON_MAX) };
+  }
   if (r.verdict === 'none') {
     if (typeof r.reason !== 'string' || !r.reason.trim()) throw new Invalid('none needs a reason: why a browser cannot check this thing');
     return { verdict: 'none', reason: r.reason.trim().slice(0, REASON_MAX) };

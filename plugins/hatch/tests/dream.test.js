@@ -57,7 +57,9 @@ test('idea set: the shape line after each chunk, then only what was added', () =
   assert.equal(a.out, 'So far: Letter grid, Tap to hear, Animal picture. Go on.');
   const b = idea(h, ['set', '--dir', dir, '--json', JSON.stringify({ items: ITEMS.concat([{ title: 'On the iPad', criteria: ['open it on the iPad'], device: true, source: 'inferred' }]) })]);
   assert.equal(b.out, "Added: On the iPad. That's 4 things so far. Go on.");
-  const bad = idea(h, ['set', '--dir', dir, '--json', JSON.stringify({ items: Array.from({ length: 9 }, (_, i) => ({ title: 't' + i })) })]);
+  const whole = idea(h, ['set', '--dir', dir, '--json', JSON.stringify({ items: Array.from({ length: 30 }, (_, i) => ({ title: 't' + i })) })]);
+  assert.equal(whole.code, 0, 'a complex idea is taken whole at the first interview: ' + whole.err);
+  const bad = idea(h, ['set', '--dir', dir, '--json', JSON.stringify({ items: Array.from({ length: 41 }, (_, i) => ({ title: 't' + i })) })]);
   assert.equal(bad.code, 64);
   assert.match(bad.err, /^hint=two_ideas$/m);
   const unknown = idea(h, ['set', '--dir', dir, '--json', JSON.stringify({ gates: { teapot: true } })]);
@@ -158,7 +160,7 @@ test('change: an agreed idea takes small changes (add, edit queued, decisions, o
   const runs = path.join(dir, '.cohdit', 'ledger', 'runs');
   fs.writeFileSync(path.join(runs, '20261101T090000Z-test-0099.jsonl'), JSON.stringify({ v: 1, c: 'DONE', r: '20261101T090000Z-test-0099', ts: '2026-11-01T09:10:00Z', i: 'ITEM-002', f: { head: 'a1b2c3d', touches: 'app/' } }) + '\n');
   assert.equal(idea(h, ['change', '--dir', dir, '--json', '{"edit":[{"id":"ITEM-002","title":"y"}]}']).code, 64);
-  // no cap on a changed idea: the eight is the first interview's
+  // no cap on a changed idea: the cap is the first interview's
   const many = Array.from({ length: 12 }, (_, i) => ({ title: 'T' + i, criteria: ['c'] }));
   const piled = idea(h, ['change', '--dir', dir, '--json', JSON.stringify({ add: many })]);
   assert.equal(piled.code, 0, piled.err);

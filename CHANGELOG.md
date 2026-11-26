@@ -8,6 +8,13 @@
   or checked changes.
 - A build that stopped part-way, often because you stopped it yourself, is no longer called "stopped unexpectedly".
   Status says where it was and that "build all" carries on from there.
+- The cost limit for one thing now holds while it is being built, not only between rounds. Once a thing has cost about
+  five dollars at list prices, the builder is stopped at its next check and the thing is set aside for cost.
+- When the builder is sure a browser test asks for more than your check does, the tester looks at the test again and
+  either rewrites it or explains why it is right. If they still disagree, the thing waits for you to decide, with both
+  sides written down. Before, the thing was simply set aside.
+- The first conversation about an idea now takes the whole idea, up to forty things. Before, it stopped at eight and
+  the rest had to be added afterwards.
 
 ## 0.0.41 — every check you agreed has its own browser test (2026-11-26)
 

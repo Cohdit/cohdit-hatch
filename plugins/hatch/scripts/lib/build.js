@@ -887,7 +887,7 @@ function brief(dir, spec, item, cfg, notes, status, advice, check) {
     out.push('', '## The browser check', 'A test of this thing in a real browser was written from the checks above before you started. You cannot see it and it is not yours to change. `verify` and `commit` run it, with the test of every thing finished before, against the built app, and print what did not pass: the check, what the browser saw, and what you may touch.',
       '- Never create or edit anything under `e2e/` or `playwright.config.*`: the change is put back and the commit refused.',
       '- Make the app do what the check says for any input. Never detect the test or special-case the values it uses.',
-      '- If you are sure the test asks for something the checks above do not, return `blocked` with reason `other` and text that starts `test:` and says what is wrong. That is a correct outcome, not a failure.');
+      '- If you are sure the test asks for something the checks above do not, return `blocked` with reason `other` and text that starts `test:` and says what is wrong. That is a correct outcome, not a failure: the tester looks at the test again and either rewrites it or tells you why it stands, and you carry on. If you still disagree after that, the person decides.');
   } else if (check && check.none) {
     out.push('', '## The browser check', 'No browser test was written for this thing (' + check.none + '). Your own tests are its only proof; the person is told to try it by hand.');
   }
@@ -910,7 +910,7 @@ function brief(dir, spec, item, cfg, notes, status, advice, check) {
 
 /** What the tester reads: the thing in the person's words and the rules a browser test is held to. It is told
  *  nothing about how the thing will be built, because nothing has been. */
-function testerBrief(dir, spec, item, status) {
+function testerBrief(dir, spec, item, status, retest) {
   const it = spec.items.find((i) => i.id === item);
   const st = status || itemStatus(dir, spec);
   const file = e2.specName(item);
@@ -923,6 +923,14 @@ function testerBrief(dir, spec, item, status) {
   for (const c of it.criteria || []) out.push('- ' + c);
   const tried = lastFailNote(dir, item);
   if (tried) out.push('', ...failSection(tried, 'Test for that as well.'));
+  if (retest) {
+    out.push('', '## The builder questioned your test', 'You wrote this thing\'s test earlier; it is in the folder at `' + file + '`. The builder, who cannot see it, was shown what it looked for and says:', '',
+      '> ' + String(retest.objection).replace(/\n/g, '\n> '), '',
+      'Judge the test against the person\'s checks above, and nothing else: not against what was built.',
+      '- If it asks for more than they checked, or for something else, rewrite the file so it asks for exactly what they checked, and return `written`.',
+      '- If it asks for exactly what they checked, change nothing and return `{"verdict":"stands","reason":"one sentence the builder will read: why the test is right"}`.',
+      'If the builder questions it again after this, the person decides.');
+  }
   out.push('', '## The whole first version (for context; test only the thing above)');
   for (const o of spec.items) out.push('- ' + o.id + ' ' + o.title + (st.get(o.id) !== 'queued' ? ' (' + st.get(o.id) + ')' : '') + (o.device ? ' (a device check, not built)' : ''));
   out.push('', '## What you write', 'Exactly one file: `' + file + '`. Any other change in the folder is thrown away and you are asked again. You run nothing.',
@@ -937,7 +945,9 @@ function testerBrief(dir, spec, item, status) {
     '- Another company\'s page (a payment form, signing in through another service) is never driven: stop where the app hands over, and name it in `stand_ins`.',
     '- Read the project to learn which pages and words exist today. Where this thing\'s own do not exist yet, the check\'s words are your guide.',
     '- Never: skip, fixme or only; fixed waits; CSS or XPath selectors; `page.route`, `page.evaluate` or anything that fakes the app; timeouts or retries of your own.',
-    '', 'The script reads your file, refuses one that breaks a rule above, and runs it against the app as it is now: it must fail, because the ' + (bug ? 'bug is still there' : 'thing does not exist yet') + '. A test that passes already tests nothing.');
+    '', retest
+      ? 'The script reads your file and refuses one that breaks a rule above. Part of the thing may be built by now, so it need not fail today.'
+      : 'The script reads your file, refuses one that breaks a rule above, and runs it against the app as it is now: it must fail, because the ' + (bug ? 'bug is still there' : 'thing does not exist yet') + '. A test that passes already tests nothing.');
   out.push('', '## Return', 'Your final message is exactly one fenced JSON block, nothing else:', '```json', '{"verdict":"written","stand_ins":[]}', '```',
     'or, only when nothing on any screen changes because of this thing, so a browser cannot check it: `{"verdict":"none","reason":"one sentence saying why"}`. The person is then told to try it by hand.');
   return out.join('\n') + '\n';

@@ -71,7 +71,9 @@ test('what the tester returns, and which paths are the tests\' own', () => {
   assert.deepEqual(e2.testerReturn('```json\n' + WRITTEN + '\n```'), { verdict: 'written', stand_ins: [] });
   assert.equal(e2.testerReturn('{"verdict":"none","reason":"it only changes a nightly job"}').reason, 'it only changes a nightly job');
   assert.throws(() => e2.testerReturn('{"verdict":"none"}'), /needs a reason/);
-  assert.throws(() => e2.testerReturn('{"verdict":"done"}'), /written or none/);
+  assert.throws(() => e2.testerReturn('{"verdict":"done"}'), /written, none or stands/);
+  assert.equal(e2.testerReturn('{"verdict":"stands","reason":"it asks for the 26 letters, as the check does"}').verdict, 'stands');
+  assert.throws(() => e2.testerReturn('{"verdict":"stands"}'), /stands needs a reason/);
   assert.throws(() => e2.testerReturn('all good'), /not one JSON block/);
   assert.equal(e2.specName('ITEM-004'), 'e2e/item-004.spec.ts');
   assert.equal(e2.itemOf('e2e/item-004.spec.ts'), 'ITEM-004');
@@ -397,4 +399,55 @@ test('a check nobody could verify is named to the interviewer: "works" with noth
   const n = run(h, ['idea', 'new', 'Vague']);
   const r = run(h, ['idea', 'set', '--dir', hintOf(n, 'dir'), '--json', JSON.stringify({ items: [{ title: 'Search', criteria: ['Search works'] }] })]);
   assert.equal(hintOf(r, 'vague'), 'Search: Search works');
+});
+
+test('"the test is wrong": the tester looks again and keeps or rewrites it; a second objection goes to the person', () => {
+  const h = home();
+  const dir = idea(h, 'Question');
+  B(h, dir, ['open']);
+  B(h, dir, ['next']);
+  put(dir, 'e2e/item-001.spec.ts', SPEC('app/grid.txt'));
+  assert.equal(B(h, dir, ['tested', 'ITEM-001', '--return', WRITTEN]).code, 0);
+  const objection = JSON.stringify({ verdict: 'blocked', blocked: { reason: 'other', text: 'test: it looks for a heading the check never mentions' }, findings: [] });
+  const q = B(h, dir, ['built', 'ITEM-001', '--return', objection]);
+  assert.equal(q.code, 0, q.err);
+  assert.equal(hintOf(q, 'next'), 'tester', 'back to the tester, not set aside');
+  assert.match(q.out, /questioned the browser test for "Letter grid"/);
+  const tb = fs.readFileSync(hintOf(q, 'brief'), 'utf8');
+  assert.match(tb, /## The builder questioned your test[\s\S]*> it looks for a heading the check never mentions/);
+  assert.match(tb, /need not fail today/);
+  assert.ok(fs.existsSync(path.join(dir, 'e2e', 'item-001.spec.ts')), 'the tester finds its own test where it wrote it');
+  const kept = B(h, dir, ['tested', 'ITEM-001', '--return', '{"verdict":"stands","reason":"it only looks for the letters the check names."}']);
+  assert.equal(kept.code, 0, kept.err);
+  assert.equal(hintOf(kept, 'next'), 'maker');
+  assert.equal(fs.existsSync(path.join(dir, 'e2e', 'item-001.spec.ts')), false, 'held from the maker again');
+  assert.match(fs.readFileSync(hintOf(kept, 'brief'), 'utf8'), /kept it: it only looks for the letters the check names\. Build to it/);
+  const again = B(h, dir, ['built', 'ITEM-001', '--return', objection]);
+  assert.match(again.out, /^Set aside "Letter grid": I need you to decide something\.$/m);
+  const why = records(dir).filter((x) => x.c === 'BLOCKED').pop();
+  assert.equal(why.f.reason, 'ambiguous', 'the person decides, and the second pass leaves it for them');
+  const text = require('../scripts/lib/ledger').readBlob(path.join(dir, '.cohdit'), why.f.blob, dir);
+  assert.match(text, /disagree[\s\S]*The builder: it looks for a heading[\s\S]*The tester kept the test: it only looks for the letters/);
+});
+
+test('"the test is wrong", rewritten: the new test is checked and held like the first, and only claims to have failed if it did', () => {
+  const h = home();
+  const dir = idea(h, 'Rewrite');
+  B(h, dir, ['open']);
+  B(h, dir, ['next']);
+  put(dir, 'e2e/item-001.spec.ts', SPEC('app/grid.txt'));
+  B(h, dir, ['tested', 'ITEM-001', '--return', WRITTEN]);
+  put(dir, 'app/grid.txt', 'A\n');
+  assert.equal(B(h, dir, ['commit', '-m', 'the grid']).code, 0);
+  const objection = JSON.stringify({ verdict: 'blocked', blocked: { reason: 'other', text: 'test: wants a sound the check does not ask for' }, findings: [] });
+  assert.equal(hintOf(B(h, dir, ['built', 'ITEM-001', '--return', objection]), 'next'), 'tester');
+  put(dir, 'e2e/item-001.spec.ts', SPEC('app/grid.txt', '// rewritten\n'));
+  const t = B(h, dir, ['tested', 'ITEM-001', '--return', WRITTEN]);
+  assert.equal(t.code, 0, t.err);
+  assert.equal(hintOf(t, 'next'), 'maker');
+  assert.match(fs.readFileSync(hintOf(t, 'brief'), 'utf8'), /the tester rewrote it/);
+  const r = finish(h, dir, 'ITEM-001');
+  assert.equal(r.code, 0, r.err + r.out);
+  const done = records(dir).filter((x) => x.c === 'DONE').pop();
+  assert.equal(done.f.red, 0, 'the rewrite passed at once, against what was built: not claimed as seen to fail');
 });
