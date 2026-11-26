@@ -330,3 +330,16 @@ test('the permission hook refuses, in any mode, an edit of Hatch\'s own settings
   assert.equal(As(undefined, 'Bash', { command: 'npm test' }), null, 'the person\'s own session is never held to an agent\'s job');
   assert.equal(As('general-purpose', 'Bash', { command: 'npm test' }), null);
 });
+
+test('the tester is told whether the idea remembers anything: it reloads only when it does', () => {
+  const b = require('../scripts/lib/build');
+  const spec = { name: 'N', items: [{ id: 'ITEM-001', title: 'T', criteria: ['c'] }] };
+  const st = new Map([['ITEM-001', 'queued']]);
+  const dir = H.mkrepo();
+  const off = b.testerBrief(dir, Object.assign({ memory: false }, spec), 'ITEM-001', st);
+  const on = b.testerBrief(dir, Object.assign({ memory: true }, spec), 'ITEM-001', st);
+  assert.match(off, /Never reload/);
+  assert.doesNotMatch(off, /reload the page or open it again/);
+  assert.match(on, /reload the page or open it again/);
+  assert.doesNotMatch(on, /Never reload/);
+});

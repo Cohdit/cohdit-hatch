@@ -920,7 +920,9 @@ function testerBrief(dir, spec, item, status) {
     '- Each test starts where a person starts (`await page.goto("/")`) and does what the check says, step by step.',
     '- Find things the way a person does: `getByRole`, `getByLabel`, `getByText`, `getByPlaceholder`. Use the person\'s own words for names; the builder is told what your test looked for when it does not pass.',
     '- Assert what the person would see, with assertions that wait: `await expect(...).toBeVisible()`, `toHaveText`, `toHaveURL`.',
-    '- When the check keeps something (adds, saves, signs in), reload the page or open it again and assert it is still there. A screen that only looks right is the commonest false pass.',
+    spec.memory
+      ? '- This idea remembers things between visits. When the check keeps something (adds, saves, signs in), reload the page or open it again and assert it is still there. A screen that only looks right is the commonest false pass.'
+      : '- The person agreed this idea remembers nothing between visits. Never reload or reopen the page inside a test, and never assert that something is still there afterwards: that would be a requirement nobody asked for.',
     '- A test makes what it needs through the app itself. It never relies on another test having run first.',
     '- Another company\'s page (a payment form, signing in through another service) is never driven: stop where the app hands over, and name it in `stand_ins`.',
     '- Read the project to learn which pages and words exist today. Where this thing\'s own do not exist yet, the check\'s words are your guide.',
