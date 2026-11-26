@@ -38,7 +38,7 @@ function idea(h, name = 'ABC Friends') {
 
 /** A test file the script's rules accept; the stand-in runner passes it once `needs` exists. */
 const SPEC = (needs, extra = '') => 'import { test, expect } from "@playwright/test";\n// needs: ' + needs + '\n' + extra
-  + 'test("the check", async ({ page }) => {\n  await page.goto("/");\n  await expect(page.getByText("A")).toBeVisible();\n});\n';
+  + 'test(' + JSON.stringify(needs === 'app/sound.txt' ? ITEMS[1].criteria[0] : ITEMS[0].criteria[0]) + ', async ({ page }) => {\n  await page.goto("/");\n  await expect(page.getByText("A")).toBeVisible();\n});\n';
 const WRITTEN = '{"verdict":"written","stand_ins":[]}';
 const DONE = JSON.stringify({ verdict: 'done', change: 'logic', criteria: [{ n: 1, met: true, ref: 'app/page.tsx:1' }], blocked: null, findings: [] });
 const PASS = '{"verdict":"pass","must_fix":[],"nits":0}';
@@ -342,4 +342,19 @@ test('the tester is told whether the idea remembers anything: it reloads only wh
   assert.doesNotMatch(off, /reload the page or open it again/);
   assert.match(on, /reload the page or open it again/);
   assert.doesNotMatch(on, /Never reload/);
+});
+
+test('each of the person\'s checks needs a test titled with it, word for word', () => {
+  const two = ['Type \'Water\' and press Add: it appears.', 'A count says how many are left'];
+  const file = 'test("type \'water\' and press  Add: it appears", async () => {});\ntest(\'Something else\', async () => {});\n// test("A count says how many are left", ...\n';
+  assert.deepEqual(e2.uncovered(file, two), [two[1]], 'case, quotes, spacing and a full stop aside; a comment is not a test');
+  assert.deepEqual(e2.uncovered(file + 'test(\`A count says how many are left\`, async () => {});\n', two), []);
+  const h = home();
+  const dir = idea(h, 'Titles');
+  B(h, dir, ['open']);
+  B(h, dir, ['next']);
+  put(dir, 'e2e/item-001.spec.ts', SPEC('app/grid.txt').replace(ITEMS[0].criteria[0], 'it works'));
+  const r = B(h, dir, ['tested', 'ITEM-001', '--return', WRITTEN]);
+  assert.equal(r.code, 64);
+  assert.match(r.err, /word for word\. Not found: "open it; you see all 26 letters, big"/);
 });

@@ -173,6 +173,18 @@ function lint(text) {
   return out;
 }
 
+/** The person's checks that no test in the file is titled with, word for word. A test is the proof of one check, so
+ *  the two are tied by the title: case, quote marks, spacing and a closing full stop aside. */
+function plainTitle(s) { return String(s || '').toLowerCase().replace(/[\u2018\u2019\u201c\u201d"'`]/g, '').replace(/\s+/g, ' ').replace(/[.!\s]+$/, '').trim(); }
+function titles(text) {
+  const code = String(text || '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  return [...code.matchAll(/^\s*test\s*\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/gm)].map((m) => m[2].replace(/\\(.)/g, '$1'));
+}
+function uncovered(text, criteria) {
+  const have = new Set(titles(text).map(plainTitle));
+  return (criteria || []).filter((c) => !have.has(plainTitle(c)));
+}
+
 // --- running ------------------------------------------------------------------------------------
 
 function strip(s) { return String(s || '').replace(/\u001b\[[0-9;]*m/g, ''); }
@@ -274,7 +286,7 @@ function testerReturn(text) {
   return { verdict: 'written', stand_ins: stand };
 }
 
-module.exports = {
+module.exports = { titles, uncovered,
   Invalid, PROTECTED, enabled, isProtected, specName, itemOf, holdDir, heldFiles, hold, drop, place, clear, hasSpecs,
   restoreSettings, switchedOff, lint, portFor, flatten, run, green, record, testerReturn,
 };

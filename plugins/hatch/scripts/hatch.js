@@ -1128,6 +1128,9 @@ function cmdBuild(argv) {
       if (stray.length) return badTest(dir, cur, spec, cfg, item, lvl, 'write only ' + want + '; these were changed as well and are thrown away: ' + stray.slice(0, 8).join(', '), lead);
       const problems = e2.lint(fs.readFileSync(path.join(dir, want), 'utf8'));
       if (problems.length) return badTest(dir, cur, spec, cfg, item, lvl, 'the test breaks these rules: ' + problems.join('; '), lead);
+      const it = spec.items.find((i) => i.id === item);
+      const missing = e2.uncovered(fs.readFileSync(path.join(dir, want), 'utf8'), it.criteria);
+      if (missing.length) return badTest(dir, cur, spec, cfg, item, lvl, 'each of the person\'s checks needs one test titled with it, word for word. Not found: ' + missing.map((c) => '"' + c + '"').join('; '), lead);
       const env = Object.assign({}, process.env, { PATH: tools.pathWithExtras(), CI: '1' });
       const b = spawnSync(cfg.e2e.build || 'npm run build', { cwd: dir, shell: true, encoding: 'utf8', timeout: bd.LONG_MS, env });
       if (b.status !== 0) return badTest(dir, cur, spec, cfg, item, lvl, 'the app does not build with your test in it: ' + ((b.stdout || '') + (b.stderr || '')).trim().split('\n').slice(-12).join(' | '), lead);
@@ -1137,7 +1140,7 @@ function cmdBuild(argv) {
       const red = res.failed > 0;
       if (!red && !o.tcontract) return badTest(dir, cur, spec, cfg, item, lvl, 'every test passes before the thing is built, so it tests nothing new. Test what this thing adds', lead);
       e2.hold(dir, item, [want]);
-      o.e2e = { spec: want, tests: res.tests, red: red ? 1 : 0 };
+      o.e2e = { spec: want, tests: res.tests, red: red ? 1 : 0, checks: (it.criteria || []).length };
       if (r.stand_ins.length) o.e2e.stand_ins = r.stand_ins;
       return toMaker(dir, cur, spec, cfg, item, lvl, lead);
     }

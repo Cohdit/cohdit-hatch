@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.41 — every check you agreed has its own browser test (2026-11-26)
+
+- A browser test is only accepted when each of your checks has a test named after it, word for word. A check with no
+  test is sent back to the tester, so nothing you asked for goes unproven without Hatch saying so.
+- The tester is told whether your idea remembers anything, and no longer tests that things are kept when it does not.
+
 ## 0.0.40 — Hatch checks each thing in a real browser before you do (2026-11-26)
 
 - A new idea gets browser checks. Before each thing is built, a tester writes a test of it from your own checks; the test

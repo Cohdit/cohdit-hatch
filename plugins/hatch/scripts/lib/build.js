@@ -916,7 +916,7 @@ function testerBrief(dir, spec, item, status) {
   out.push('', '## The whole first version (for context; test only the thing above)');
   for (const o of spec.items) out.push('- ' + o.id + ' ' + o.title + (st.get(o.id) !== 'queued' ? ' (' + st.get(o.id) + ')' : '') + (o.device ? ' (a device check, not built)' : ''));
   out.push('', '## What you write', 'Exactly one file: `' + file + '`. Any other change in the folder is thrown away and you are asked again. You run nothing.',
-    '- One `test(` for each check above, titled in the person\'s words, importing only `test` and `expect` from `@playwright/test`.',
+    '- One `test(` for each check above, titled with that check word for word (the script matches them), importing only `test` and `expect` from `@playwright/test`.',
     '- Each test starts where a person starts (`await page.goto("/")`) and does what the check says, step by step.',
     '- Find things the way a person does: `getByRole`, `getByLabel`, `getByText`, `getByPlaceholder`. Use the person\'s own words for names; the builder is told what your test looked for when it does not pass.',
     '- Assert what the person would see, with assertions that wait: `await expect(...).toBeVisible()`, `toHaveText`, `toHaveURL`.',
