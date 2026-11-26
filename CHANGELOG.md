@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Status knows whether a build is really still working. Hatch's own agents leave a heartbeat on every step they take,
+  so a builder quietly working for a long time still shows as working, and a build whose session was closed shows as
+  stopped within about twelve minutes instead of saying "Working now" for twenty. Nothing about how things are built
+  or checked changes.
+
 ## 0.0.41 — every check you agreed has its own browser test (2026-11-26)
 
 - A browser test is only accepted when each of your checks has a test named after it, word for word. A check with no

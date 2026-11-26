@@ -1807,6 +1807,8 @@ function cmdAllow() {
   try {
     const h = JSON.parse(fs.readFileSync(0, 'utf8') || '{}');
     const projects = sp.registry().projects.map((p) => p.path).concat([path.join(sp.homeDir(), 'Hatch', '.work')]);
+    // Hatch's own agents at work: the heartbeat status reads to tell a quiet build from one whose session went away.
+    if (/^hatch:/.test(String(h.agent_type || '')) && h.cwd) ml.touchBeat(h.cwd);
     const no = denyDecision(h, projects, sp.homeDir(), __filename);
     if (no) {
       process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: no } }) + '\n');

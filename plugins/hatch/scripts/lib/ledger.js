@@ -27,6 +27,7 @@ const { execFileSync } = require('child_process');
 
 const SCHEMA = 1;
 const COHDIT_DIR = '.cohdit';
+const BEAT_FILE = 'beat';     // in the spool folder: touched by every tool call of Hatch's own agents
 const LEDGER_DIR = path.join(COHDIT_DIR, 'ledger', 'runs');
 const BLOB_DIR = path.join(COHDIT_DIR, 'ledger', 'blobs');
 const SCRIPTS = path.dirname(__dirname);
@@ -132,6 +133,39 @@ function spoolDir(cwd) {
   const d = path.join(common, 'cohdit');
   fs.mkdirSync(d, { recursive: true });
   return d;
+}
+
+/** Touch the project's heartbeat (hatch.js allow, on each tool call of Hatch's own agents). Finds the shared git
+ *  folder by reading files, not by running git, because it runs on every tool call. Never throws. */
+function touchBeat(dir) {
+  try {
+    let d = path.resolve(dir);
+    for (;;) {
+      const g = path.join(d, '.git');
+      if (fs.existsSync(g)) {
+        let common = g;
+        if (fs.statSync(g).isFile()) {
+          // a side copy (worktree): `gitdir: <repo>/.git/worktrees/<name>`, whose commondir points back to the shared folder
+          const m = /^gitdir:\s*(.+)$/m.exec(fs.readFileSync(g, 'utf8'));
+          if (!m) return false;
+          const wt = path.resolve(d, m[1].trim());
+          const cd = path.join(wt, 'commondir');
+          common = fs.existsSync(cd) ? path.resolve(wt, fs.readFileSync(cd, 'utf8').trim()) : wt;
+        }
+        const spool = path.join(common, 'cohdit');
+        if (!fs.existsSync(spool)) return false;     // not a Hatch project: nothing to beat for
+        const f = path.join(spool, BEAT_FILE);
+        const t = new Date();
+        try { fs.utimesSync(f, t, t); } catch (e) { fs.writeFileSync(f, ''); }
+        return true;
+      }
+      const up = path.dirname(d);
+      if (up === d) return false;
+      d = up;
+    }
+  } catch (e) {
+    return false;
+  }
 }
 
 /** Hooks never fail the session; they leave a line here for `ledger.js lint`. */
@@ -569,7 +603,7 @@ function loadConfig(cohditDir) {
 module.exports = {
   SCHEMA, COHDIT_DIR, LEDGER_DIR, BLOB_DIR, SCRIPTS, PLUGIN, ITEM_RE, STALE_RUN_H, BLOB_MAX,
   dumps, sortKeys, sha1, utcNow, parseTs, fmtTs, hoursBetween, host, osName, pluginVersion,
-  git, repoRoot, spoolDir, logError, recordId, stamp, appendSpool, readJsonl, appendRecords,
+  git, repoRoot, spoolDir, touchBeat, BEAT_FILE, logError, recordId, stamp, appendSpool, readJsonl, appendRecords,
   readSpool, listFiles, readLedger, pointerPath, activeRunFile, activeRun, setActiveRun, clearActiveRun, checkpoint, runRecords, SETTLED, itemStatus,
   blobId, writeBlob, readBlob, loadPrices, modelPrice, usageCost, usageTokens, usageKinds, fmtTokens, transcriptUsage, contextOf,
   lastContext, transcriptMeta, attribute, settingsPath, userSettings, readJson, loadSpec, loadConfig,

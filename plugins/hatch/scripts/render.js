@@ -4,7 +4,7 @@
  * render.js — turn the ledger into words. A pure function: same inputs, same bytes.
  *
  *   render.js <view> [--level plain|product|tech] [--cohdit DIR] [--now ISO] [--run ID | --last]
- *             [--item ITEM-NNN] [--since ISO] [--until ISO] [--spool FILE] [--json]
+ *             [--item ITEM-NNN] [--since ISO] [--until ISO] [--spool FILE] [--beat FILE] [--json]
  *
  *   views   spec     the idea read back from its draft (--partial: the one-line shape so far)
  *           status   where things stand: what is left first (--all lists the finished things too), what's live, what waits on you
@@ -30,12 +30,14 @@
  * human reads comes from a template in codes.json or from this file's fixed strings — the model
  * never writes any of it. Golden tests in tests/golden/ freeze every view × level × fixture.
  */
+const fs = require('fs');
 const path = require('path');
 const ml = require('./lib/ledger');
 const api = require('./lib/api');
 const cz = require('./lib/codes');
 
 const LIVE_WINDOW_MIN = 20;     // a run with no RUN_END whose last event is older than this is dead
+const BEAT_WINDOW_MIN = 12;     // with a heartbeat: one tool call is at most 9 minutes (build.js LONG_MS), plus the agent's thinking
 const STEPS_SHOWN = 6;
 const TRUST_COVERAGE = 0.95;
 const TRUST_UNATTRIBUTED = 0.10;
@@ -211,6 +213,10 @@ class Ctx {
     this.w = WORDS[this.level === 'tech' ? 'product' : this.level];
     this.now = ml.parseTs(a.now || ml.utcNow());
     this.cohdit = a.cohdit;
+    // Hatch's own agents touch this file on every tool call (hatch.js allow): proof a run's agents are still at work
+    // between ledger events, and that they stopped when the session that ran them went away.
+    this.beat = null;
+    try { if (a.beat) this.beat = fs.statSync(a.beat).mtime; } catch (e) { /* no beat yet */ }
     this.table = cz.load();
     this.rails = cz.loadRails();
     this.prices = ml.loadPrices();
@@ -399,10 +405,18 @@ class Ctx {
     if (stop.length) return ['stopped', stop[stop.length - 1]];
     const end = rs.filter((r) => r.c === 'RUN_END');
     if (end.length) return [end[end.length - 1].f.outcome === 'ok' ? 'finished' : 'crashed', end[end.length - 1]];
-    const ageMin = (this.now.getTime() - ml.parseTs(rs[rs.length - 1].ts).getTime()) / 60000;
+    let lastMs = ml.parseTs(rs[rs.length - 1].ts).getTime();
     const last = signal(rs);
     // A try is the person's time, not Hatch's: it is live until it is a day old, however quiet.
-    const window = rs[0].c === 'RUN_START' && rs[0].f.skill === 'try' ? ml.STALE_RUN_H * 60 : LIVE_WINDOW_MIN;
+    const isTry = rs[0].c === 'RUN_START' && rs[0].f.skill === 'try';
+    let window = isTry ? ml.STALE_RUN_H * 60 : LIVE_WINDOW_MIN;
+    // A heartbeat since the run began is the better clock: its agents are working (a maker can be quiet in the ledger
+    // for longer than the window) or they stopped (the session closed under them), whatever the ledger last said.
+    if (!isTry && this.beat && this.beat.getTime() >= ml.parseTs(rs[0].ts).getTime()) {
+      lastMs = Math.max(lastMs, this.beat.getTime());
+      window = BEAT_WINDOW_MIN;
+    }
+    const ageMin = (this.now.getTime() - lastMs) / 60000;
     if (ageMin > window && rs[rs.length - 1].c !== 'BEAT') return ['crashed', last];
     return ['live', last];
   }
@@ -1195,12 +1209,12 @@ function viewChecklist(c, a) {
 }
 
 const VIEWS = { status: viewStatus, why: viewWhy, digest: viewDigest, events: viewEvents, score: viewScore, spec: viewSpec, checklist: viewChecklist };
-const USAGE_TEXT = 'usage: render.js <view> [--level plain|product|tech] [--cohdit DIR] [--now ISO] [--run ID | --last] [--item ITEM-NNN] [--since ISO] [--until ISO] [--spool FILE] [--json]\n'
+const USAGE_TEXT = 'usage: render.js <view> [--level plain|product|tech] [--cohdit DIR] [--now ISO] [--run ID | --last] [--item ITEM-NNN] [--since ISO] [--until ISO] [--spool FILE] [--beat FILE] [--json]\n'
   + 'views: ' + Object.keys(VIEWS).join(' ') + '\n';
 
 function parseArgs(argv) {
-  const a = { view: null, level: null, cohdit: null, now: null, run: null, last: false, item: null, since: null, until: null, spool: null, json: false, partial: false, all: false };
-  const valued = ['level', 'cohdit', 'now', 'run', 'item', 'since', 'until', 'spool'];
+  const a = { view: null, level: null, cohdit: null, now: null, run: null, last: false, item: null, since: null, until: null, spool: null, beat: null, json: false, partial: false, all: false };
+  const valued = ['level', 'cohdit', 'now', 'run', 'item', 'since', 'until', 'spool', 'beat'];
   for (let i = 0; i < argv.length; i++) {
     const x = argv[i];
     if (x === '--last' || x === '--json' || x === '--partial' || x === '--all') {
@@ -1254,7 +1268,10 @@ function main(argv) {
     // folder above .cohdit is itself the repository, so fixtures and goldens never see one.
     try {
       const top = path.dirname(path.resolve(a.cohdit));
-      if (path.resolve(ml.git(['rev-parse', '--show-toplevel'], top)) === top) a.spool = path.join(ml.spoolDir(top), 'spool.jsonl');
+      if (path.resolve(ml.git(['rev-parse', '--show-toplevel'], top)) === top) {
+        a.spool = path.join(ml.spoolDir(top), 'spool.jsonl');
+        if (!a.beat) a.beat = path.join(ml.spoolDir(top), ml.BEAT_FILE);
+      }
     } catch (e) { /* not a repository */ }
   }
   const c = new Ctx(a);

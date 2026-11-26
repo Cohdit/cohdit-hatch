@@ -167,3 +167,26 @@ test('prune keeps the newest 50 runs and archives the rest', () => {
 test('outside a git repository: exit 2', () => {
   assert.equal(L(H.tmpdir(), 'status').code, 2);
 });
+
+test('the heartbeat: the hook stamps it for Hatch\'s own agents, in the project and in a side copy, and nowhere else', () => {
+  const ml = require('../scripts/lib/ledger');
+  const repo = H.mkrepo();
+  fs.mkdirSync(path.dirname(H.spool(repo)), { recursive: true });     // a Hatch project has its spool folder
+  const beat = path.join(path.dirname(H.spool(repo)), ml.BEAT_FILE);
+  const hook = (h) => H.run('hatch.js', ['allow'], { input: JSON.stringify(h) });
+  const read = { tool_name: 'Read', tool_input: { file_path: path.join(repo, 'x') } };
+  hook(Object.assign({ cwd: repo }, read));
+  assert.ok(!fs.existsSync(beat), 'the person\'s own session is no beat');
+  hook(Object.assign({ cwd: path.join(repo, 'app'), agent_type: 'hatch:maker' }, read));
+  assert.ok(fs.existsSync(beat), 'a maker inside the project beats');
+  const old = new Date('2026-01-01T00:00:00Z');
+  fs.utimesSync(beat, old, old);
+  const side = path.join(H.tmpdir(), 'side');
+  H.git(['worktree', 'add', '-q', '-b', 'side', side], repo);
+  assert.ok(ml.touchBeat(side), 'a side copy finds the shared folder');
+  assert.ok(fs.statSync(beat).mtime > old, 'and beats the same file');
+  const plain = H.tmpdir();
+  H.git(['init', '-q'], plain);
+  assert.equal(ml.touchBeat(plain), false, 'a repository Hatch has never used gets no file');
+  assert.equal(ml.touchBeat(H.tmpdir()), false, 'no repository at all: nothing, and no throw');
+});
