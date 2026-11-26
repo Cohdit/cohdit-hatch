@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.0.42 — the loop holds its cost limit mid-thing, a questioned test goes back to the tester, a whole idea is agreed at once (2026-11-26)
 
 - Status knows whether a build is really still working. Hatch's own agents leave a heartbeat on every step they take,
   so a builder quietly working for a long time still shows as working, and a build whose session was closed shows as
