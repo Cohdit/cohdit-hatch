@@ -658,7 +658,7 @@ function gate(dir, cur, spec, item, lvl, lead) {
     if (o.cases.na.length) done.na = o.cases.na.join(',');
     done.rev = o.cases.reviewed ? 1 : 0;
   }
-  if (o.e2e) { done.e2e = o.e2e.tests || 0; done.red = o.e2e.red ? 1 : 0; }   // its browser tests, and whether they were seen to fail first
+  if (o.e2e) { done.e2e = o.e2e.tests || 0; done.red = o.e2e.red ? 1 : 0; if (o.e2e.weak) done.weak = o.e2e.weak; }   // its browser tests, and whether they were seen to fail first
   const recs = (lead || []).concat([['GATE', { result: 'pass' }, item], ['DONE', done, item]]);
   const written = bd.emit(dir, cur.run, recs);
   bd.releaseClaim(dir, o.branch);
@@ -797,6 +797,14 @@ function guardChecks(dir, cfg) {
 }
 
 /** The lenses still to report on an item under review; the skill dispatches exactly these. */
+/** The held browser test, as text after the diff the reviewers read: they judge whether it proves the person's check. */
+function heldTestText(dir, item, o) {
+  if (!o.e2e || !o.e2e.spec) return '';
+  const f = path.join(e2.holdDir(dir, item), o.e2e.spec);
+  if (!fs.existsSync(f)) return '';
+  return '\n\n# The browser test this thing had to pass: ' + o.e2e.spec + '\n# The builder never saw it and cannot change it. It is not part of the change above.\n\n' + fs.readFileSync(f, 'utf8');
+}
+
 function awaitReview(dir, item, o) {
   const left = o.review.expected.filter((a) => !o.review.got[a]);
   for (const a of left) bd.writeRole(dir, a, item);
@@ -1245,7 +1253,7 @@ function cmdBuild(argv) {
         lead.push(['RISK', { tier: risk.tier, signals: risk.signals.join(',') }, item]);
         const lenses = bd.lensesFor(risk);
         if (!lenses.length) return gate(dir, cur, spec, item, lvl, lead);
-        fs.writeFileSync(bd.diffPath(dir, item), diff);
+        fs.writeFileSync(bd.diffPath(dir, item), diff + heldTestText(dir, item, o));
         for (const a of lenses) lead.push(['DISPATCH', { agent: a, model: bd.agentModel(a) }, item]);
         o.phase = 'review';
         o.review = { expected: lenses, got: {} };
@@ -1273,7 +1281,15 @@ function cmdBuild(argv) {
         o.cases.tested = o.cases.tested.filter((k) => !got.checker.unproved.includes(k));
         o.cases.reviewed = true;
       }
-      const notes = o.review.expected.flatMap((a) => got[a].must_fix.map((m) => (a === 'checker' ? '' : '[' + a.replace('lens-', '') + '] ') + (m.ref ? m.ref + ': ' : '') + m.text));
+      // What a reviewer says against the browser test goes to the person, not the builder: the builder never sees
+      // that test and cannot change it. The thing is marked so the person checks it with care.
+      const onTest = (m) => /^e2e\//.test(String(m.ref || ''));
+      const weak = o.review.expected.flatMap((a) => got[a].must_fix.filter(onTest).map((m) => m.text));
+      if (weak.length && o.e2e) {
+        o.e2e.weak = (o.e2e.weak || 0) + weak.length;
+        bd.emit(dir, cur.run, weak.map((w) => ['FINDING', { scope: 'in', sev: 'medium', blob: bd.blob(dir, 'The browser test may prove less than the check: ' + w) }, item]));
+      }
+      const notes = o.review.expected.flatMap((a) => got[a].must_fix.filter((m) => !onTest(m)).map((m) => (a === 'checker' ? '' : '[' + a.replace('lens-', '') + '] ') + (m.ref ? m.ref + ': ' : '') + m.text));
       delete o.review;
       if (!notes.length) return gate(dir, cur, spec, item, lvl, []);
       o.rounds += 1;

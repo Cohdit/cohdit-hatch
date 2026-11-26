@@ -358,3 +358,30 @@ test('each of the person\'s checks needs a test titled with it, word for word', 
   assert.equal(r.code, 64);
   assert.match(r.err, /word for word\. Not found: "open it; you see all 26 letters, big"/);
 });
+
+test('the reviewer reads the browser test; what it says against the test goes to the person, and the try list says so', () => {
+  const h = home();
+  const dir = idea(h, 'Weak');
+  B(h, dir, ['open']);
+  B(h, dir, ['next']);
+  put(dir, 'e2e/item-001.spec.ts', SPEC('app/grid.txt'));
+  assert.equal(B(h, dir, ['tested', 'ITEM-001', '--return', WRITTEN]).code, 0);
+  put(dir, 'app/grid.txt', 'A\n');
+  assert.equal(B(h, dir, ['commit', '-m', 'the grid']).code, 0);
+  const b = B(h, dir, ['built', 'ITEM-001', '--return', DONE]);
+  assert.equal(hintOf(b, 'next'), 'review', b.err + b.out);
+  const diff = fs.readFileSync(hintOf(b, 'diff'), 'utf8');
+  assert.match(diff, /# The browser test this thing had to pass: e2e\/item-001\.spec\.ts\n# The builder never saw it/);
+  assert.match(diff, /needs: app\/grid\.txt/, 'the test itself is there to read');
+  let r;
+  for (const a of hintOf(b, 'agents').split(',')) {
+    r = B(h, dir, ['checked', 'ITEM-001', '--agent', a, '--return', a === 'checker'
+      ? '{"verdict":"fail","must_fix":[{"n":1,"ref":"e2e/item-001.spec.ts:4","text":"check 1: the test sees one letter, not all 26"}],"nits":0}' : PASS]);
+  }
+  assert.match(r.out, /^Done: "Letter grid"\.$/m, 'the builder is not sent back for a test it cannot see: ' + r.err);
+  const done = records(dir).filter((x) => x.c === 'DONE' && x.i === 'ITEM-001').pop();
+  assert.equal(done.f.weak, 1);
+  B(h, dir, ['next']); B(h, dir, ['close']);
+  const list = H.run('render.js', ['checklist', '--level', 'plain', '--cohdit', path.join(dir, '.cohdit')], { env: h.env }).out;
+  assert.match(list, /1\. Letter grid\n   Check: Open it; you see all 26 letters, big\n   Checked in a browser, but the test may prove less than you asked: check this one with care\./);
+});
