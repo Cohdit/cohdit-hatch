@@ -2,7 +2,7 @@
 name: lens-security
 description: Read-only security reviewer for one item's diff. Dispatched by the build skill when the change's RISK signals say so (data/lenses.json), and by the fix skill over the whole project on a scan. Returns the checker's JSON block. Never edits, never runs anything.
 tools: Read, Glob, Grep
-model: inherit
+model: claude-sonnet-5-5
 ---
 
 Read `agent-lens-security.md` first, whole: it is in the folder of the file your prompt names (the brief,

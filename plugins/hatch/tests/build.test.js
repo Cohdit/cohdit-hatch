@@ -1115,12 +1115,102 @@ test('the cost limit for one thing holds while the maker works: its spend is rea
   assert.equal(usage.length, 2, 'spend recorded at each check, nothing counted twice');
   const v = B(h, dir, ['verify']);
   assert.equal(v.code, 1);
-  assert.match(v.out, /reached the cost limit for one thing[\s\S]*verdict blocked, reason budget/);
+  assert.match(v.out, /reached the cost limit for one thing[\s\S]*run build commit once now[\s\S]*verdict blocked, reason budget/);
   assert.equal(hintOf(v, 'hint'), 'budget');
   fs.writeFileSync(path.join(dir, 'app', 'b.txt'), 'b\n');
-  assert.equal(B(h, dir, ['commit', '-m', 'more']).code, 1, 'and the gate takes nothing more');
+  assert.equal(B(h, dir, ['commit', '-m', 'finished']).code, 0, 'work that passes is kept, not thrown away at the limit');
   const r = B(h, dir, ['built', item, '--return', BLOCKED('ran out of road')]);
   assert.equal(r.code, 0, r.err);
   const last = bdl.allRecords(dir).filter((x) => x.c === 'BLOCKED' && x.i === item).pop();
   assert.equal(last.f.reason, 'budget', 'set aside for cost, whatever reason the maker gave, so the second pass leaves it');
+
+  // the person sends it back: a fresh attempt gets a fresh allowance, not a refusal for what the last one spent
+  B(h, dir, ['close']);
+  assert.equal(B(h, dir, ['open', '--session', 's1']).code, 0);
+  const rt = B(h, dir, ['retry', item]);
+  assert.equal(rt.code, 0, rt.err);
+  const nx = B(h, dir, ['next']);
+  assert.equal(hintOf(nx, 'next'), 'maker', nx.err);
+  const again = B(h, dir, ['verify']);
+  assert.doesNotMatch(again.out, /reached the cost limit/, 'the earlier attempt\'s spend is not held against this one');
+});
+
+test('"build all" says before they go what is left, what it may cost and what could stop it, and puts set-aside things back', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Overnight', ITEMS.slice(0, 2));
+  oneLane(dir);
+  B(h, dir, ['open']);
+  B(h, dir, ['next']);
+  B(h, dir, ['built', 'ITEM-001', '--return', BLOCKED('ran out of road')]);
+  B(h, dir, ['close']);
+  const o = B(h, dir, ['open', '--items', 'all']);
+  assert.equal(o.code, 0, o.err);
+  assert.match(o.out, /^Before you go:\n- Building all 2 things left, usually 2 to 5 dollars each at list prices\.\n/);
+  assert.match(o.out, /- Going back on the list, with what stopped them: /);
+  assert.match(o.out, /One thing stops at about 10 dollars and the rest carry on; say "raise the cost limit"/);
+  assert.match(o.out, /tick auto-continue/);
+  assert.equal(hintOf(o, 'retried'), 'ITEM-001');
+  B(h, dir, ['close']);
+  const plain = B(h, dir, ['open', '--items', '3']);
+  assert.doesNotMatch(plain.out, /Before you go/, 'only "build all" says it');
+});
+
+test('every helper is named its model: the reviews and the runner on Sonnet, the rest on the person\'s own, any group theirs to move', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Models', ITEMS.slice(0, 1));
+  oneLane(dir);
+  const M = (args) => H.run('hatch.js', ['models'].concat(args), { env: h.env, cwd: h.dir });
+  const list = M([]);
+  assert.equal(list.code, 0, list.err);
+  assert.match(list.out, /- Reviews [^\n]*: Sonnet 5\.5\n- Runner [^\n]*: Sonnet 5\.5\n- Builder: your own model\n/);
+  const o = B(h, dir, ['open', '--model', 'opus']);
+  assert.equal(hintOf(o, 'runner_model'), null, 'the runner keeps its own Sonnet');
+  const n = B(h, dir, ['next']);
+  assert.equal(hintOf(n, 'next'), 'maker');
+  assert.equal(hintOf(n, 'model'), 'opus', 'the builder is named the session\'s model, never left to inherit the runner\'s');
+  assert.equal(bdl.allRecords(dir).filter((r) => r.c === 'DISPATCH').pop().f.model, 'opus');
+
+  assert.match(M(['builder', 'sonnet']).out, /^Changed\. [\s\S]*- Builder: Sonnet \(you chose; Hatch's default is your own model\)/);
+  assert.match(M(['reviews', 'mine']).out, /- Reviews [^\n]*: your own model \(you chose/);
+  assert.match(M(['runner', 'haiku']).out, /- Runner [^\n]*: Haiku/);
+  B(h, dir, ['close']);
+  const o2 = B(h, dir, ['open']);
+  assert.equal(hintOf(o2, 'runner_model'), 'haiku');
+  assert.equal(hintOf(B(h, dir, ['next']), 'model'), 'sonnet');
+  M(['builder', 'default']); M(['reviews', 'default']); M(['runner', 'default']);
+  assert.doesNotMatch(M([]).out, /you chose/);
+  assert.notEqual(M(['everything', 'opus']).code, 0);
+  assert.notEqual(M(['builder', 'gpt']).code, 0);
+});
+
+test('an advisor answer that runs long is cut at a sentence, not refused', () => {
+  const long = 'Use the simplest store. '.repeat(80);
+  const a = bdl.advisorReturn(JSON.stringify({ answer: long })).answer;
+  assert.ok(a.length <= 1200 && a.endsWith('store.'), a.slice(-40));
+});
+
+test('the cost limits are the person\'s: shown, raised, switched off and put back on their word', () => {
+  const h = home();
+  const dir = agreedIdea(h, 'Limits', ITEMS.slice(0, 1));
+  B(h, dir, ['open']);
+  B(h, dir, ['close']);
+  const show = B(h, dir, ['limits']);
+  assert.equal(show.code, 0, show.err);
+  assert.match(show.out, /each thing about 10 dollars at list prices; each run about 50 dollars/);
+  // a project made before 0.0.45 has the old defaults copied into its config: they were never the person's, so today's apply
+  const f = path.join(dir, '.cohdit', 'config.json');
+  const old = JSON.parse(fs.readFileSync(f, 'utf8'));
+  old.caps = Object.assign({}, old.caps, { usd_per_item: 5, usd_per_run: 15 });
+  fs.writeFileSync(f, JSON.stringify(old));
+  assert.equal(bdl.readCfg(dir).caps.usd_per_item, 10);
+  assert.match(B(h, dir, ['limits', '--item', '20']).out, /^Changed\. [\s\S]*each thing about 20 dollars/);
+  const off = B(h, dir, ['limits', '--item', 'off', '--run', 'off']);
+  assert.match(off.out, /each thing none; each run none/);
+  const cfg = JSON.parse(fs.readFileSync(path.join(dir, '.cohdit', 'config.json'), 'utf8'));
+  assert.equal(cfg.caps.usd_per_item, null);
+  assert.equal(bdl.readCfg(dir).caps.usd_per_item, null, 'off stays off when read back');
+  assert.match(B(h, dir, ['limits', '--item', '25']).out, /each thing about 25 dollars at list prices; each run none/);
+  assert.match(B(h, dir, ['limits', '--item', 'default', '--run', 'default']).out, /each thing about 10 dollars at list prices; each run about 50 dollars/);
+  assert.equal(JSON.parse(fs.readFileSync(f, 'utf8')).caps_set, undefined, 'back on the defaults, it follows them again');
+  assert.notEqual(B(h, dir, ['limits', '--item', 'lots']).code, 0);
 });

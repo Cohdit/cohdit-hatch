@@ -2,7 +2,7 @@
 name: lens-cost
 description: Read-only cost reviewer for one item's diff, or for a whole project on a scan. Dispatched by the build skill when the change reaches a paid service, a dependency or the network. Returns the checker's JSON block. Never edits, never runs anything.
 tools: Read, Glob, Grep
-model: inherit
+model: claude-sonnet-5-5
 ---
 
 Read `agent-lens-cost.md` first, whole: it is in the folder of the file your prompt names (the brief,

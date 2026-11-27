@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.0.45 — cost limits that fit, keep finished work, and are yours to change; builds spend less (2026-11-28)
+
+- The default cost limit is now about 10 dollars for each thing and 50 for each run, up from 5 and 15. An ordinary thing
+  costs about 2 to 5 dollars on the strongest model, so the old limit stopped finished work. Ideas you already have move
+  to the new limits too, unless you set your own.
+- "Build all" builds all. Things set aside earlier for a reason a fresh try can get past go back on the list without
+  you asking. Before it starts, a short "Before you go" note says how many things are left and roughly what they'll cost.
+  It also says what could still stop them, such as a thing running close to its cost limit (with the words to raise it)
+  or a question only you can answer. Then it starts straight away, with no question.
+- The cost limits are yours to change. Say "remove the cost limit", "raise the cost limit to 20 dollars" or "what are
+  the cost limits". Hatch never changes them on its own.
+- A thing that reaches its cost limit just as it is finished is now kept, not thrown away. A thing you send back to be
+  built again gets a fresh allowance, instead of being stopped by what the last attempt spent.
+- Builds spend less. The reviews (the main checker and the security, privacy, cost and rules reviewers) and the runner
+  that drives each thing use Sonnet 5.5. The builder, the tester, the advisor and the designer use the model you chose
+  for your session, every time. Say "which models" to see this, or "use Opus for the reviews", "put the builder on
+  Sonnet" or "back to the defaults" to change it. The builder no longer breaks its own finished work to watch
+  a test fail. A long answer from the advisor is shortened instead of stopping the thing.
+
 ## 0.0.44 — the first mock-up comes closer to right, so you ask for fewer changes (2026-11-27)
 
 - Tell Hatch the look you already have, like an app you're replacing, your brand or your other apps. The mock-up then

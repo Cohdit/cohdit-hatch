@@ -52,7 +52,10 @@ const mk = require('./mock');
 
 // "build it" takes the next DEFAULT_ITEMS things; "build all" the whole list (hatch.js runWant).
 const DEFAULT_ITEMS = 10;
-const DEFAULT_CAPS = { items_per_run: DEFAULT_ITEMS, usd_per_run: 15, rounds_per_item: 3, restarts: 1, usd_per_item: 5, minutes_per_item: 40, lanes: 3 };
+// The cost limits fit a thing of ordinary size built on the strongest model (about 2 to 5 dollars each at list prices,
+// measured 2026-11-27), with room to finish; the person may change them (`build limits`).
+const DEFAULT_CAPS = { items_per_run: DEFAULT_ITEMS, usd_per_run: 50, rounds_per_item: 3, restarts: 1, usd_per_item: 10, minutes_per_item: 40, lanes: 3 };
+const USD_CAPS = ['usd_per_item', 'usd_per_run'];
 const LANES_MAX = 3;                             // makers at once: the person's plan, their computer, and clashes all grow with it
 const DEFAULT_VERIFY = 'npm test && npm run build';
 const LONG_MS = 9 * 60000;                       // one verify, one scaffold step: under Claude Code's limit for a call
@@ -77,7 +80,11 @@ function notesDir(dir) { return path.join(cohditDir(dir), 'notes'); }
 
 function readCfg(dir) {
   const cfg = ml.readJson(path.join(cohditDir(dir), 'config.json'), { v: 1 });
-  cfg.caps = Object.assign({}, DEFAULT_CAPS, cfg.caps || {});
+  const mine = Object.assign({}, cfg.caps || {});
+  // A cost limit in the file counts only when the person set it (`caps_set`); otherwise it is a copy of an older
+  // default, and today's default applies.
+  if (!cfg.caps_set) for (const k of USD_CAPS) delete mine[k];
+  cfg.caps = Object.assign({}, DEFAULT_CAPS, mine);
   if (!cfg.verify) cfg.verify = DEFAULT_VERIFY;
   return cfg;
 }
@@ -617,6 +624,7 @@ function scaffold(dir, spec, cfg) {
   if (sc.coverage_min) cfg.coverage_min = sc.coverage_min;
   cfg.verify = cfg.verify || DEFAULT_VERIFY;
   cfg.caps = Object.assign({}, DEFAULT_CAPS, cfg.caps || {});
+  if (!cfg.caps_set) for (const k of USD_CAPS) delete cfg.caps[k];   // the defaults apply until the person sets one
   saveCfg(dir, cfg);
   git(['add', '-A'], dir);
   git(['commit', '-q', '-m', 'Hatch: the first version, skeleton'], dir);
@@ -1150,8 +1158,14 @@ function checkerReturn(text) {
 function advisorReturn(text) {
   const r = parseReturn(text);
   if (!r || typeof r.answer !== 'string' || !r.answer.trim()) throw new Invalid('the advisor returns {"answer": "…"}');
-  if (r.answer.length > ANSWER_MAX) throw new Invalid('the answer is over ' + ANSWER_MAX + ' characters');
-  return { answer: r.answer.trim() };
+  // An answer that runs long is cut at a sentence, not refused: refusing it threw away the whole attempt.
+  let a = r.answer.trim();
+  if (a.length > ANSWER_MAX) {
+    const cut = a.slice(0, ANSWER_MAX);
+    const end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('.\n'));
+    a = (end > ANSWER_MAX / 2 ? cut.slice(0, end + 1) : cut.replace(/\s+\S*$/, '') + '…');
+  }
+  return { answer: a };
 }
 
 /** The one risk rule: low when the change is copy or style in a couple of files; high when it reaches
@@ -1266,7 +1280,7 @@ function ensureLineCoverage(dir) {
 
 module.exports = {
   CASE_KINDS, ensureLineCoverage, proof, noteSetAside, learned,
-  Invalid, DEFAULT_ITEMS, DEFAULT_CAPS, wanted, DEFAULT_VERIFY, LONG_MS, NET_MS, LIVE_MIN, STALE_CLAIM_H, TOPIC, AGENTS, TERMINAL,
+  Invalid, DEFAULT_ITEMS, DEFAULT_CAPS, USD_CAPS, wanted, DEFAULT_VERIFY, LONG_MS, NET_MS, LIVE_MIN, STALE_CLAIM_H, TOPIC, AGENTS, TERMINAL,
   cohditDir, notesDir, readCfg, saveCfg, level, blob, emit, spoolFile, flush,
   git, gitNet, hasRemote, headSha, fullSha, currentBranch, isPrimary, mainBranch, resetTree, dirtyPaths, fetch, remoteMain, toMain, rebaseOnto, fastForward, baseSha, startBase, keepWork, pushMain, commitLedger, landMain, land, agentModel,
   active, saveActive, isLive, setPointer, clearPointer, newRunId, runStart, stopBefore, abandon,

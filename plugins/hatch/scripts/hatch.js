@@ -10,6 +10,8 @@
  *                                       start the sign-in in the background; prints code= and url= to relay.
  *                                       --switch signs the current account out first.
  *   hatch.js level [plain|product|tech] show or set how Hatch talks (~/.cohdit/settings.json)
+ *   hatch.js models [<group> <model>]   show or set which model each group of helpers runs on (reviews, runner,
+ *                                      builder, tester, advisor, designer; sonnet, opus, haiku, fable, mine, default)
  *   hatch.js idea new <name> [--dir d]  start an idea: folder, draft, registry; begins the dream run
  *   hatch.js idea set [--dir d] --json <patch|->
  *   hatch.js idea change [--dir d] --json <patch|->   (agreed idea: add, edit, decisions, out, open_questions, look_from)
@@ -29,6 +31,8 @@
  *   hatch.js mock agree                 the person signed it off: committed, recorded; build may start
  *   hatch.js build open [--dir d | --name n] [--items N|all] [--only bugs|things] [--for <minutes>] [--budget <dollars>]
  *                                       start (or resume) the unattended run: checks, skeleton, GitHub
+ *   hatch.js build limits [--item <dollars|off|default>] [--run <dollars|off|default>]
+ *                                      show or change the cost limits (only on the person's word)
  *   hatch.js build next                 pick the next thing; writes the maker's brief (item= brief= on stderr)
  *   hatch.js build verify               run the checks (the maker calls this)
  *   hatch.js build commit -m <msg>      the gate: checks, then commit only on pass (the maker's only way)
@@ -499,6 +503,7 @@ function toDesigner(dir, spec, local) {
   bd.writeRole(dir, 'designer');
   hint('brief', path.join(ml.spoolDir(dir), 'mock-brief.md'));
   hint('roles', ml.spoolDir(dir));
+  hintModel(dir, ['designer']);
   hint('next', 'designer');
 }
 
@@ -701,11 +706,46 @@ function stopRun(dir, cur, cause, lvl, extra) {
 
 const land = bd.land;
 
-/** What one thing has cost so far at list prices, over every run; null when a model has no known price. */
+// --- which model each helper runs on -----------------------------------------------------------------
+// The reviews and the runner default to Sonnet (their frontmatter); the builder, tester, advisor and designer follow the
+// person's own model. A helper set to inherit takes its parent's model, and the runner is a parent, so every dispatch
+// names its model outright from the session's (`build open --model`). The person may move any group (`hatch.js models`).
+const MODEL_ALIASES = ['sonnet', 'opus', 'haiku', 'fable'];
+const MODEL_ROLES = { reviews: ['checker', 'lens-security', 'lens-privacy', 'lens-cost', 'lens-compliance'], runner: ['runner'],
+  builder: ['maker'], tester: ['tester'], advisor: ['advisor'], designer: ['designer'] };
+const roleOf = (agent) => Object.keys(MODEL_ROLES).find((r) => MODEL_ROLES[r].includes(agent)) || null;
+function sessionModel(dir) {
+  try {
+    const v = fs.readFileSync(path.join(ml.spoolDir(dir), 'session-model'), 'utf8').trim();
+    return MODEL_ALIASES.includes(v) ? v : null;
+  } catch (e) { return null; }
+}
+/** The alias to pass when dispatching `agent`, or null to leave it on its own model. */
+function modelFor(dir, agent) {
+  const set = (ml.userSettings().models || {})[roleOf(agent)];
+  const mine = sessionModel(dir);
+  if (set === 'mine') return mine;
+  if (MODEL_ALIASES.includes(set)) return set;
+  return bd.agentModel(agent) === 'inherit' ? mine : null;
+}
+/** What a DISPATCH record says the agent ran on. */
+const dispModel = (dir, agent) => modelFor(dir, agent) || bd.agentModel(agent);
+/** Tell the dispatcher the model for these agents (one group), when it must name one. */
+function hintModel(dir, agents) {
+  const m = modelFor(dir, agents[0]);
+  if (m) hint('model', m);
+}
+
+/** A cost limit is on when it is a positive number; the person may switch one off (`build limits`), stored as null. */
+const capOn = (v) => typeof v === 'number' && v > 0;
+
+/** What one thing has cost at list prices in its latest attempt (since its last PICK, over every run): a thing the
+ *  person sends back to be built again starts a fresh allowance. null when a model has no known price. */
 function spentOn(dir, home, item) {
   const prices = ml.loadPrices();
   let usd = 0;
-  for (const r of bd.allRecords(home)) {
+  for (const r of bd.allRecords(home)) {                        // ledger then spool, in the order things happened
+    if (r.i === item && r.c === 'PICK') { usd = 0; continue; }
     if (r.c !== 'USAGE' || r.i !== item || !r.f || !r.f.models) continue;
     const c = ml.usageCost(r.f.models, prices);
     if (c === null) return null;
@@ -715,20 +755,107 @@ function spentOn(dir, home, item) {
 }
 
 /** Mid-thing: the maker's spend so far (usage.js records it at each verify and commit) against the limit for one
- *  thing. Over it, the checks and the gate refuse, and the maker is told to stop and report; its report then sets the
- *  thing aside with reason budget. True when over. */
+ *  thing. Over it, the checks refuse and the maker is told to stop; the gate still takes a commit, so work that passes
+ *  is kept rather than thrown away. A report that is not done then sets the thing aside with reason budget. True when over. */
 function overLimit(dir, cur, cfg, item) {
   const o = item && cur.open[item];
-  if (!o || o.phase !== 'maker') return false;
+  if (!o || o.phase !== 'maker' || !capOn(cfg.caps.usd_per_item)) return false;
   const cost = spentOn(dir, bd.homeDir(dir, cur), item);
   if (o.over || (cost !== null && cost >= cfg.caps.usd_per_item)) {
     if (!o.over) { o.over = true; bd.saveActive(dir, cur); }
     process.stdout.write('This thing has reached the cost limit for one thing (about ' + cfg.caps.usd_per_item + ' dollars at list prices). '
-      + 'Stop building it. Return your report now: verdict blocked, reason budget, and in text what is done and what is left.\n');
+      + 'Stop building and change nothing more. If what you have is finished, run build commit once now (it is still allowed, and keeps the work) and report done. '
+      + 'Otherwise return your report now: verdict blocked, reason budget, and in text what is done and what is left.\n');
     hint('hint', 'budget');
     return true;
   }
   return false;
+}
+
+/** `build limits [--item <dollars|off>] [--run <dollars|off>]`: show or change the project's cost limits, only on the
+ *  person's word. `off` removes a limit; `default` puts it back. Written to .cohdit/config.json. */
+function buildLimits(dir, rest) {
+  const file = path.join(sp.cohditDir(dir), 'config.json');
+  const raw = ml.readJson(file, { v: 1 });
+  const KEYS = { '--item': 'usd_per_item', '--run': 'usd_per_run' };
+  let changed = false;
+  const caps = Object.assign({}, bd.readCfg(dir).caps);
+  for (const flag of Object.keys(KEYS)) {
+    const v = opt(rest, flag);
+    if (v === undefined || v === null) continue;
+    const k = KEYS[flag];
+    if (v === 'off') caps[k] = null;
+    else if (v === 'default') caps[k] = bd.DEFAULT_CAPS[k];
+    else if (/^[1-9]\d{0,3}$/.test(String(v))) caps[k] = Number(v);
+    else return fail(flag + ' takes whole dollars from 1, off, or default');
+    changed = true;
+  }
+  if (changed) {
+    raw.caps = Object.assign({}, raw.caps || {});
+    for (const k of bd.USD_CAPS) raw.caps[k] = caps[k];
+    raw.caps_set = bd.USD_CAPS.some((k) => caps[k] !== bd.DEFAULT_CAPS[k]);   // back to both defaults: follow future defaults again
+    if (!raw.caps_set) { for (const k of bd.USD_CAPS) delete raw.caps[k]; delete raw.caps_set; }
+    bd.saveCfg(dir, raw);
+  }
+  const show = (v) => (capOn(v) ? 'about ' + v + ' dollars at list prices' : 'none');
+  process.stdout.write((changed ? 'Changed. ' : '') + 'Cost limits for ' + (raw.name || 'this idea') + ': each thing ' + show(caps.usd_per_item)
+    + '; each run ' + show(caps.usd_per_run) + '.\n');
+  hint('dir', dir);
+  return 0;
+}
+
+/** Why a thing may be set aside and still go back on the list without asking the person: nothing in it waits on them. */
+const AUTO_RETRY = ['budget', 'other', 'env'];
+
+/** "Build all" means all: each thing set aside for a reason a fresh attempt may get past goes back on the list, with
+ *  what stopped it. A question for the person, a refusal or a disputed test stays set aside. Returns the ids. */
+function retryAll(dir, cur, spec, lvl) {
+  const st = bd.itemStatus(dir, spec), all = bd.allRecords(dir), back = [];
+  for (const it of spec.items) {
+    if (st.get(it.id) !== 'blocked') continue;
+    const last = all.filter((r) => r.c === 'BLOCKED' && r.i === it.id).sort((x, y) => (x.ts < y.ts ? -1 : 1)).pop();
+    if (!last || !AUTO_RETRY.includes(last.f.reason)) continue;
+    const why = (last.f.blob && ml.readBlob(sp.cohditDir(dir), last.f.blob, dir)) || 'it was set aside';
+    if (/^test:/i.test(String(why).replace(/^[^:]*:\s*/, ''))) continue;
+    bd.emit(dir, cur.run, [['TRY_RESULT', { result: 'fail', blob: bd.blob(dir, bd.TRIED_AGAIN + String(why).trim().slice(0, 1500)) }, it.id]]);
+    back.push(it);
+  }
+  if (back.length) hint('retried', back.map((i) => i.id).join(','));
+  return back;
+}
+
+/** What one finished thing of this idea has cost, from its own history: the median of its done things' last attempts,
+ *  or null before any is done. */
+function typicalCost(dir, spec) {
+  const st = bd.itemStatus(dir, spec);
+  const costs = spec.items.filter((i) => ['done', 'tried'].includes(st.get(i.id))).map((i) => spentOn(dir, dir, i.id)).filter((c) => c !== null && c > 0).sort((a, b) => a - b);
+  if (!costs.length) return null;
+  return costs[Math.floor(costs.length / 2)];
+}
+
+/** Said once when the person asks for everything, before they walk away: how much is left, what it may cost, what could
+ *  stop it, and what it needs from them. It asks nothing; the build starts straight after. */
+function beforeYouGo(dir, spec, cfg, back) {
+  const st = bd.itemStatus(dir, spec);
+  const left = spec.items.filter((i) => ['queued', 'building'].includes(st.get(i.id)));
+  const device = left.filter((i) => i.device), build = left.filter((i) => !i.device);
+  const held = spec.items.filter((i) => st.get(i.id) === 'blocked');
+  const each = typicalCost(dir, spec), lim = cfg.caps.usd_per_item;
+  const $ = (n) => (n >= 10 ? Math.round(n) : Math.round(n * 10) / 10);
+  const out = ['Before you go:'];
+  if (!build.length) out.push('- Nothing is left to build.');
+  else {
+    out.push('- Building all ' + build.length + ' thing' + (build.length === 1 ? '' : 's') + ' left'
+      + (each !== null ? ', at about ' + $(each) + ' dollars each so far: about ' + $(each * build.length) + ' dollars in all at list prices.' : ', usually 2 to 5 dollars each at list prices.'));
+  }
+  if (back.length) out.push('- Going back on the list, with what stopped them: ' + back.map((i) => i.title).join('; ') + '.');
+  if (!capOn(lim)) out.push('- No cost limit for one thing: each one runs until it is done or stuck.');
+  else if (each !== null && each >= lim * 0.6) out.push('- Your things cost about ' + $(each) + ' dollars each, close to the limit of ' + lim + ' for one thing. Say "raise the cost limit to ' + Math.ceil(each * 3 / 5) * 5 + ' dollars" now if you are going away.');
+  else out.push('- One thing stops at about ' + lim + ' dollars and the rest carry on; say "raise the cost limit" to change it.');
+  if (held.length) out.push('- Waiting on your answer, so not built: ' + held.map((i) => i.title).join('; ') + '. Say "status" to see why.');
+  if (device.length) out.push('- Checked on a device when you try it, not now: ' + device.length + '.');
+  out.push('- Keep this computer awake, plugged in and this window open. If Claude pauses you for its usage limit, tick auto-continue.');
+  return out.join('\n') + '\n\n';
 }
 
 /** The second pass: each thing set aside for a reason a fresh builder may get past goes back on the list, once
@@ -741,10 +868,10 @@ function secondPass(dir, home, cur, spec, status, cfg, lvl) {
     if (status.get(it.id) !== 'blocked') continue;
     const mine = all.filter((r) => r.i === it.id);
     const last = mine.filter((r) => r.c === 'BLOCKED').sort((x, y) => (x.ts < y.ts ? -1 : 1)).pop();
-    if (!last || !RETRIABLE.includes(last.f.reason)) continue;
+    if (!last || !(RETRIABLE.includes(last.f.reason) || (last.f.reason === 'budget' && cur.want && cur.want.items === null))) continue;
     if (mine.filter((r) => r.c === 'ROUND' && r.f.cause === 'restart').length >= cfg.caps.restarts) continue;
-    const cost = spentOn(dir, home, it.id);
-    if (cost !== null && cost >= cfg.caps.usd_per_item) continue;
+    const cost = spentOn(dir, home, it.id);                    // a cost stop's restart is a fresh attempt with its own allowance
+    if (last.f.reason !== 'budget' && cost !== null && capOn(cfg.caps.usd_per_item) && cost >= cfg.caps.usd_per_item) continue;
     const why = (last.f.blob && ml.readBlob(sp.cohditDir(home), last.f.blob, home)) || 'it was set aside';
     const recs = bd.emit(dir, cur.run, [['ROUND', { cause: 'restart' }, it.id],
       ['TRY_RESULT', { result: 'fail', blob: bd.blob(dir, bd.TRIED_AGAIN + String(why).trim().slice(0, 1500)) }, it.id]]);
@@ -895,7 +1022,7 @@ function clash(dir, cur, spec, cfg, item, lvl, lead, why) {
   fs.writeFileSync(bd.diffPath(dir, item), earlier);
   o.notes = ['Another change reached main while this was being built, and the two ' + (why === 'conflict' ? 'change the same lines' : 'fail the checks together')
     + '. Build this thing again on the current main. Your earlier version is the diff at ' + bd.diffPath(dir, item) + ': reuse what still fits.'];
-  const written = bd.emit(dir, cur.run, (lead || []).concat([['ROUND', { cause: 'gate' }, item], ['DISPATCH', { agent: 'maker', model: bd.agentModel('maker') }, item]]));
+  const written = bd.emit(dir, cur.run, (lead || []).concat([['ROUND', { cause: 'gate' }, item], ['DISPATCH', { agent: 'maker', model: dispModel(dir, 'maker') }, item]]));
   say(dir, written.filter((x) => x.c === 'ROUND'), lvl);
   dispatchMaker(dir, cur, spec, cfg, item, lvl, o.notes);
   return 0;
@@ -932,6 +1059,7 @@ function dispatchMaker(dir, cur, spec, cfg, item, lvl, notes, status) {
   fs.writeFileSync(bd.briefPath(dir, item), bd.brief(dir, spec, item, cfg, notes, status, o.advice, o.e2e));
   hint('item', item);
   hint('brief', bd.briefPath(dir, item));
+  hintModel(dir, ['maker']);
   hint('next', 'maker');
 }
 
@@ -946,13 +1074,14 @@ function dispatchTester(dir, cur, spec, item, status) {
   hint('item', item);
   hint('brief', bd.testerPath(dir, item));
   hint('roles', ml.spoolDir(dir));
+  hintModel(dir, ['tester']);
   hint('next', 'tester');
 }
 
 /** The tester is done, one way or the other: on to the maker. */
 function toMaker(dir, cur, spec, cfg, item, lvl, lead, notes) {
   bd.resetTree(dir);                                             // nothing the tester left in the folder reaches the maker
-  bd.emit(dir, cur.run, lead.concat([['DISPATCH', { agent: 'maker', model: bd.agentModel('maker') }, item]]));
+  bd.emit(dir, cur.run, lead.concat([['DISPATCH', { agent: 'maker', model: dispModel(dir, 'maker') }, item]]));
   if (notes) cur.open[item].notes = notes;
   dispatchMaker(dir, cur, spec, cfg, item, lvl, notes);
   return 0;
@@ -971,7 +1100,7 @@ function questionTest(dir, cur, spec, item, lvl, text, lead) {
   o.retest = { objection: text.replace(/^\s*test:\s*/i, '').trim().slice(0, 1500), kept: null };
   o.tcontract = 0;
   bd.resetTree(dir);                                             // the maker's half work stays committed; nothing loose reaches the tester
-  const written = bd.emit(dir, cur.run, lead.concat([['ROUND', { cause: 'test' }, item], ['DISPATCH', { agent: 'tester', model: bd.agentModel('tester') }, item]]));
+  const written = bd.emit(dir, cur.run, lead.concat([['ROUND', { cause: 'test' }, item], ['DISPATCH', { agent: 'tester', model: dispModel(dir, 'tester') }, item]]));
   say(dir, written.filter((x) => x.c === 'ROUND'), lvl);
   dispatchTester(dir, cur, spec, item);
   return 0;
@@ -1042,12 +1171,12 @@ function heldTestText(dir, item, o) {
 function awaitReview(dir, item, o) {
   const left = o.review.expected.filter((a) => !o.review.got[a]);
   for (const a of left) bd.writeRole(dir, a, item);
-  hint('item', item); hint('diff', bd.diffPath(dir, item)); hint('agents', left.join(',')); hint('roles', ml.spoolDir(dir)); hint('next', 'review');
+  hint('item', item); hint('diff', bd.diffPath(dir, item)); hint('agents', left.join(',')); hintModel(dir, left); hint('roles', ml.spoolDir(dir)); hint('next', 'review');
 }
 
 function awaitAdvisor(dir, item) {
   bd.writeRole(dir, 'advisor');
-  hint('item', item); hint('consult', bd.consultPath(dir, item)); hint('roles', ml.spoolDir(dir)); hint('next', 'advisor');
+  hint('item', item); hint('consult', bd.consultPath(dir, item)); hintModel(dir, ['advisor']); hint('roles', ml.spoolDir(dir)); hint('next', 'advisor');
 }
 
 /** Is a fix run due by the schedule the person set? */
@@ -1156,11 +1285,12 @@ function cmdBuild(argv) {
   const args = stripOpt(argv, '--session');
   const sub = args[0];
   const rest = args.slice(1);
-  const VALUED = ['--dir', '--name', '--return', '--agent', '-m', '--items', '--only', '--for', '--budget'];
+  const VALUED = ['--dir', '--name', '--return', '--agent', '-m', '--items', '--only', '--for', '--budget', '--item', '--run', '--model'];
   try {
     let dir = buildDir(rest);
     let lvl = bd.level(dir);
     hint('level', lvl);
+    if (sub === 'limits') return buildLimits(dir, rest);
     if (sub === 'open') {
       const want = runWant(rest);
       const spec = sp.load(dir);
@@ -1233,6 +1363,17 @@ function cmdBuild(argv) {
         if (want.usd) cur.want.usd = want.usd;
         bd.saveActive(dir, cur);
       }
+      const said = opt(rest, '--model');                         // the session's own model: every helper that follows it is named it
+      if (said && MODEL_ALIASES.includes(said)) {
+        fs.mkdirSync(ml.spoolDir(dir), { recursive: true });
+        fs.writeFileSync(path.join(ml.spoolDir(dir), 'session-model'), said + '\n');
+      }
+      const rm = modelFor(dir, 'runner');
+      if (rm) hint('runner_model', rm);
+      if (want && want.items === null && !cur.lead) {           // "build all": everything, set-aside things too, said before they go
+        const back = retryAll(dir, cur, spec, lvl);
+        process.stdout.write(beforeYouGo(dir, spec, cfg, back));
+      }
       bd.setPointer(dir, cur.run, session);
       if (bd.scaffold(dir, spec, cfg)) hint('hint', 'scaffolded');
       else if (!Object.keys(cur.open || {}).length) bd.ensureLineCoverage(dir);
@@ -1304,7 +1445,7 @@ function cmdBuild(argv) {
         if (picks >= cfg.caps.items_per_run) return ease('cap');
         const c = new render.Ctx({ level: lvl, cohdit: sp.cohditDir(home), spool: bd.spoolFile(dir) });
         const u = c.usage(c.runs.get(cur.run) || []);
-        if (u.usd !== null && u.usd >= cfg.caps.usd_per_run) return ease('budget');
+        if (u.usd !== null && capOn(cfg.caps.usd_per_run) && u.usd >= cfg.caps.usd_per_run) return ease('budget');
       }
       const sb = bd.startBase(dir);                              // the shared main and this computer's own unpushed commits
       const base = sb.base;
@@ -1346,7 +1487,7 @@ function cmdBuild(argv) {
       const first = e2.enabled(cfg) ? 'tester' : 'maker';        // with browser checks, the test is written before the thing
       cur.open[picked.id] = { branch, base, start, fork: bd.headSha(dir, base), picked_at: ml.utcNow(), rounds: 0, contract: 0, phase: first, commits: [] };
       cur.picked.push(picked.id);
-      const recs = bd.emit(dir, cur.run, [['PICK', { branch, fork: bd.headSha(dir, base) }, picked.id], ['DISPATCH', { agent: first, model: bd.agentModel(first) }, picked.id]]);
+      const recs = bd.emit(dir, cur.run, [['PICK', { branch, fork: bd.headSha(dir, base) }, picked.id], ['DISPATCH', { agent: first, model: dispModel(dir, first) }, picked.id]]);
       say(dir, [recs[0]], lvl);
       status.set(picked.id, 'building');
       if (first === 'tester') dispatchTester(dir, cur, spec, picked.id, status);
@@ -1364,8 +1505,7 @@ function cmdBuild(argv) {
       const item = Object.keys(cur.open)[0];
       if (!item) return fail('nothing is being built; there is no branch to commit on');
       if (cur.open[item].phase === 'tester') return fail('the test for ' + item + ' is still being written; nothing to commit yet');
-      if (overLimit(dir, cur, cfg, item)) return 1;
-      if (guardTests(dir, cfg).length + guardChecks(dir, cfg).length) return 1;
+      if (guardTests(dir, cfg).length + guardChecks(dir, cfg).length) return 1;   // over the cost limit still commits: work that passes is kept
       if (verifyNow(dir, cur, cfg, lvl) !== 0) { hint('hint', 'checks_failed'); return 1; }
       bd.git(['add', '-A', '--', '.', ':(exclude).cohdit'], dir);
       const staged = (bd.git(['diff', '--cached', '--name-only'], dir, false) || '').split('\n').filter((f) => f && !f.startsWith('.cohdit/'));
@@ -1482,7 +1622,7 @@ function cmdBuild(argv) {
           o.consult = r.consult;
           o.phase = 'advisor';
           bd.writeConsult(dir, item, r.consult);
-          lead.push(['DISPATCH', { agent: 'advisor', model: bd.agentModel('advisor') }, item]);
+          lead.push(['DISPATCH', { agent: 'advisor', model: dispModel(dir, 'advisor') }, item]);
           bd.saveActive(dir, cur);
           say(dir, bd.emit(dir, cur.run, lead).filter((x) => x.c === 'DISPATCH'), lvl);
           awaitAdvisor(dir, item);
@@ -1505,7 +1645,7 @@ function cmdBuild(argv) {
         const lenses = bd.lensesFor(risk);
         if (!lenses.length) return gate(dir, cur, spec, item, lvl, lead);
         fs.writeFileSync(bd.diffPath(dir, item), diff + heldTestText(dir, item, o) + mk.reviewSection(dir, item));
-        for (const a of lenses) lead.push(['DISPATCH', { agent: a, model: bd.agentModel(a) }, item]);
+        for (const a of lenses) lead.push(['DISPATCH', { agent: a, model: dispModel(dir, a) }, item]);
         o.phase = 'review';
         o.review = { expected: lenses, got: {} };
         bd.saveActive(dir, cur);
@@ -1517,7 +1657,7 @@ function cmdBuild(argv) {
       if (sub === 'advised') {
         o.advice = Object.assign({}, o.consult, { answer: r.answer });
         delete o.consult;
-        const written = bd.emit(dir, cur.run, [['RETURN', { agent: 'advisor', verdict: 'answered' }, item], ['ROUND', { cause: 'consult' }, item], ['DISPATCH', { agent: 'maker', model: bd.agentModel('maker') }, item]]);
+        const written = bd.emit(dir, cur.run, [['RETURN', { agent: 'advisor', verdict: 'answered' }, item], ['ROUND', { cause: 'consult' }, item], ['DISPATCH', { agent: 'maker', model: dispModel(dir, 'maker') }, item]]);
         say(dir, written.filter((x) => x.c === 'ROUND'), lvl);
         if (bd.currentBranch(dir) !== o.branch) bd.git(['checkout', '-q', o.branch], dir);
         dispatchMaker(dir, cur, spec, cfg, item, lvl, o.notes);
@@ -1545,13 +1685,13 @@ function cmdBuild(argv) {
       if (!notes.length) return gate(dir, cur, spec, item, lvl, []);
       o.rounds += 1;
       const cost = spentOn(dir, bd.homeDir(dir, cur), item);
-      if (cost !== null && cost >= cfg.caps.usd_per_item) {
+      if (cost !== null && capOn(cfg.caps.usd_per_item) && cost >= cfg.caps.usd_per_item) {
         return blocked(dir, cur, item, lvl, 'budget', 'this thing reached the limit for one thing (about ' + cfg.caps.usd_per_item + ' dollars at list prices) with the review still asking for changes:\n' + notes.join('\n'), [['ROUND', { cause: 'review' }, item]]);
       }
       if (o.rounds < cfg.caps.rounds_per_item) {
         o.notes = notes;
         bd.git(['checkout', '-q', o.branch], dir);
-        const written = bd.emit(dir, cur.run, [['ROUND', { cause: 'review' }, item], ['DISPATCH', { agent: 'maker', model: bd.agentModel('maker') }, item]]);
+        const written = bd.emit(dir, cur.run, [['ROUND', { cause: 'review' }, item], ['DISPATCH', { agent: 'maker', model: dispModel(dir, 'maker') }, item]]);
         say(dir, written.filter((x) => x.c === 'ROUND'), lvl);
         dispatchMaker(dir, cur, spec, cfg, item, lvl, notes);
         return 0;
@@ -2076,6 +2216,35 @@ function cmdAllow() {
   return 0;
 }
 
+/** `models [<group> <sonnet|opus|haiku|fable|mine|default>]`: which model each group of helpers runs on, and the
+ *  person's change to one. Kept in ~/.cohdit/settings.json for every idea. */
+function cmdModels(argv) {
+  const NAMES = { reviews: 'Reviews (the checker and the security, privacy, cost and rules lenses)', runner: 'Runner (drives each thing)',
+    builder: 'Builder', tester: 'Tester (writes the browser test first)', advisor: 'Advisor', designer: 'Designer (the mock-up)' };
+  const file = ml.settingsPath();
+  const s = ml.readJson(file, {});
+  if (argv.length) {
+    const [g, v] = argv;
+    if (!MODEL_ROLES[g]) return fail('group must be one of ' + Object.keys(MODEL_ROLES).join(', '));
+    if (![...MODEL_ALIASES, 'mine', 'default'].includes(v)) return fail('model must be one of ' + MODEL_ALIASES.concat(['mine', 'default']).join(', '));
+    s.models = Object.assign({}, s.models || {});
+    if (v === 'default') delete s.models[g]; else s.models[g] = v;
+    if (!Object.keys(s.models).length) delete s.models;
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(s, null, 2) + '\n');
+  }
+  const name = (m) => ({ sonnet: 'Sonnet', opus: 'Opus', haiku: 'Haiku', fable: 'Fable', mine: 'your own model' }[m] || m);
+  const out = [(argv.length ? 'Changed. ' : '') + 'Which model each part of a build runs on:'];
+  for (const g of Object.keys(MODEL_ROLES)) {
+    const set = (s.models || {})[g];
+    const own = bd.agentModel(MODEL_ROLES[g][0]);
+    const def = own === 'inherit' ? 'your own model' : 'Sonnet 5.5';
+    out.push('- ' + NAMES[g] + ': ' + (set ? name(set) + ' (you chose; Hatch\'s default is ' + def + ')' : def));
+  }
+  process.stdout.write(out.join('\n') + '\n');
+  return 0;
+}
+
 function cmdLevel(argv) {
   if (!argv.length) {
     process.stdout.write(doc.ensureSettings() + '\n');
@@ -2150,6 +2319,7 @@ function cmdFix(argv) {
       const left = cur.review.expected.filter((a) => !cur.review.got[a]);
       for (const a of left) bd.writeRole(dir, a);
       hint('agents', left.join(','));
+      hintModel(dir, left);
       hint('roles', ml.spoolDir(dir));
       hint('next', 'scan');
       return 0;
@@ -2179,6 +2349,7 @@ function cmdFix(argv) {
       bd.saveActive(dir, cur);
       const left = cur.review.expected.filter((a) => !cur.review.got[a]);
       hint('agents', left.join(','));
+      hintModel(dir, left);
       hint('next', left.length ? 'scan' : 'close');
       return 0;
     }
@@ -2634,6 +2805,7 @@ function dispatch(argv) {
     case 'fix': return cmdFix(argv.slice(1));
     case 'report': return cmdReport(argv.slice(1));
     case 'remember': return cmdRemember(argv.slice(1));
+    case 'models': return cmdModels(argv.slice(1));
     case 'allow': return cmdAllow();
     default:
       process.stderr.write(USAGE);
