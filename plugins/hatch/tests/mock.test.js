@@ -28,9 +28,10 @@ const run = (h, args, input) => H.run('hatch.js', args, { env: h.env, input, cwd
 const hintOf = (r, k) => { const m = new RegExp('^' + k + '=(.*)$', 'm').exec(r.err); return m ? m[1] : null; };
 const M = (h, dir, args, input) => run(h, ['mock'].concat(args, ['--dir', dir]), input);
 const put = (dir, file, text) => { fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true }); fs.writeFileSync(path.join(dir, file), text); };
+const linkTo = (dir, from, to) => fs.appendFileSync(path.join(dir, from), '<nav><a href="' + to + '">' + to + '</a></nav>\n');
 const spec = (dir) => JSON.parse(fs.readFileSync(path.join(dir, '.cohdit', 'spec.json'), 'utf8'));
 const DRAWN = '{"verdict":"drawn","look":"Big friendly letters on warm paper colours, for a small child."}';
-const page = (items, extra = '') => '<!doctype html><link rel="stylesheet" href="look.css"><main>'
+const page = (items, extra = '') => '<!doctype html><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="look.css"><main>'
   + items.map((i) => '<section data-item="' + i + '"><h1>' + i + '</h1></section>').join('') + extra + '</main>\n';
 
 function agreed(h, name = 'ABC Friends') {
@@ -136,6 +137,7 @@ test('a later change: a big one is drawn into the mock-up first and may be skipp
   assert.doesNotMatch(brief, /## What the person asked you to change/, 'the first round\'s changes are not carried over');
   // the small thing added without a mock needs no screen; the new one does
   put(dir, 'mock/spell.html', page(['ITEM-004']));
+  linkTo(dir, 'mock/index.html', 'spell.html');
   assert.equal(M(h, dir, ['drawn', '--return', DRAWN]).code, 0);
   assert.equal(M(h, dir, ['agree']).code, 0);
   assert.equal(spec(dir).items.find((i) => i.id === 'ITEM-004').mock, 'agreed');
@@ -146,6 +148,7 @@ test('a later change: a big one is drawn into the mock-up first and may be skipp
   assert.equal(hintOf(third, 'next'), 'mock');
   M(h, dir, ['open']);
   put(dir, 'mock/word.html', page(['ITEM-005']));
+  linkTo(dir, 'mock/index.html', 'word.html');
   assert.equal(M(h, dir, ['drawn', '--return', DRAWN]).code, 0);
   assert.equal(M(h, dir, ['agree']).code, 0);
   assert.equal(H.git(['log', '-1', '--format=%s'], dir), 'Hatch: the signed-off mock-up', 'after the first build, committed on its own');
@@ -176,9 +179,38 @@ test('what the script refuses in a mock, and the designer\'s report', () => {
   put(dir, 'mock/index.html', '<script src="https://cdn.example.com/x.js"></script><p data-item="ITEM-001">x</p>');
   assert.match(mk.lint(dir).join('|'), /loads a script from the network[\s\S]*does not use look\.css/);
   assert.deepEqual(mk.screensFor(dir, 'ITEM-001'), ['mock/index.html']);
+  assert.match(mk.lint(dir).join('|'), /index\.html has no <meta name="viewport"/);
   assert.throws(() => mk.designerReturn('{"verdict":"drawn"}'), /look needs one sentence/);
   assert.throws(() => mk.designerReturn('{"verdict":"done","look":"x"}'), /verdict must be drawn/);
   assert.equal(mk.designerReturn('```json\n' + DRAWN + '\n```').look, 'Big friendly letters on warm paper colours, for a small child.');
+});
+
+test('every screen is reached by using the app, every link goes somewhere, and every screen fits a phone', () => {
+  const dir = H.tmpdir();
+  put(dir, 'mock/look.css', '');
+  put(dir, 'mock/index.html', page(['ITEM-001'], '<a class="row" href="agent.html#refunds">Refunds</a><a href="gone.html">Gone</a>'
+    + '<footer><a href="first-visit.html">First visit</a><a href="agent.html">Agent</a></footer>'));
+  put(dir, 'mock/agent.html', page(['ITEM-002'], '<a href="index.html">Back</a><a href="sub/rules.html">Rules</a>'));
+  put(dir, 'mock/first-visit.html', page([], '<a href="first-visit.html">Agents</a>'));
+  put(dir, 'mock/sub/rules.html', page([], '<a href="../agent.html">Back</a>'));
+  const problems = mk.lint(dir);
+  assert.deepEqual(problems.filter((p) => /reached only/.test(p)).map((p) => p.split(' ')[0]), ['mock/first-visit.html'],
+    'a screen linked only from a footer list, or only from itself, is not reached; a row link and a relative path are');
+  assert.deepEqual(problems.filter((p) => /not drawn/.test(p)), ['mock/index.html links to mock/gone.html, which is not drawn']);
+  assert.equal(problems.length, 2);
+});
+
+test('the look the person already has goes to the designer, set at the interview or changed later', () => {
+  const h = home();
+  const n = run(h, ['idea', 'new', 'Owl Board']);
+  const dir = hintOf(n, 'dir');
+  assert.equal(run(h, ['idea', 'set', '--dir', dir, '--json', JSON.stringify({ items: ITEMS, gates: GATES, look_from: 'the app it replaces, in ~/apps/old-board' })]).code, 0);
+  assert.equal(run(h, ['idea', 'agree', '--dir', dir]).code, 0);
+  assert.match(fs.readFileSync(hintOf(M(h, dir, ['open']), 'brief'), 'utf8'), /## The look they already have\nThe person already has a look this must match: the app it replaces, in ~\/apps\/old-board\. Open it before you draw/);
+  const c = run(h, ['idea', 'change', '--dir', dir, '--json', JSON.stringify({ look_from: 'their brand at https://example.com' })]);
+  assert.equal(c.code, 0, c.err);
+  assert.equal(spec(dir).look_from, 'their brand at https://example.com');
+  assert.notEqual(run(h, ['idea', 'change', '--dir', dir, '--json', JSON.stringify({ look_from: '' })]).code, 0);
 });
 
 test('the designer writes the mock-up and nothing else', () => {

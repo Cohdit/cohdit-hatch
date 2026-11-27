@@ -12,7 +12,7 @@
  *   hatch.js level [plain|product|tech] show or set how Hatch talks (~/.cohdit/settings.json)
  *   hatch.js idea new <name> [--dir d]  start an idea: folder, draft, registry; begins the dream run
  *   hatch.js idea set [--dir d] --json <patch|->
- *   hatch.js idea change [--dir d] --json <patch|->   (agreed idea: add, edit, decisions, out, open_questions)
+ *   hatch.js idea change [--dir d] --json <patch|->   (agreed idea: add, edit, decisions, out, open_questions, look_from)
  *   hatch.js idea reopen [--dir d]                    (agreed idea: back to the interview, agree again)
  *                                       record what the interview learned; prints the one-line shape so far
  *   hatch.js idea show [--dir d] [--full]

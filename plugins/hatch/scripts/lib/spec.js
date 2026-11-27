@@ -10,7 +10,7 @@
  *     items: [{ id, title, criteria[], source: said|inferred, device? }   (no status: what happened to a thing is the ledger's, lib/ledger.js itemStatus)],
  *     out: [],                                  // not in the first version
  *     gates: { <rails.json rule>: { value, source } },
- *     decisions: [{ type, choice, who }], open_questions: [], memory?, people?: { region?, kinds?, field? },
+ *     decisions: [{ type, choice, who }], open_questions: [], memory?, people?: { region?, kinds?, field? }, look_from?,
  *     rails: [], terms_v?, agreed, refused? }
  *
  * Bounded by construction: at most 8 items, 3 criteria each. Everything the person said keeps their
@@ -223,7 +223,10 @@ function applyDecisions(spec, v) {
   }
 }
 
-const CHANGE_KEYS = ['add', 'edit', 'decisions', 'out', 'open_questions', 'mock'];
+const CHANGE_KEYS = ['add', 'edit', 'decisions', 'out', 'open_questions', 'mock', 'look_from'];
+// Where the look comes from, when the person already has one (an app this replaces, their brand, their other apps):
+// a folder, a link or a few words. The designer starts from it, so the first drawing is already theirs.
+const LOOK_FROM_MAX = 500;
 const CHANGE_LOCKED_DECISIONS = ['hosting', 'terms'];   // these also write config.json and the registry: only agree does that
 
 /** A small change to an agreed idea: new things added, queued things reworded, a decision, what is out.
@@ -283,6 +286,7 @@ function applyChange(spec, patch, interview, status = new Map()) {
   }
   if (patch.decisions !== undefined) applyDecisions(trial, patch.decisions);
   if (patch.out !== undefined) trial.out = strList(patch.out, 'out');
+  if (patch.look_from !== undefined) trial.look_from = str(patch.look_from, 'look_from').slice(0, LOOK_FROM_MAX);
   if (patch.open_questions !== undefined) trial.open_questions = strList(patch.open_questions, 'open_questions');
   Object.assign(spec, trial);
   return res;
@@ -302,6 +306,7 @@ function applyPatch(spec, patch, interview) {
     switch (k) {
       case 'name': spec.name = str(v, k); break;
       case 'for': case 'anchor': case 'pitch': spec[k] = str(v, k); break;
+      case 'look_from': spec.look_from = str(v, k).slice(0, LOOK_FROM_MAX); break;
       case 'shape':
         if (!SHAPES.includes(v)) throw new Invalid('shape must be one of ' + SHAPES.join(', '));
         spec.shape = v; break;

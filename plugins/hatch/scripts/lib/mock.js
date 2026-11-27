@@ -62,8 +62,32 @@ function lint(dir) {
     const text = fs.readFileSync(path.join(dir, f), 'utf8');
     if (/<script[^>]+src\s*=\s*["']\s*(?:https?:)?\/\//i.test(text)) problems.push(f + ' loads a script from the network; the mock is plain HTML and opens with no connection');
     if (!/look\.css/.test(text)) problems.push(f + ' does not use ' + LOOK + ', so it would not share the one look');
+    if (!/<meta[^>]+name\s*=\s*["']viewport["']/i.test(text)) problems.push(f + ' has no <meta name="viewport" content="width=device-width, initial-scale=1">, so a phone shows it shrunk to desktop width');
+    for (const to of links(text, f)) if (!fs.existsSync(path.join(dir, to))) problems.push(f + ' links to ' + to + ', which is not drawn');
   }
+  for (const f of unreached(dir)) problems.push(f + ' is reached only from a list or footer, not by using the app: link it from where the person would really come to it (a row, a button, a tab, a switch at the top for a first-time or something-wrong view)');
   return problems;
+}
+
+/** The screens one page links to, as project-relative paths. Only local .html links; a link outside the page's own
+ *  <footer> when `navOnly`, so a list of screens at the bottom does not count as a way to get there. */
+function links(text, from, navOnly) {
+  const body = navOnly ? text.replace(/<footer\b[\s\S]*?<\/footer>/gi, '') : text;
+  const out = new Set();
+  for (const m of body.matchAll(/\bhref\s*=\s*["']([^"'#?:]+\.html?)(?:[#?][^"']*)?["']/gi)) {
+    if (m[1].startsWith('/')) continue;
+    out.add(path.posix.normalize(path.posix.join(path.posix.dirname(from), m[1])));
+  }
+  return [...out];
+}
+
+/** The screens no other screen links to by its own navigation: every one but index.html must be reached by use. */
+function unreached(dir) {
+  const all = screens(dir);
+  const home = DIR + '/' + INDEX;
+  const reached = new Set();
+  for (const f of all) for (const to of links(fs.readFileSync(path.join(dir, f), 'utf8'), f, true)) if (to !== f) reached.add(to);
+  return all.filter((f) => f !== home && !reached.has(f));
 }
 
 /** The designer's report. Throws Invalid. */
@@ -125,17 +149,18 @@ function brief(dir, spec, notes, earlier) {
       ? 'Keep every signed-off screen as it is, except where a new thing joins it (a link, a new section). Use the same look.css; add to it only what the new things need.'
       : 'This app was built before mock-ups existed, so there is no mock-up yet: take the look from the app\'s own styles and pages, and draw the new things as they will sit in it, with `' + DIR + '/' + INDEX + '` leading to them.');
   }
+  if (spec.look_from) out.push('', '## The look they already have', 'The person already has a look this must match: ' + spec.look_from + '. Open it before you draw anything and take its colours, type and logo (copied into `' + DIR + '/`, at the size it has there). Choose a look of your own only where it has none.');
   if (earlier) out.push('', 'Your earlier look: ' + earlier);
   out.push('', '## What you draw', 'Everything under `' + DIR + '/`, and nothing anywhere else.',
-    '- `' + DIR + '/' + INDEX + '`: the screen the person sees first, with a way to every other screen.',
+    '- `' + DIR + '/' + INDEX + '`: the app\'s own first screen, as the person will see it. Every other screen is reached the way they will really reach it (a row, a button, a tab), never from a list of screens; a first-time or something-wrong view is a small switch at the top of the screen it belongs to.',
     '- `' + DIR + '/' + LOOK + '`: the one look. Colours, type, spacing and the shared pieces (buttons, fields, lists, messages) as CSS custom properties and classes. Every screen links it and adds no look of its own.',
     '- One `.html` file per screen. A thing\'s screen marks the part that shows it with `data-item="ITEM-NNN"`; a screen may show several things, and every thing above that is not a device check is marked somewhere.',
     '- High fidelity: what it will really look like, not a sketch. Real content taken from the checks\' own examples (their names, numbers and dates), each thing shown as the person will see it once it has done its job, and where it matters the first-time screen (nothing yet) and the something-wrong one.',
     '- Words: a button, field, heading or message the person named in a check reads exactly as they wrote it ("press Add part" is a button that says Add part). Those words become the app\'s and the browser tests\'.',
-    '- It works at phone width and at desktop width.',
+    '- It works at phone width and at desktop width: every screen has the viewport line, nothing scrolls sideways on a phone, and a wide table becomes stacked rows there.',
     '- Plain HTML and CSS. A small script inside the page only to show what happens on a click (a dialog opening, a row appearing). No framework, no build step, no script from the network; a font from Google Fonts is fine.',
     '- Draw only what the checks above describe, plus what joins them (navigation, a header). Nothing the person did not ask for.',
-    '', 'The script reads the folder and refuses a mock that misses a thing, loads a script from the network, or has a screen without the shared look.');
+    '', 'The script reads the folder and refuses a mock that misses a thing, loads a script from the network, has a screen without the shared look or the viewport line, links to a screen not drawn, or has a screen reached only from a list.');
   out.push('', '## Return', 'Your final message is exactly one fenced JSON block, nothing else:', '```json',
     '{"verdict":"drawn","look":"one sentence the person will read: the look you chose and why it suits this idea"}', '```');
   return out.join('\n') + '\n';
@@ -170,4 +195,4 @@ function reviewSection(dir, item) {
   return '\n\n# The signed-off mock-up of this thing: ' + mine.join(', ') + ' (the part marked data-item="' + item + '"), with the shared look in ' + DIR + '/' + LOOK + '.\n# The person agreed to it before the build. A page that departs from it in look or words, where no check asked for that, is a must-fix.\n';
 }
 
-module.exports = { DIR, INDEX, LOOK, Invalid, root, exists, screens, itemScreens, screensFor, lint, pending, problems, designerReturn, brief, makerSection, testerSection, reviewSection };
+module.exports = { DIR, INDEX, LOOK, Invalid, root, exists, screens, itemScreens, screensFor, lint, links, unreached, pending, problems, designerReturn, brief, makerSection, testerSection, reviewSection };

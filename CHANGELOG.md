@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.44 — the first mock-up comes closer to right, so you ask for fewer changes (2026-11-27)
+
+- Tell Hatch the look you already have, like an app you're replacing, your brand or your other apps. The mock-up then
+  starts from it: your colours, type and logo.
+- Before you see a mock-up, Hatch checks it for the changes people ask for most. Lists are drawn at their real
+  size, and everything on screen says what it means. A whole card is clickable, not just its name.
+- Every screen in the mock-up is reached by using it, the way you will use the app. There's no list of links to
+  screens you can't otherwise get to, and no link to a screen that isn't drawn. Every screen also fits a phone's width.
+- Several changes in one message are redrawn together, in one go.
+
 ## 0.0.43 — you see a mock-up of every screen, and sign it off, before anything is built (2026-11-26)
 
 - Before anything is built, you see it. Once you agree your idea, Hatch draws a mock-up of every screen, using your own
