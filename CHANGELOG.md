@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.0.46 — a status and a build summary you can read at a glance (2026-11-28)
+
+- The summary at the end of a build is a few lines: how many things were built, anything set aside or not finished and
+  why, and what to do next. Finished things are no longer listed one by one, each with how to check it; "let me try it"
+  walks you through those. The product and technical views still list them.
+
+- "Status" is grouped by what you do about each thing: your answer needed, still to build, to check on your device, set
+  aside. Built things are a count ("15 of 19 built"), not one long line each. Say "status all" to list them; the test
+  numbers for each thing stay in the product and technical views.
+- While a build is fixing something, status says which thing and why: fixing "X" after its checks failed.
+- A thing set aside because its change clashed with another built at the same time now says so, instead of "needs
+  something else built first". "Build all", and the second pass at the end of a run, put it back on the list.
+
 ## 0.0.45 — cost limits that fit, keep finished work, and are yours to change; builds spend less (2026-11-28)
 
 - The default cost limit is now about 10 dollars for each thing and 50 for each run, up from 5 and 15. An ordinary thing

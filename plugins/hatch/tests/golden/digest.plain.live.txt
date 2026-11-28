@@ -1,2 +1,2 @@
 Built 0 of 1 thing.
-  open      Weekly scoreboard
+Not finished: Weekly scoreboard

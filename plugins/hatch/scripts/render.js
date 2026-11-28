@@ -77,7 +77,7 @@ const WORDS = {
     usedRun: (tokens, est) => 'This run used about ' + tokens + ' tokens (' + est + ').',
     waitingHead: (n) => 'Waiting on you: ' + plural(n, 'question') + '.',
     yourAnswer: ' — your answer needed',
-    row: { open: 'open', done: 'done', held: 'parked', blocked: 'set aside', refused: 'refused' },
+    row: { open: 'not finished', done: 'done', held: 'parked', blocked: 'set aside', refused: 'refused' },
     heldRow: (title, q) => title + ' — needs you: ' + q + ' (say "status" to answer)',
     blockWhy: { dependency: 'needs something else built first', ambiguous: 'needs your decision', access: 'no access to something it needs', env: 'something on this computer is in the way', budget: 'it reached the cost limit for one thing' },
     failedTimes: (n) => 'the checks failed ' + times(n),
@@ -95,6 +95,8 @@ const WORDS = {
     setupLeft: (n) => n === 0 ? 'Everything is ready.' : (n === 1 ? 'One thing' : n + ' things') + " left. I'll walk you through " + (n === 1 ? 'it' : 'them one at a time') + '.',
     refusedIdea: (name, phrase) => 'Idea: ' + name + ' — not something Cohdit builds (apps that ' + phrase + ').',
     trying: 'waiting for you to try it',
+    clashed: 'it clashed with another change built at the same time; "build all" tries it again',
+    fixing: (title) => 'fixing "' + title + '" after its checks failed',
     stillBuilding: 'Still building; say "status" for where it is up to, and try it once the build has finished.',
     nothingToTry: 'Nothing to try yet. Say "build it".',
     trySay: 'Say "let me try it" to start it on this computer.',
@@ -512,6 +514,7 @@ function workingPhrase(c, rs) {
     if (BOOKKEEPING.includes(r.c) || r.c === 'BEAT' || r.c === 'RUN_START') continue;
     if (r.c === 'DONE') return 'just finished "' + c.title(r.i) + '", picking the next';
     if (r.c === 'TRY_START' || r.c === 'TRY_RESULT') return c.w.trying;
+    if (r.c === 'VERIFY' && Number(r.f.rc) !== 0 && r.i && c.w.fixing) return c.w.fixing(c.title(r.i));
     const line = c.line(r, c.level === 'tech' ? 'product' : c.level, rs);
     if (line) return lowerFirst(line.replace(/\.+$/, ''));
   }
@@ -520,6 +523,7 @@ function workingPhrase(c, rs) {
 
 /** Why an item was set aside, for the digest's one-line summary. */
 function blockPhrase(c, rec, rs) {
+  if (c.w.clashed && rec.f.reason === 'dependency' && rec.f.blob && /conflicts with this one/.test(c.blob(rec.f.blob))) return c.w.clashed;
   const why = c.w.blockWhy[rec.f.reason];
   if (why) return why;
   const n = c.rounds(rs, rec.i);
@@ -623,6 +627,7 @@ function viewStatus(c, a) {
     const rs = c.runs.get(live[live.length - 1]);
     out.push('Working now: ' + workingPhrase(c, rs) + ' (started ' + c.ago(rs[0].ts) + ')' + (tech ? ', run ' + live[live.length - 1] : '') + '.');
   }
+  if (c.level === 'plain') return statusPlain(c, a, items, waiting, live, lastShared, out);
   const k = { left: 0, held: 0, setAside: 0, device: 0, toTry: 0, finished: 0, all: a.all };
   for (const i of items) {
     const st = c.statusOf(i);
@@ -661,6 +666,55 @@ function viewStatus(c, a) {
   return out;
 }
 
+/** The plain status: grouped by what the person does about it, the questions first, built things as a count
+ *  (each with its test numbers is the product and technical view; "status all" lists them). The idea line
+ *  above it gains how far along it is. */
+function statusPlain(c, a, items, waiting, live, lastShared, out) {
+  const by = { left: [], held: [], device: [], aside: [], toTry: [], tried: [] };
+  for (const i of items) {
+    const st = c.statusOf(i);
+    if (st === 'queued' || st === 'building') by[i.device && st === 'queued' ? 'device' : 'left'].push(i);
+    else if (st === 'held') by.held.push(i);
+    else if (st === 'blocked' || st === 'refused') by.aside.push(i);
+    else if (st === 'done') by.toTry.push(i);
+    else if (st === 'tried') by.tried.push(i);
+  }
+  const built = by.toTry.length + by.tried.length;
+  if (items.length) out[0] += ' — ' + (built ? built + ' of ' + items.length + ' built.' : 'nothing built yet (' + plural(items.length, 'thing') + ' planned).');
+  const section = (head, list, line) => {
+    if (!list.length) return;
+    out.push(head + ' (' + list.length + '):');
+    for (const i of list) out.push('  ' + line(i));
+  };
+  const asked = new Map(waiting.map((h) => [h.i, c.blob(h.f.blob)]));
+  const heldIds = by.held.map((i) => i.id).concat(waiting.map((h) => h.i).filter((id) => !by.held.some((i) => i.id === id)));
+  section('Your answer needed', heldIds, (id) => c.title(id) + (asked.get(id) ? ' — ' + asked.get(id) : ''));
+  section('Still to build', by.left, (i) => {
+    const stuck = c.statusOf(i) === 'queued' ? (i.depends || []).map((d) => items.find((x) => x.id === d)).filter((d) => d && c.statusOf(d) === 'blocked') : [];
+    return i.title + (c.statusOf(i) === 'building' && live.length ? ' (building now)' : '')
+      + (stuck.length ? ' — waits for "' + stuck.map((d) => d.title).join('", "') + '", which was set aside' : '');
+  });
+  section('To check on your device', by.device, (i) => i.title);
+  section('Set aside', by.aside, (i) => {
+    const rec = [...c.recs].reverse().find((r) => r.c === 'BLOCKED' && r.i === i.id);
+    const why = rec && c.w.blockWhy[rec.f.reason];
+    const mine = rec && ['ambiguous', 'access', 'env'].includes(rec.f.reason) && rec.f.blob ? c.blob(rec.f.blob) : null;
+    if (rec && rec.f.reason === 'dependency' && rec.f.blob && /conflicts with this one/.test(c.blob(rec.f.blob))) return i.title + ' — ' + c.w.clashed;
+    const first = rec && rec.f.reason === 'dependency' ? (i.depends || []).map((d) => items.find((x) => x.id === d)).filter((d) => d && !['done', 'tried'].includes(c.statusOf(d))) : [];
+    if (first.length) return i.title + ' — waits for "' + first.map((d) => d.title).join('", "') + '" to be built';
+    return i.title + (mine ? ' — what I need from you: ' + mine : why ? ' — ' + why : '');
+  });
+  if (a.all) {
+    section('Built, to try', by.toTry, (i) => i.title);
+    section('Finished and tried', by.tried, (i) => i.title);
+  }
+  out.push(lastShared ? 'Live: ' + lastShared.f.url + ' (shared ' + c.ago(lastShared.ts) + ')' : c.w.notShared);
+  const trying = live.some((run) => c.runs.get(run)[0].f.skill === 'try');
+  if (by.toTry.length) out.push(trying ? c.w.tryAnswer : (a.all ? c.w.toTry(by.toTry.length) : c.w.toTry(by.toTry.length).replace(/\.$/, ' (or "status all" to list them).')));
+  else if (trying) out.push(c.w.tryAnswer);
+  return out;
+}
+
 function viewDigest(c, a) {
   const run = c.selectRun(a);
   if (!run) return c.level === 'tech' ? ['no runs recorded'] : [c.w.noRuns];
@@ -690,11 +744,12 @@ function viewDigest(c, a) {
       const it = c.item(i) || {};
       const crit = (it.criteria && it.criteria.length ? it.criteria : [''])[0];
       const id = tech ? ' (' + i + (r && r.c === 'DONE' ? ', ' + r.f.head : '') + ')' : '';
-      if (!r) out.push('  ' + pad(w.row.open, 9) + ' ' + c.title(i) + id);
-      else if (r.c === 'DONE') out.push('  ' + pad(w.row.done, 9) + ' ' + c.title(i) + id + (crit ? ' — ' + crit : ''));
-      else if (r.c === 'HELD') out.push('  ' + pad(w.row.held, 9) + ' ' + w.heldRow(c.title(i) + id, c.blob(r.f.blob)));
-      else if (r.c === 'BLOCKED') out.push('  ' + pad(w.row.blocked, 9) + ' ' + c.title(i) + id + ' — ' + blockPhrase(c, r, rs));
-      else out.push('  ' + pad(w.row.refused, 9) + ' ' + c.title(i) + id);
+      const row = (word) => (c.level === 'plain' ? word.charAt(0).toUpperCase() + word.slice(1) + ':' : '  ' + pad(word, 9));   // plain: a sentence, not a column
+      if (!r) out.push(row(w.row.open) + ' ' + c.title(i) + id);
+      else if (r.c === 'DONE') { if (c.level !== 'plain') out.push(row(w.row.done) + ' ' + c.title(i) + id + (crit ? ' — ' + crit : '')); }   // plain: a count; the try list walks each one
+      else if (r.c === 'HELD') out.push(row(w.row.held) + ' ' + w.heldRow(c.title(i) + id, c.blob(r.f.blob)));
+      else if (r.c === 'BLOCKED') out.push(row(w.row.blocked) + ' ' + c.title(i) + id + ' — ' + blockPhrase(c, r, rs));
+      else out.push(row(w.row.refused) + ' ' + c.title(i) + id);
     }
     for (const r of stop) {
       if (!outcome.has(r.i)) out.push(c.line(r, kind, rs));   // an item-level stop is already on its item's line

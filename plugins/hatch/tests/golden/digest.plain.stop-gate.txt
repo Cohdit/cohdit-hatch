@@ -1,6 +1,4 @@
 Built 2 of 3 things.
-  done      Add a chore — type "Dishes", press Add: it appears in the list
-  done      Tick a chore done — tick Dishes: it moves under Done
-  set aside Reset on Sunday — the checks failed twice
+Set aside: Reset on Sunday — the checks failed twice
 Saved in your GitHub account as chore-chart.
 Next: say "let me try it" and check these 2 things yourself.

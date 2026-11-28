@@ -1,3 +1,2 @@
 Built 1 of 1 thing.
-  done      Add a chore — type "Dishes", press Add: it appears in the list
 Next: say "let me try it" and check this one thing yourself.

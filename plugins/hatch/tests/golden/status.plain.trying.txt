@@ -1,11 +1,10 @@
-Idea: Chore Chart
+Idea: Chore Chart — 2 of 5 built.
 Working now: waiting for you to try it (started 5 minutes ago).
-Left to build: 1. Waiting on you: 1. To check on your device: 1. Built, to try: 1. Finished and tested: 1 (say "status all" to list them).
-  done       Tick a chore done (2 new tests; all tests together run 78% of its lines; cases tested 2 of 5, missing: smallest and largest, wrong input, something failing (builder's own count))
-  waiting    Reset on Sunday — your answer needed
-  to do      Weekly scoreboard
-  to check   On the iPad
-Not shared yet — say "share it" when you want friends to see it.
-Waiting on you: 1 question.
+Your answer needed (1):
   Reset on Sunday — Reset on Sunday night, or Monday morning before school?
+Still to build (1):
+  Weekly scoreboard
+To check on your device (1):
+  On the iPad
+Not shared yet — say "share it" when you want friends to see it.
 Say "pass", or say which one didn't work and what you saw.

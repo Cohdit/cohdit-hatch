@@ -220,7 +220,7 @@ test('a test that breaks the rules twice, or a thing no screen shows: built with
   assert.ok(records(dir).some((r) => r.c === 'RETURN' && r.f.agent === 'tester' && r.f.verdict === 'none'));
   // The run closes and every view of it still reads: the tester is one more agent on the record.
   const close = B(h, dir, ['close']);
-  assert.match(close.out, /Letter grid/);
+  assert.match(close.out, /^Built 1 of 2 things\.$/m);
   for (const lvl of ['plain', 'product', 'tech']) {
     const sc = H.run('render.js', ['score', '--level', lvl, '--cohdit', path.join(dir, '.cohdit')], { env: h.env });
     assert.equal(sc.code, 0, lvl + ': ' + sc.err);

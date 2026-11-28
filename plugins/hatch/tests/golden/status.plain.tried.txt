@@ -1,8 +1,7 @@
-Idea: Chore Chart
-Left to build: 2. Waiting on you: 1. Finished and tested: 1 (say "status all" to list them).
-  to do      Tick a chore done
-  waiting    Reset on Sunday — your answer needed
-  to do      Weekly scoreboard
-Not shared yet — say "share it" when you want friends to see it.
-Waiting on you: 1 question.
+Idea: Chore Chart — 1 of 4 built.
+Your answer needed (1):
   Reset on Sunday — Reset on Sunday night, or Monday morning before school?
+Still to build (2):
+  Tick a chore done
+  Weekly scoreboard
+Not shared yet — say "share it" when you want friends to see it.

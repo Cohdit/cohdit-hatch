@@ -173,9 +173,9 @@ test('a try from start to pass: the app, the list, a fail in their words, pass f
   assert.ok(!fs.existsSync(path.join(h.dir, '.cohdit', 'active.json')), 'pointer cleared');
   assert.equal(H.git(['status', '--porcelain'], dir), '', 'the ledger is committed');
   const status = R(h, dir, 'status', 'plain', '--all');
-  assert.match(status, /^  tested     Letter grid$/m);
+  assert.match(status, /^Finished and tried \(\d+\):\n(  .*\n)*  Letter grid$/m);
   assert.doesNotMatch(R(h, dir, 'status', 'plain'), /Letter grid/, 'what is finished and tested is a count, not a row');
-  assert.match(status, /^  to do      Animal picture$/m, 'queued again');
+  assert.match(status, /^Still to build \(\d+\):\n(  .*\n)*  Animal picture$/m, 'queued again');
   // `hatch.js status` is that same view, from the ledger: spec.json still says "queued" for the tested thing
   const said = run(h, ['status', '--dir', dir, '--all']);
   assert.equal(said.code, 0);
@@ -184,7 +184,7 @@ test('a try from start to pass: the app, the list, a fail in their words, pass f
   assert.equal(hintOf(said, 'next'), 'build');
   const raw = JSON.parse(fs.readFileSync(path.join(dir, '.cohdit', 'spec.json'), 'utf8'));
   assert.equal(raw.items[0].status, undefined, 'the plan file holds no state');
-  assert.match(status, /^  tested     On the iPad$/m);
+  assert.match(status, /^Finished and tried \(\d+\):\n(  .*\n)*  On the iPad$/m);
   assert.doesNotMatch(status, /things to try/);
   const none = T(h, dir, ['start']);
   assert.equal(none.code, 1);
@@ -209,7 +209,7 @@ test('everything works: "pass" ends pointing at share; a device check is not pas
   assert.match(p.out, /^Next: say "share it" when you want friends to see it\.$/m);
   assert.equal(hintOf(p, 'next'), 'share');
   const status = R(h, dir, 'status', 'plain');
-  assert.match(status, /^  to check   On the iPad$/m, 'the device check stays theirs to do');
+  assert.match(status, /^To check on your device \(\d+\):\n(  .*\n)*  On the iPad$/m, 'the device check stays theirs to do');
   assert.doesNotMatch(status, /things to try/, 'and never blocks');
   const d = R(h, dir, 'digest', 'product', '--last');
   assert.match(d, /^Tested 3 items: all passed\.$/m);

@@ -1,9 +1,9 @@
-Idea: Chore Chart
-Left to build: 2. Waiting on you: 1. To check on your device: 1. Finished and tested: 1 (say "status all" to list them).
-  to do      Tick a chore done
-  waiting    Reset on Sunday — your answer needed
-  to do      Weekly scoreboard
-  to check   On the iPad
-Live: https://chore-chart.vercel.app (shared 7 minutes ago)
-Waiting on you: 1 question.
+Idea: Chore Chart — 1 of 5 built.
+Your answer needed (1):
   Reset on Sunday — Reset on Sunday night, or Monday morning before school?
+Still to build (2):
+  Tick a chore done
+  Weekly scoreboard
+To check on your device (1):
+  On the iPad
+Live: https://chore-chart.vercel.app (shared 7 minutes ago)

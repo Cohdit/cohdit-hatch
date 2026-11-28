@@ -197,8 +197,8 @@ test('the one question, a no, the yes, one deploy, the link; a later share asks 
   assert.doesNotMatch(go.out, /priya-k/, 'the deployment\'s own address is never handed back');
   const status = R(h, dir, 'status', 'plain', '--all');
   assert.match(status, /^Live: https:\/\/abc-friends\.vercel\.app \(shared just now\)$/m);
-  assert.match(status, /^  tested     Letter grid$/m);
-  assert.match(status, /^  to check   On the iPad$/m);
+  assert.match(status, /^Finished and tried \(\d+\):\n(  .*\n)*  Letter grid$/m);
+  assert.match(status, /^To check on your device \(\d+\):\n(  .*\n)*  On the iPad$/m);
   const reg = JSON.parse(fs.readFileSync(path.join(h.dir, '.cohdit', 'settings.json'), 'utf8'));
   assert.equal(reg.projects[0].url, 'https://abc-friends.vercel.app');
   // a week later, after a fix and a try: no question, the same project, the same link

@@ -1,11 +1,8 @@
-Idea: Chore Chart
+Idea: Chore Chart — 2 of 4 built.
 Working now: building "Weekly scoreboard" (started 10 minutes ago).
-Left to build: 1. Waiting on you: 1. Built, to try: 2.
-  done       Add a chore
-  done       Tick a chore done
-  waiting    Reset on Sunday — your answer needed
-  building   Weekly scoreboard
-Not shared yet — say "share it" when you want friends to see it.
-Waiting on you: 1 question.
+Your answer needed (1):
   Reset on Sunday — Reset on Sunday night, or Monday morning before school?
-Waiting on you: 2 things to try. Say "let me try it".
+Still to build (1):
+  Weekly scoreboard (building now)
+Not shared yet — say "share it" when you want friends to see it.
+Waiting on you: 2 things to try. Say "let me try it" (or "status all" to list them).

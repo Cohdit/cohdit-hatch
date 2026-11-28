@@ -1,11 +1,9 @@
-Idea: Chore Chart
-Left to build: 1. Waiting on you: 1. Set aside: 1. Built, to try: 1.
-  done       Add a chore
-  to do      Tick a chore done
-  waiting    Reset on Sunday — your answer needed
-  set aside  Weekly scoreboard
-             Needs something else built first
-Live: https://chore-chart.vercel.app (shared 1 hour ago)
-Waiting on you: 1 question.
+Idea: Chore Chart — 1 of 4 built.
+Your answer needed (1):
   Reset on Sunday — Reset on Sunday night, or Monday morning before school?
-Waiting on you: 1 thing to try. Say "let me try it".
+Still to build (1):
+  Tick a chore done
+Set aside (1):
+  Weekly scoreboard — waits for "Tick a chore done" to be built
+Live: https://chore-chart.vercel.app (shared 1 hour ago)
+Waiting on you: 1 thing to try. Say "let me try it" (or "status all" to list them).

@@ -1,8 +1,9 @@
-Idea: ABC Friends
+Idea: ABC Friends — nothing built yet (4 things planned).
 Working now: i read the idea back to you: 4 things to build (started just now).
-Left to build: 3. To check on your device: 1.
-  to do      Letter grid
-  to do      Tap to hear
-  to do      Animal picture
-  to check   On the iPad
+Still to build (3):
+  Letter grid
+  Tap to hear
+  Animal picture
+To check on your device (1):
+  On the iPad
 Not shared yet — say "share it" when you want friends to see it.

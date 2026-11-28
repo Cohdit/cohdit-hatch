@@ -805,7 +805,9 @@ function buildLimits(dir, rest) {
 }
 
 /** Why a thing may be set aside and still go back on the list without asking the person: nothing in it waits on them. */
-const AUTO_RETRY = ['budget', 'other', 'env'];
+const AUTO_RETRY = ['budget', 'other', 'env', 'dependency'];
+/** A thing set aside because its change clashed with another lane's: nothing is wrong with it, and the other work has landed since. */
+const CLASHED = /conflicts with this one/;
 
 /** "Build all" means all: each thing set aside for a reason a fresh attempt may get past goes back on the list, with
  *  what stopped it. A question for the person, a refusal or a disputed test stays set aside. Returns the ids. */
@@ -868,11 +870,12 @@ function secondPass(dir, home, cur, spec, status, cfg, lvl) {
     if (status.get(it.id) !== 'blocked') continue;
     const mine = all.filter((r) => r.i === it.id);
     const last = mine.filter((r) => r.c === 'BLOCKED').sort((x, y) => (x.ts < y.ts ? -1 : 1)).pop();
-    if (!last || !(RETRIABLE.includes(last.f.reason) || (last.f.reason === 'budget' && cur.want && cur.want.items === null))) continue;
+    const why = (last && last.f.blob && ml.readBlob(sp.cohditDir(home), last.f.blob, home)) || 'it was set aside';
+    const clashed = last && last.f.reason === 'dependency' && CLASHED.test(why);
+    if (!last || !(RETRIABLE.includes(last.f.reason) || clashed || (last.f.reason === 'budget' && cur.want && cur.want.items === null))) continue;
     if (mine.filter((r) => r.c === 'ROUND' && r.f.cause === 'restart').length >= cfg.caps.restarts) continue;
     const cost = spentOn(dir, home, it.id);                    // a cost stop's restart is a fresh attempt with its own allowance
     if (last.f.reason !== 'budget' && cost !== null && capOn(cfg.caps.usd_per_item) && cost >= cfg.caps.usd_per_item) continue;
-    const why = (last.f.blob && ml.readBlob(sp.cohditDir(home), last.f.blob, home)) || 'it was set aside';
     const recs = bd.emit(dir, cur.run, [['ROUND', { cause: 'restart' }, it.id],
       ['TRY_RESULT', { result: 'fail', blob: bd.blob(dir, bd.TRIED_AGAIN + String(why).trim().slice(0, 1500)) }, it.id]]);
     say(dir, recs.filter((r) => r.c === 'ROUND'), lvl);

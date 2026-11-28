@@ -74,7 +74,7 @@ test('a problem told in words becomes a bug on the list, in their words; a twin 
   assert.equal(second.out, 'Bug filed: the back button does nothing.\n2 bugs waiting. Say "fix all" when you want them fixed.');
   assert.equal(run(h, ['report', 'add', '--dir', dir, '--json', '{"did":"x"}']).code, 64, 'a report needs what they saw');
   assert.equal(fs.readdirSync(path.join(dir, '.cohdit', 'reports')).length, 0, 'the file is gone once the bug is on the list');
-  assert.match(R(h, dir, 'status', 'plain'), /^  to do      a weird box with a question mark$/m);
+  assert.match(R(h, dir, 'status', 'plain'), /^Still to build \(\d+\):\n(  .*\n)*  a weird box with a question mark$/m);
 });
 
 test('a fix run: reports pulled from the live app, every lens over the whole project, bugs queued, then build fixes one from a bug brief', () => {

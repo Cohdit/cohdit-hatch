@@ -133,7 +133,7 @@ test('open: the skeleton, the GitHub copy, the run; a device check is never pick
   assert.match(brief, /build commit --dir/);
   assert.match(brief, /On the iPad \(a device check, not built\)/);
   assert.equal(H.git(['rev-parse', '--abbrev-ref', 'HEAD'], dir), 'item/001-letter-grid');
-  assert.match(R(h, dir, 'status', 'plain', '--spool', H.spool(dir)), /^  building   Letter grid$/m, 'status reads the ledger, spool included');
+  assert.match(R(h, dir, 'status', 'product', '--spool', H.spool(dir)), /^  building   Letter grid$/m, 'status reads the ledger, spool included');
 });
 
 test('the gate: commit refuses failing checks; a logic change goes to the checker; pass merges, prints Done; close commits the ledger', () => {
@@ -185,8 +185,7 @@ test('the gate: commit refuses failing checks; a logic change goes to the checke
   const chk = review(h, dir, 'ITEM-002', 'lens-security,lens-privacy');
   assert.equal(chk.code, 0, chk.err);
   assert.equal(chk.out, 'Done: "Tap to hear".');
-  const proved = R(h, dir, 'status', 'plain');
-  assert.match(proved, /Tap to hear \(no new tests; cases tested 2 of 5, missing: smallest and largest, wrong input, something failing\)/, 'speed does not apply; the checker took "failure" off; the reviewer checked it');
+  assert.match(R(h, dir, 'status', 'product'), /Tap to hear \(no new tests; cases 2\/5, missing: limits, invalid, failure\)/, 'speed does not apply; the checker took "failure" off; the reviewer checked it');
   assert.equal(H.git(['rev-parse', '--abbrev-ref', 'HEAD'], dir), 'main');
   assert.ok(bareLs(bare).includes('app/sound.tsx'), 'merged and pushed to the shared main');
   assert.ok(!spawnSync('git', ['show-ref', 'refs/heads/item/002-tap-to-hear'], { cwd: bare }).stdout.toString().trim(), 'the claim is released');
@@ -202,9 +201,7 @@ test('the gate: commit refuses failing checks; a logic change goes to the checke
   assert.match(close.out, /\nHatch can share anonymous numbers about each build[^\n]*"share my build numbers"/, 'asked once, after the first build');
   assert.equal(close.out.replace(/\nHatch can share anonymous numbers[^\n]*$/, ''), [
     'Built 2 of 3 things.',
-    "  set aside Letter grid — couldn't finish it",
-    '  done      Tap to hear — tap a letter; you hear it',
-    '  done      Animal picture — tap a letter; you see the animal and its name',
+    "Set aside: Letter grid — couldn't finish it",
     'Saved in your GitHub account as abc-friends.',
     'Next: say "let me try it" and check these 2 things yourself.',
   ].join('\n'));
@@ -217,9 +214,9 @@ test('the gate: commit refuses failing checks; a logic change goes to the checke
   assert.match(events, /REVIEW lens-security ITEM-002 must_fix=0 nits=0/, 'each lens leaves its own review record');
   assert.match(events, /DISPATCH lens-privacy ITEM-002 model=/);
   const status = R(h, dir, 'status', 'plain');
-  assert.match(status, /^  to check   On the iPad$/m);
-  assert.match(status, /^  set aside  Letter grid$/m);
-  assert.match(status, /^Waiting on you: 2 things to try\. Say "let me try it"\.$/m);
+  assert.match(status, /^To check on your device \(1\):\n  On the iPad$/m);
+  assert.match(status, /^Set aside \(1\):\n  Letter grid$/m);
+  assert.match(status, /^Waiting on you: 2 things to try\. Say "let me try it" \(or "status all" to list them\)\.$/m);
   const digestTech = R(h, dir, 'digest', 'tech', '--last');
   assert.match(digestTech, /^Built 2 of 3 items \(run \S+\)\.$/m);
   assert.match(digestTech, /^  done      Tap to hear \(ITEM-002, [0-9a-f]{8}\) — /m);
@@ -250,7 +247,7 @@ test('review rounds: a fail sends the maker back once; a second fail sets the th
   assert.equal(H.git(['rev-parse', '--abbrev-ref', 'HEAD'], dir), 'main');
   const close = B(h, dir, ['close']);
   // two review rounds failed; under the pinned test clock the two identical ROUND records share one id, so the count may read once
-  assert.match(close.out, /^  set aside Letter grid — the checks failed (once|twice)$/m);
+  assert.match(close.out, /^Set aside: Letter grid — the checks failed (once|twice)$/m);
   assert.equal(hintOf(close, 'next'), 'none', 'nothing to try');
 });
 
@@ -409,7 +406,7 @@ test('without GitHub the build still runs and says the copy is not online', () =
   B(h, dir, ['built', 'ITEM-001', '--return', DONE('copy')]);
   const close = B(h, dir, ['close']);
   assert.match(close.out, /^Not saved online yet; say "set me up" to sign in to GitHub\.$/m);
-  assert.match(close.out, /^  done      Letter grid/m, 'merged locally');
+  assert.match(close.out, /^Built 1 of 1 thing\.$/m, 'merged locally');
 });
 
 test('two sessions on one computer share the work: a side copy, claims, and combining before merging', () => {
@@ -464,7 +461,7 @@ test('two sessions on one computer share the work: a side copy, claims, and comb
   const closeA = A(['close']);
   assert.equal(closeA.code, 0, closeA.err);
   assert.match(closeA.out, /^Built 1 of 1 thing\.$/m);
-  const statusA = R(h, dir, 'status', 'plain');
+  const statusA = R(h, dir, 'status', 'product');
   assert.match(statusA, /^  done       Letter grid \(no new tests\)$/m);
   assert.match(statusA, /^  done       Tap to hear \(no new tests\)$/m, 'A\'s ledger holds B\'s outcome too, through the shared copy');
   assert.match(statusA, /^  building   Animal picture$/m);
@@ -838,7 +835,7 @@ test('an idea this computer never saw is found in the GitHub account by name and
   assert.equal(reg.projects[0].repo, 'priya-k/abc-friends');
   const n = run(h2, ['build', 'next', '--dir', dir2]);
   assert.equal(hintOf(n, 'item'), 'ITEM-002', 'the first thing is already done on the shared copy');
-  assert.match(R(h2, dir2, 'status', 'plain'), /^  done       Letter grid \(no new tests\)$/m);
+  assert.match(R(h2, dir2, 'status', 'product'), /^  done       Letter grid \(no new tests\)$/m);
 });
 
 test('the permission hook approves exactly two shapes, and tells a build call which session made it', () => {
@@ -1142,14 +1139,17 @@ test('"build all" says before they go what is left, what it may cost and what co
   B(h, dir, ['open']);
   B(h, dir, ['next']);
   B(h, dir, ['built', 'ITEM-001', '--return', BLOCKED('ran out of road')]);
+  B(h, dir, ['next']);
+  B(h, dir, ['built', 'ITEM-002', '--return', JSON.stringify({ verdict: 'blocked', blocked: { reason: 'dependency', text: "someone else's change conflicts with this one; it can be built again later" }, findings: [] })]);
   B(h, dir, ['close']);
+  assert.match(R(h, dir, 'status', 'plain'), /^  [^\n]+ — it clashed with another change built at the same time; "build all" tries it again$/m, 'a clash is not "needs something else built first"');
   const o = B(h, dir, ['open', '--items', 'all']);
   assert.equal(o.code, 0, o.err);
   assert.match(o.out, /^Before you go:\n- Building all 2 things left, usually 2 to 5 dollars each at list prices\.\n/);
   assert.match(o.out, /- Going back on the list, with what stopped them: /);
   assert.match(o.out, /One thing stops at about 10 dollars and the rest carry on; say "raise the cost limit"/);
   assert.match(o.out, /tick auto-continue/);
-  assert.equal(hintOf(o, 'retried'), 'ITEM-001');
+  assert.equal(hintOf(o, 'retried'), 'ITEM-001,ITEM-002', 'a clash goes back on the list too');
   B(h, dir, ['close']);
   const plain = B(h, dir, ['open', '--items', '3']);
   assert.doesNotMatch(plain.out, /Before you go/, 'only "build all" says it');
